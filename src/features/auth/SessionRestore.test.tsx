@@ -86,7 +86,7 @@ describe('HU_DN_01_05 - expired or missing session (criterion 6)', () => {
     renderApp(PATHS.homeManager);
     await screen.findByText(EXPIRED);
     await user.click(screen.getByRole('link', { name: 'ir-inicio' }));
-    await screen.findByRole('heading', { level: 1, name: /DashNode/ });
+    await screen.findByRole('heading', { level: 1, name: /Gestión inteligente/ });
     await user.click(screen.getByRole('link', { name: 'ir-login' }));
     await screen.findByRole('heading', { name: 'Inicio de sesión' });
     expect(screen.queryByText(EXPIRED)).not.toBeInTheDocument();
@@ -174,7 +174,7 @@ describe('HU_DN_01_05 - what the browser keeps (criterion 4)', () => {
   it('does not ask for the session on the public landing page', async () => {
     const calls = mockApi({});
     renderApp(PATHS.landing);
-    await screen.findByRole('heading', { level: 1, name: /DashNode/ });
+    await screen.findByRole('heading', { level: 1, name: /Gestión inteligente/ });
     expect(calls).toHaveLength(0);
   });
 });

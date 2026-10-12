@@ -10,7 +10,9 @@ describe('AppRoutes', () => {
         <AppRoutes />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('DashNode');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
+      /Gestión inteligente/,
+    );
   });
 
   it('shows a not-found page for unknown routes', async () => {

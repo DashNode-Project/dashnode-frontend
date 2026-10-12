@@ -55,6 +55,10 @@ const ENDPOINTS = {
   login: { method: 'POST', suffix: '/auth/login' },
   logout: { method: 'POST', suffix: '/auth/logout' },
   register: { method: 'POST', suffix: '/auth/register' },
+  passwordResetRequest: { method: 'POST', suffix: '/auth/password-reset/request' },
+  passwordResetConfirm: { method: 'POST', suffix: '/auth/password-reset/confirm' },
+  adminUsers: { method: 'GET', suffix: '/auth/admin/users' },
+  adminPasswordReset: { method: 'POST', suffix: '/auth/admin/users/' },
 } as const;
 
 export type Endpoint = keyof typeof ENDPOINTS;
@@ -70,7 +74,10 @@ export function mockApi(routes: Partial<Record<Endpoint, Route>>): RecordedCall[
   };
   return mockFetch((call) => {
     for (const [name, endpoint] of Object.entries(ENDPOINTS)) {
-      if (call.method === endpoint.method && call.url.endsWith(endpoint.suffix)) {
+      const pathMatch =
+        call.url.endsWith(endpoint.suffix) ||
+        (endpoint.suffix.endsWith('/') && call.url.includes(endpoint.suffix));
+      if (call.method === endpoint.method && pathMatch) {
         const route = withDefaults[name as Endpoint];
         if (route === undefined) break;
         return typeof route === 'function' ? route(call) : route;

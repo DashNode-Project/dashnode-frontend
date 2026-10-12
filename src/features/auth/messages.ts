@@ -14,4 +14,14 @@ export const AUTH_MESSAGES = {
   invalidCredentials: 'Credenciales no válidas. Verifique su correo y contraseña.',
   attemptsExceeded: 'Ha superado el número de intentos permitidos. Intente nuevamente más tarde.',
   accountDisabled: 'Su cuenta está desactivada. Contacte al Administrador.',
+  // HU_DN_01_06
+  passwordResetRequestSuccess:
+    'Si el correo está registrado, recibirá un enlace para restablecer su contraseña.',
+  emailSendFailed: 'No fue posible enviar el correo. Intente nuevamente.',
+  // HU_DN_01_07
+  passwordSetSuccess: 'Su contraseña ha sido establecida correctamente. Ya puede iniciar sesión.',
+  invalidOrExpiredLink: 'El enlace no es válido o ha expirado. Solicite uno nuevo.',
+  // HU_DN_01_10
+  adminResetSent: 'Se ha enviado el enlace de restablecimiento al correo del usuario.',
+  adminResetDisabledTarget: 'No se puede restablecer la contraseña de un usuario desactivado.',
 } as const;

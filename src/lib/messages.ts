@@ -4,4 +4,5 @@ export const MESSAGES = {
   technicalFailure: 'No fue posible completar la operación. Intente nuevamente.',
   sessionExpired: 'Su sesión ha expirado. Inicie sesión nuevamente.',
   loggedOut: 'Sesión cerrada correctamente.',
+  accessDenied: 'Acceso denegado. No tiene permisos para realizar esta acción.',
 } as const;

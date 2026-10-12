@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Outlet } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { LoadFailureScreen } from '@/components/LoadFailureScreen';
 import { useAuth } from './AuthContext';
@@ -12,6 +12,7 @@ import type { Role } from './types';
  * the load-failure message with a retry action.
  */
 export function RequireAuth() {
+  const location = useLocation();
   const { status, restore } = useAuth();
 
   useEffect(() => {
@@ -19,7 +20,15 @@ export function RequireAuth() {
   }, [status, restore]);
 
   if (status === 'authenticated') return <Outlet />;
-  if (status === 'anonymous') return <Navigate to={PATHS.login} replace />;
+  if (status === 'anonymous') {
+    return (
+      <Navigate
+        to={PATHS.login}
+        replace
+        state={{ returnTo: location.pathname + location.search }}
+      />
+    );
+  }
   if (status === 'error') return <LoadFailureScreen onRetry={() => void restore()} />;
   return (
     <div className="flex min-h-screen items-center justify-center" role="status">

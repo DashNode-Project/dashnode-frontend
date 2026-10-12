@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useIncomingFlash } from '@/app/FlashContext';
 import { PATHS } from '@/app/paths';
 import { Alert } from '@/components/ui/Alert';
@@ -9,7 +9,6 @@ import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
-import { notifyUnderDevelopment } from '@/lib/underDevelopment';
 import { useAuth } from './AuthContext';
 import { AuthLayout } from './components/AuthLayout';
 import { homePathFor } from './roles';
@@ -26,6 +25,8 @@ const FORM_LEVEL_CODES = new Set([
 /** 'Inicio de sesión' screen (HU_DN_01_03). */
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
   const { login } = useAuth();
   const { flash, dismiss } = useIncomingFlash();
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -52,7 +53,10 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const user = await login({ email: email.trim(), password });
-      navigate(homePathFor(user.role), { replace: true });
+      const fallback = homePathFor(user.role);
+      const target =
+        returnTo && returnTo !== PATHS.login && returnTo !== PATHS.register ? returnTo : fallback;
+      navigate(target, { replace: true });
     } catch (error) {
       setSubmitting(false);
       setPassword('');
@@ -124,13 +128,12 @@ export default function LoginPage() {
         </Button>
 
         <div className="flex flex-col items-center gap-2 text-sm">
-          <button
-            type="button"
-            onClick={() => notifyUnderDevelopment('forgot-password')}
+          <Link
+            to={PATHS.forgotPassword}
             className="text-blue-300 underline underline-offset-4 hover:text-blue-200"
           >
             ¿Olvidó su contraseña?
-          </button>
+          </Link>
           <Link
             to={PATHS.register}
             className="text-blue-300 underline underline-offset-4 hover:text-blue-200"

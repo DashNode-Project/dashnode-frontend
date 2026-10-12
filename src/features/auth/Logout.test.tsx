@@ -117,7 +117,7 @@ describe('HU_DN_01_04 - success (criteria 3, 4 and 5)', () => {
     await screen.findByText('Sesión cerrada correctamente.');
 
     await user.click(screen.getByRole('link', { name: 'ir-inicio' }));
-    await screen.findByRole('heading', { level: 1, name: /DashNode/ });
+    await screen.findByRole('heading', { level: 1, name: /Gestión inteligente/ });
     await user.click(screen.getByRole('link', { name: 'ir-login' }));
     await screen.findByRole('heading', { name: 'Inicio de sesión' });
     expect(screen.queryByText('Sesión cerrada correctamente.')).not.toBeInTheDocument();

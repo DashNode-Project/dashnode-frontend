@@ -11,6 +11,8 @@ import { PATHS } from './paths';
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'));
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@/features/auth/ForgotPasswordPage'));
+const SetPasswordPage = lazy(() => import('@/features/auth/SetPasswordPage'));
 const HomePage = lazy(() => import('@/features/home/HomePage'));
 
 function PageLoading() {
@@ -33,6 +35,8 @@ export function AppRoutes() {
               <Route element={<GuestOnly />}>
                 <Route path={PATHS.login} element={<LoginPage />} />
                 <Route path={PATHS.register} element={<RegisterPage />} />
+                <Route path={PATHS.forgotPassword} element={<ForgotPasswordPage />} />
+                <Route path={PATHS.setPassword} element={<SetPasswordPage />} />
               </Route>
 
               <Route element={<RequireAuth />}>

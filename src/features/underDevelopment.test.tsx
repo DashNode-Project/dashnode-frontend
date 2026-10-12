@@ -93,14 +93,15 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     expect(screen.queryByRole('button', { name: 'Notificaciones' })).not.toBeInTheDocument();
   });
 
-  it("'¿Olvidó su contraseña?' only logs the notice", async () => {
+  it("'¿Olvidó su contraseña?' navigates to the reset request screen (HU_DN_01_06)", async () => {
     mockApi({});
-    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const user = userEvent.setup();
     renderApp(PATHS.login);
-    await user.click(await screen.findByRole('button', { name: '¿Olvidó su contraseña?' }));
-    expect(info).toHaveBeenCalledWith(UNDER_DEVELOPMENT_MESSAGE, { feature: 'forgot-password' });
-    expect(currentPath()).toBe(PATHS.login);
+    await user.click(await screen.findByRole('link', { name: '¿Olvidó su contraseña?' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Restablecer contraseña' }),
+    ).toBeInTheDocument();
+    expect(currentPath()).toBe(PATHS.forgotPassword);
   });
 
   it('the authenticated shell has no accessibility violations', async () => {

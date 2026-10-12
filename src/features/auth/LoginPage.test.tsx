@@ -25,7 +25,10 @@ describe('HU_DN_01_03 - form (criteria 1 and 2)', () => {
     expect(await screen.findByRole('heading', { name: 'Inicio de sesión' })).toBeInTheDocument();
     expect(screen.getByLabelText('Correo electrónico')).toBeRequired();
     expect(screen.getByLabelText('Contraseña')).toHaveAttribute('type', 'password');
-    expect(screen.getByRole('button', { name: '¿Olvidó su contraseña?' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '¿Olvidó su contraseña?' })).toHaveAttribute(
+      'href',
+      PATHS.forgotPassword,
+    );
     expect(screen.getByRole('link', { name: 'Registrarme como Gerente' })).toHaveAttribute(
       'href',
       PATHS.register,
