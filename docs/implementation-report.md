@@ -23,12 +23,13 @@ Modo de proyecto: `MOCKUP_PRODUCTIONIZATION`.
 | HU_DN_01_05 | Hecho | `feat(HU_DN_01_05): keep the session across page reloads` |
 | Fuera de alcance | Hecho | `feat(EP-01): log 'Funcionalidad en desarrollo, no disponible' for out-of-scope controls` |
 | Contenedor | Hecho | `chore(EP-01): containerize the SPA with nginx and same-origin API proxy` |
+| HU_DN_01_06–10 + landing demo | Hecho | `feat(auth): HU_DN_01_06-10 UI, guards, landing aligned with demo` |
 
 ## Decisiones técnicas
 
 - El mockup (Figma Make) se tomó como referencia visual; la arquitectura pasó a React Router, cliente HTTP único y sesión hidratada desde el servidor.
 - `VITE_API_BASE_URL=/api/v1` (mismo origen) para que la cookie HttpOnly sea de primera parte.
-- «¿Olvidó su contraseña?» (HU_DN_01_06) registra el mensaje de fuera de alcance y no navega.
+- «¿Olvidó su contraseña?» navega a `/restablecer-contrasena`; establecer contraseña en `/establecer-contrasena?token=…`.
 - La navegación de módulos posteriores a EP-01 permanece visible e inerte (mismo manejador).
 - `docs/` del mockup se conserva; los 4 documentos FRAMAI se añaden.
 
