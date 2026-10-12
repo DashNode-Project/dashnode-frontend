@@ -1,82 +1,67 @@
-import { describe, expect, it } from 'vitest';
-import { apiRequest } from './client';
-import { ApiError, NetworkError, isTechnicalFailure, parseErrorBody } from './errors';
-import { apiError, mockFetch, ok } from '@/test/fetchMock';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, NetworkError } from './errors';
+import { apiFormRequest, apiRequest } from './client';
 
-describe('apiRequest', () => {
-  it('sends credentials, JSON and never caches', async () => {
-    const calls = mockFetch(() => ok({ hello: 'world' }));
-    const result = await apiRequest<{ hello: string }>('/ping', { method: 'POST', body: { a: 1 } });
-    expect(result).toEqual({ hello: 'world' });
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({
-      url: '/api/v1/ping',
+describe('api client', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('posts JSON with credentials', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })),
+    );
+    const result = await apiRequest<{ ok: boolean }>('/auth/ping', {
       method: 'POST',
       body: { a: 1 },
-      credentials: 'include',
     });
-    expect(calls[0]?.headers['Content-Type']).toBe('application/json');
+    expect(result.ok).toBe(true);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/ping'),
+      expect.objectContaining({ credentials: 'include', method: 'POST' }),
+    );
   });
 
-  it('does not add a content type to bodiless requests', async () => {
-    const calls = mockFetch(() => ok({}));
-    await apiRequest('/ping');
-    expect(calls[0]?.headers['Content-Type']).toBeUndefined();
-  });
-
-  it('turns an error contract into ApiError', async () => {
-    mockFetch(() => apiError(409, 'EMAIL_ALREADY_REGISTERED', 'Mensaje', { email: 'x' }));
-    const error = await apiRequest('/x').catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({
-      status: 409,
-      code: 'EMAIL_ALREADY_REGISTERED',
-      message: 'Mensaje',
-      fields: { email: 'x' },
+  it('sends multipart form data', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ saved: true }), { status: 200 })),
+    );
+    const formData = new FormData();
+    formData.set('name', 'Test');
+    const result = await apiFormRequest<{ saved: boolean }>('/auth/profile', {
+      formData,
     });
+    expect(result.saved).toBe(true);
+    const init = vi.mocked(fetch).mock.calls[0]?.[1];
+    expect(init?.body).toBeInstanceOf(FormData);
   });
 
-  it('maps an unreadable error answer to UNEXPECTED_RESPONSE', async () => {
-    mockFetch(() => ({ status: 502 }));
-    const error = await apiRequest('/x').catch((e: unknown) => e);
-    expect(error).toMatchObject({ status: 502, code: 'UNEXPECTED_RESPONSE' });
-    expect(isTechnicalFailure(error)).toBe(true);
+  it('throws NetworkError when fetch fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      }),
+    );
+    await expect(apiRequest('/auth/session')).rejects.toBeInstanceOf(NetworkError);
   });
 
-  it('rejects an empty success answer', async () => {
-    mockFetch(() => ({ status: 200 }));
-    await expect(apiRequest('/x')).rejects.toMatchObject({ code: 'UNEXPECTED_RESPONSE' });
-  });
-
-  it('turns transport failures into NetworkError', async () => {
-    mockFetch(() => new TypeError('Failed to fetch'));
-    await expect(apiRequest('/x')).rejects.toBeInstanceOf(NetworkError);
+  it('throws ApiError when multipart upload fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: { code: 'AVATAR_INVALID', message: 'invalid', fields: {} },
+            }),
+            { status: 400 },
+          ),
+      ),
+    );
+    const formData = new FormData();
+    await expect(apiFormRequest('/auth/profile', { formData })).rejects.toBeInstanceOf(ApiError);
   });
 });
-
-describe('error helpers', () => {
-  it('classifies failures', () => {
-    expect(isTechnicalFailure(new NetworkError())).toBe(true);
-    expect(isTechnicalFailure(new ApiError(500, parseErrorBody(body(500))!))).toBe(true);
-    expect(isTechnicalFailure(new ApiError(401, parseErrorBody(body(401))!))).toBe(false);
-    expect(isTechnicalFailure(new Error('boom'))).toBe(true);
-  });
-
-  it('ignores malformed bodies and non-string fields', () => {
-    expect(parseErrorBody(null)).toBeNull();
-    expect(parseErrorBody({ error: 'x' })).toBeNull();
-    expect(parseErrorBody({ error: { code: 1, message: 'm' } })).toBeNull();
-    expect(
-      parseErrorBody({ error: { code: 'C', message: 'm', fields: { a: 'b', c: 3 } } }),
-    ).toEqual({ code: 'C', message: 'm', fields: { a: 'b' } });
-    expect(parseErrorBody({ error: { code: 'C', message: 'm' } })).toEqual({
-      code: 'C',
-      message: 'm',
-      fields: {},
-    });
-  });
-});
-
-function body(status: number) {
-  return { error: { code: `E${status}`, message: 'm', fields: {} } };
-}

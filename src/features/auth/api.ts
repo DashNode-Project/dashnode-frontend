@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/api/client';
+import { apiFormRequest, apiRequest } from '@/lib/api/client';
 import type {
   LoginPayload,
   LogoutResult,
@@ -56,12 +56,111 @@ export interface AdminUserSummary {
   is_active: boolean;
 }
 
-export function listAdminUsers(): Promise<AdminUserSummary[]> {
-  return apiRequest<AdminUserSummary[]>('/auth/admin/users');
-}
-
 export function adminRequestPasswordReset(userId: string): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(`/auth/admin/users/${userId}/password-reset`, {
     method: 'POST',
   });
+}
+
+export interface ListAdminUsersParams {
+  name?: string;
+  role?: string;
+}
+
+export function listAdminUsers(params: ListAdminUsersParams = {}): Promise<AdminUserSummary[]> {
+  const query = new URLSearchParams();
+  if (params.name?.trim()) query.set('name', params.name.trim());
+  if (params.role?.trim()) query.set('role', params.role.trim());
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return apiRequest<AdminUserSummary[]>(`/auth/admin/users${suffix}`);
+}
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  role: string;
+}
+
+export function createUserByAdmin(payload: CreateUserPayload): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>('/auth/admin/users', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export interface InviteDeveloperPayload {
+  name: string;
+  email: string;
+  role?: string;
+}
+
+export function inviteDeveloper(payload: InviteDeveloperPayload): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>('/auth/manager/users/invite', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export interface UpdateUserPayload {
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface UpdateUserResult {
+  message: string;
+  user: AdminUserSummary;
+}
+
+export function updateUserByAdmin(
+  userId: string,
+  payload: UpdateUserPayload,
+): Promise<UpdateUserResult> {
+  return apiRequest<UpdateUserResult>(`/auth/admin/users/${userId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export function deactivateUserByAdmin(userId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/auth/admin/users/${userId}/deactivate`, {
+    method: 'POST',
+  });
+}
+
+export function reactivateUserByAdmin(userId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/auth/admin/users/${userId}/reactivate`, {
+    method: 'POST',
+  });
+}
+
+export function fetchPendingAssignments(userId: string): Promise<{ pending_count: number }> {
+  return apiRequest<{ pending_count: number }>(`/auth/admin/users/${userId}/pending-assignments`);
+}
+
+export interface ProfileData {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  avatar_url: string | null;
+}
+
+export interface ProfileResponse {
+  message?: string | null;
+  profile: ProfileData;
+}
+
+export function fetchProfile(): Promise<ProfileResponse> {
+  return apiRequest<ProfileResponse>('/auth/profile');
+}
+
+export function updateProfile(payload: {
+  name: string;
+  avatar?: File | null;
+}): Promise<ProfileResponse> {
+  const formData = new FormData();
+  formData.set('name', payload.name);
+  if (payload.avatar) formData.set('avatar', payload.avatar);
+  return apiFormRequest<ProfileResponse>('/auth/profile', { method: 'PATCH', formData });
 }

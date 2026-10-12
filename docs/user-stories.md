@@ -512,7 +512,31 @@
 | HU_DN_01_07 | Implementado | `SetPasswordPage`, `POST /auth/password-reset/confirm`, `SetPasswordPage.test.tsx` |
 | HU_DN_01_08 | Implementado | `RequireAuth` guarda `returnTo`; login redirige tras autenticación |
 | HU_DN_01_09 | Implementado | `MESSAGES.accessDenied`; panel admin muestra 403 literal |
-| HU_DN_01_10 | Implementado | `AdminUsersPanel`, modal y `POST /auth/admin/users/{id}/password-reset` |
+| HU_DN_01_10 | Implementado | `UsersPage` restablecer contraseña, `POST /auth/admin/users/{id}/password-reset` |
 | Landing (extra) | Implementado | Navbar, preview, roadmap, trazabilidad, CTA registro, footer demo; panel auth izquierdo (lg+) |
+
+---
+
+## Estado de implementación — EP-02 (HU_DN_01_11 … HU_DN_01_16, Sprint 1)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_01_11 | Implementado | `UsersPage` formulario «Crear usuario», `POST /auth/admin/users`, tests `UsersPage.test.tsx` |
+| HU_DN_01_12 | Implementado | «Invitar Desarrollador», `POST /auth/manager/users/invite`, tests invite en `UsersPage.test.tsx` |
+| HU_DN_01_13 | Implementado | UI sin rol Administrador; servidor 403 en manipulación de rol admin |
+| HU_DN_01_14 | Implementado | Tabla con filtros, estados Activo/Desactivado, `UsersAdmin.integration.test.tsx` |
+| HU_DN_01_16 | Implementado | Modal «Editar usuario», `PATCH /auth/admin/users/{id}`, mensajes literales |
+
+---
+
+## Estado de implementación — EP-02 (HU_DN_01_17 … HU_DN_01_21, Sprint 1)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_01_17 | Implementado | `UsersPage` diálogo Desactivar/Confirmar, `POST .../deactivate`, mensajes literales |
+| HU_DN_01_18 | Implementado | Acción Reactivar + confirmación, `POST .../reactivate` |
+| HU_DN_01_19 | Implementado | Aviso dinámico de tareas pendientes al abrir modal de desactivación |
+| HU_DN_01_20 | Implementado | `PermissionsPage`, enlace «Permisos y roles» en menú de usuario |
+| HU_DN_01_21 | Implementado | `ProfilePage`, subida multipart, `applySessionUser` en sesión |
 
 ---

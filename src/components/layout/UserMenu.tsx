@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut, Shield, UserRound } from 'lucide-react';
+import { Link } from 'react-router';
+import { PATHS } from '@/app/paths';
 import { Alert } from '@/components/ui/Alert';
 import { useAuth } from '@/features/auth/AuthContext';
 import { ROLE_LABELS } from '@/features/auth/roles';
@@ -94,6 +96,22 @@ export function UserMenu() {
               {error}
             </Alert>
           ) : null}
+          <Link
+            to={PATHS.profile}
+            onClick={() => setOpen(false)}
+            className="mb-1 flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-white/5"
+          >
+            <UserRound size={16} aria-hidden="true" />
+            Mi perfil
+          </Link>
+          <Link
+            to={PATHS.permissions}
+            onClick={() => setOpen(false)}
+            className="mb-3 flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-white/5"
+          >
+            <Shield size={16} aria-hidden="true" />
+            Permisos y roles
+          </Link>
           <button
             type="button"
             onClick={signOut}

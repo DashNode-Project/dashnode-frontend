@@ -1,7 +1,6 @@
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { ROLE_LABELS } from '@/features/auth/roles';
-import { AdminUsersPanel } from './AdminUsersPanel';
 
 function formatExpiry(iso: string | null): string | null {
   if (!iso) return null;
@@ -43,7 +42,6 @@ export default function HomePage() {
           ) : null}
         </dl>
       </section>
-      {user.role === 'admin' ? <AdminUsersPanel /> : null}
     </>
   );
 }

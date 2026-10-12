@@ -45,6 +45,8 @@ interface AuthApi extends AuthState {
   logout: () => Promise<void>;
   /** Validates the session cookie with the server (HU_DN_01_05). Never rejects. */
   restore: (options?: RestoreOptions) => Promise<void>;
+  /** Updates in-memory user after profile changes (HU_DN_01_21). */
+  applySessionUser: (user: AuthUser) => void;
 }
 
 const SIGNED_OUT: AuthState = { status: 'anonymous', user: null, expiresAt: null };
@@ -67,6 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await loginRequest(payload);
     setState({ status: 'authenticated', user: session.user, expiresAt: session.expires_at });
     return session.user;
+  }, []);
+
+  const applySessionUser = useCallback((user: AuthUser) => {
+    setState((current) => (current.status === 'authenticated' ? { ...current, user } : current));
   }, []);
 
   const logout = useCallback(async () => {
@@ -130,8 +136,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [status, expiresAt, setFlash]);
 
   const value = useMemo<AuthApi>(
-    () => ({ ...state, isAuthenticated: state.status === 'authenticated', login, logout, restore }),
-    [state, login, logout, restore],
+    () => ({
+      ...state,
+      isAuthenticated: state.status === 'authenticated',
+      login,
+      logout,
+      restore,
+      applySessionUser,
+    }),
+    [state, login, logout, restore, applySessionUser],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

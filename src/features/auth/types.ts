@@ -8,6 +8,7 @@ export interface AuthUser {
   role: Role;
   is_active: boolean;
   created_at: string;
+  avatar_url?: string | null;
 }
 
 export interface RegisterPayload {

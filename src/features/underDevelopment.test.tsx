@@ -10,14 +10,13 @@ import { mockApi, ok } from '@/test/fetchMock';
 import type { Role } from '@/features/auth/types';
 
 const EXPECTED_NAV: Record<Role, string[]> = {
-  admin: ['Usuarios', 'Perfil'],
+  admin: [],
   manager: [
     'Proyectos',
     'Mis tareas',
     'Reuniones',
     'Calendario',
     'Disponibilidad',
-    'Perfil',
     'Manual de usuario',
   ],
   developer: [
@@ -26,7 +25,6 @@ const EXPECTED_NAV: Record<Role, string[]> = {
     'Reuniones',
     'Calendario',
     'Disponibilidad',
-    'Perfil',
     'Manual de usuario',
   ],
 };
@@ -69,6 +67,12 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
       }
     },
   );
+
+  it('exposes Usuarios as a real route for admin and manager', async () => {
+    await authenticated('admin');
+    const users = screen.getByRole('link', { name: 'Usuarios' });
+    expect(users).toHaveAttribute('href', PATHS.users);
+  });
 
   it('keeps the role start screen as the only working navigation entry', async () => {
     await authenticated('manager');

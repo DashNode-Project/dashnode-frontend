@@ -24,6 +24,7 @@ Modo de proyecto: `MOCKUP_PRODUCTIONIZATION`.
 | Fuera de alcance | Hecho | `feat(EP-01): log 'Funcionalidad en desarrollo, no disponible' for out-of-scope controls` |
 | Contenedor | Hecho | `chore(EP-01): containerize the SPA with nginx and same-origin API proxy` |
 | HU_DN_01_06–10 + landing demo | Hecho | `feat(auth): HU_DN_01_06-10 UI, guards, landing aligned with demo` |
+| EP-02 HU_DN_01_11–16 Usuarios | Hecho | `feat(HU_DN_01_11)` + docs HU_12–16; `UsersPage` en `/usuarios` |
 
 ## Decisiones técnicas
 
