@@ -1,0 +1,6 @@
+#!/bin/sh
+# Blocks commits that contain secrets or .env files. Enable with: git config core.hooksPath .githooks
+node scripts/scan-secrets.mjs || {
+  echo "Commit blocked: remove the flagged secrets/files first." >&2
+  exit 1
+}

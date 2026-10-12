@@ -1,0 +1,37 @@
+# DashNode frontend (nginx + static build). The API runs in the backend compose project and is
+# reached through the shared docker network `dashnode-net` as `dashnode-api`.
+#
+#   1. In dashnode-backend:  docker compose up -d --build
+#   2. Here:                 docker compose up -d --build   ->  http://localhost:8080
+#
+# Values come from `.env` (git-ignored; see `.env.example`). No secret is needed here.
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    image: dashnode-frontend:local
+    container_name: dashnode-web
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-dashnode-api:8000}
+    ports:
+      - '127.0.0.1:${FRONTEND_HOST_PORT:-8080}:8080'
+    read_only: true
+    tmpfs:
+      - /tmp
+      # The entrypoint renders the nginx template here (nginx runs as uid 101).
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=0755
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - dashnode-net
+
+networks:
+  dashnode-net:
+    name: ${DASHNODE_NETWORK:-dashnode-net}
+    external: true
