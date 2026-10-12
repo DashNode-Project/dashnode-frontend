@@ -522,5 +522,6 @@
 | HU | Estado | Evidencia |
 | --- | --- | --- |
 | HU_DN_01_11 | Implementado | `UsersPage` formulario «Crear usuario», `POST /auth/admin/users`, tests `UsersPage.test.tsx` |
+| HU_DN_01_12 | Implementado | «Invitar Desarrollador», `POST /auth/manager/users/invite`, tests invite en `UsersPage.test.tsx` |
 
 ---
