@@ -1,21 +1,24 @@
+# Dependencies and build output
 node_modules/
 dist/
-build/
-.cache/
-.env*
+coverage/
 .vite/
-vite.config.*.timestamp-*
 *.tsbuildinfo
-*-debug.log*
-logs/
-*.log
-.claude-replay.*
-.tmp-*
-/.figma/design-context/
 
-# Platform-managed agentplat state, not project source. In the
-# client-initiated single-repo workspace layout (make's `Path: "."` spec) the
-# repo root IS the workspace root, so these land inside this repo rather than
-# beside it.
-/.plugins/
-/.opencode-skills/
+# Local environment files: NEVER commit real values. Only *.example files are versioned.
+.env
+.env.*
+!.env.example
+
+# Logs, caches, OS and editor files
+*.log
+logs/
+.cache/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local scratch
+.tmp-*
