@@ -1,0 +1,10 @@
+{
+  "description": "Streamline software project management with an intelligent platform that centralizes user roles, tasks, and documentation for efficient team collaboration.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

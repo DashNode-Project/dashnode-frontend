@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0A0B0E;
+  color: #F9FAFB;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input, textarea, select {
+  background-color: transparent;
+  color: inherit;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1E1F2B inset;
+  -webkit-text-fill-color: #F9FAFB;
+}
+
+.sidebar-transition {
+  transition: width 0.2s ease, transform 0.2s ease;
+}
+
+.fade-in {
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-8px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.kanban-card {
+  cursor: grab;
+}
+.kanban-card:active {
+  cursor: grabbing;
+}
+
+/* Calendar */
+.calendar-day:hover { background: rgba(59,130,246,0.08); }
+.calendar-day.today { background: rgba(59,130,246,0.15); }
+.calendar-day.selected { background: rgba(59,130,246,0.25); }
+
+/* Availability bars */
+.avail-occupied {
+  background: linear-gradient(135deg, rgba(239,68,68,0.7) 0%, rgba(239,68,68,0.5) 100%);
+}
+.avail-free {
+  background: linear-gradient(135deg, rgba(16,185,129,0.7) 0%, rgba(16,185,129,0.5) 100%);
+}
