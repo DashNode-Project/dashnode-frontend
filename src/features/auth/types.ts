@@ -21,3 +21,15 @@ export interface RegisterResult {
   message: string;
   user: AuthUser;
 }
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+/** What the client may know about its session (never the token). */
+export interface SessionInfo {
+  user: AuthUser;
+  /** ISO-8601 UTC instant at which the session ends (8 hours after login). */
+  expires_at: string;
+}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { useFlash } from '@/app/FlashContext';
+import { useSetFlash } from '@/app/FlashContext';
 import { PATHS } from '@/app/paths';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -40,7 +40,7 @@ const FORM_LEVEL_CODES = new Set(['REQUIRED_FIELDS', 'ROLE_NOT_ALLOWED']);
 /** 'Registro de Gerente' screen (HU_DN_01_02). The role is never chosen by the user. */
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { setFlash } = useFlash();
+  const setFlash = useSetFlash();
   const formRef = useRef<HTMLFormElement>(null);
   const [values, setValues] = useState<RegisterValues>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors<RegisterField>>({});
@@ -95,7 +95,7 @@ export default function RegisterPage() {
         password: values.password,
         confirm_password: values.confirmPassword,
       });
-      setFlash({ kind: 'success', message: AUTH_MESSAGES.registerSuccess });
+      setFlash({ kind: 'success', message: AUTH_MESSAGES.registerSuccess }, PATHS.login);
       navigate(PATHS.login, { replace: true });
     } catch (error) {
       setSubmitting(false);

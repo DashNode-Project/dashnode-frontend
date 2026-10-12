@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { FlashProvider, useFlash } from '@/app/FlashContext';
+import { FlashProvider, useIncomingFlash } from '@/app/FlashContext';
 import { PATHS } from '@/app/paths';
 import { apiError, mockFetch, ok } from '@/test/fetchMock';
 import RegisterPage from './RegisterPage';
@@ -16,8 +16,7 @@ const VALID = {
 };
 
 function LoginProbe() {
-  const { takeFlash } = useFlash();
-  const flash = takeFlash();
+  const { flash } = useIncomingFlash();
   return (
     <div>
       <p>pantalla de inicio de sesión</p>

@@ -1,12 +1,16 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { LoadFailureBoundary } from '@/components/LoadFailureBoundary';
+import { AuthProvider } from '@/features/auth/AuthContext';
+import { GuestOnly, RequireAuth, RequireRole } from '@/features/auth/guards';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { FlashProvider } from './FlashContext';
 import { PATHS } from './paths';
 
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'));
+const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/RegisterPage'));
+const HomePage = lazy(() => import('@/features/home/HomePage'));
 
 function PageLoading() {
   return (
@@ -19,15 +23,34 @@ function PageLoading() {
 export function AppRoutes() {
   return (
     <FlashProvider>
-      <LoadFailureBoundary>
-        <Suspense fallback={<PageLoading />}>
-          <Routes>
-            <Route path={PATHS.landing} element={<LandingPage />} />
-            <Route path={PATHS.register} element={<RegisterPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </LoadFailureBoundary>
+      <AuthProvider>
+        <LoadFailureBoundary>
+          <Suspense fallback={<PageLoading />}>
+            <Routes>
+              <Route path={PATHS.landing} element={<LandingPage />} />
+
+              <Route element={<GuestOnly />}>
+                <Route path={PATHS.login} element={<LoginPage />} />
+                <Route path={PATHS.register} element={<RegisterPage />} />
+              </Route>
+
+              <Route element={<RequireAuth />}>
+                <Route element={<RequireRole allow="admin" />}>
+                  <Route path={PATHS.homeAdmin} element={<HomePage />} />
+                </Route>
+                <Route element={<RequireRole allow="manager" />}>
+                  <Route path={PATHS.homeManager} element={<HomePage />} />
+                </Route>
+                <Route element={<RequireRole allow="developer" />}>
+                  <Route path={PATHS.homeDeveloper} element={<HomePage />} />
+                </Route>
+              </Route>
+
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </LoadFailureBoundary>
+      </AuthProvider>
     </FlashProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { InputHTMLAttributes, ReactNode } from 'react';
+import type { InputHTMLAttributes, ReactNode, Ref } from 'react';
 import { AlertCircle } from 'lucide-react';
 
 export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
@@ -9,6 +9,7 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   /** Element rendered inside the field, on the right (e.g. the show/hide password button). */
   trailing?: ReactNode;
   id?: string;
+  ref?: Ref<HTMLInputElement>;
 }
 
 export function TextField({
