@@ -25,6 +25,7 @@ export default function SetPasswordPage() {
   const [confirmError, setConfirmError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showInvalidBanner, setShowInvalidBanner] = useState(true);
 
   const linkInvalid = token.trim() === '';
 
@@ -80,9 +81,11 @@ export default function SetPasswordPage() {
         title="Establecer contraseña"
         subtitle="Use el enlace que recibió por correo electrónico."
       >
-        <Alert variant="error" className="mb-4">
-          El enlace no es válido o ha expirado. Solicite uno nuevo.
-        </Alert>
+        {showInvalidBanner ? (
+          <Alert variant="error" className="mb-4" onDismiss={() => setShowInvalidBanner(false)}>
+            El enlace no es válido o ha expirado. Solicite uno nuevo.
+          </Alert>
+        ) : null}
         <Link
           to={PATHS.forgotPassword}
           className="text-sm text-blue-300 underline underline-offset-4 hover:text-blue-200"
@@ -127,7 +130,11 @@ export default function SetPasswordPage() {
           required
         />
 
-        {formError ? <Alert variant="error">{formError}</Alert> : null}
+        {formError ? (
+          <Alert variant="error" onDismiss={() => setFormError(null)}>
+            {formError}
+          </Alert>
+        ) : null}
 
         <Button
           type="submit"

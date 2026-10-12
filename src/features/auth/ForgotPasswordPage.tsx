@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
       subtitle="Ingrese el correo asociado a su cuenta. Le enviaremos un enlace si está registrado."
     >
       {success ? (
-        <Alert variant="success" className="mb-4">
+        <Alert variant="success" className="mb-4" onDismiss={() => setSuccess(null)}>
           {success}
         </Alert>
       ) : null}
@@ -86,7 +86,11 @@ export default function ForgotPasswordPage() {
           required
         />
 
-        {formError ? <Alert variant="error">{formError}</Alert> : null}
+        {formError ? (
+          <Alert variant="error" onDismiss={() => setFormError(null)}>
+            {formError}
+          </Alert>
+        ) : null}
 
         <Button type="submit" className="w-full" disabled={email.length === 0} loading={submitting}>
           Enviar enlace

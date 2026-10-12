@@ -73,7 +73,11 @@ export function AdminUsersPanel() {
         Usuarios
       </h2>
       {banner ? (
-        <Alert variant={banner.kind === 'success' ? 'success' : 'error'} className="mb-4">
+        <Alert
+          variant={banner.kind === 'success' ? 'success' : 'error'}
+          className="mb-4"
+          onDismiss={() => setBanner(null)}
+        >
           {banner.message}
         </Alert>
       ) : null}

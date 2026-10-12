@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
 import { Logo } from '@/components/ui/Logo';
 import { AiAssistantButton, HeaderTools } from './HeaderTools';
+import { DevelopmentNotice } from './DevelopmentNotice';
 import { SideNav } from './SideNav';
 import { UserMenu } from './UserMenu';
 
@@ -18,6 +19,7 @@ export function AppShell() {
           <UserMenu />
         </div>
       </header>
+      <DevelopmentNotice />
       <div className="flex flex-1 flex-col md:flex-row">
         <SideNav />
         <main id="main" className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">

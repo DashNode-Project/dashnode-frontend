@@ -9,6 +9,7 @@ import { FlashProvider } from './FlashContext';
 import { PATHS } from './paths';
 
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'));
+const AboutPage = lazy(() => import('@/features/landing/AboutPage'));
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/features/auth/ForgotPasswordPage'));
@@ -31,6 +32,7 @@ export function AppRoutes() {
           <Suspense fallback={<PageLoading />}>
             <Routes>
               <Route path={PATHS.landing} element={<LandingPage />} />
+              <Route path={PATHS.about} element={<AboutPage />} />
 
               <Route element={<GuestOnly />}>
                 <Route path={PATHS.login} element={<LoginPage />} />

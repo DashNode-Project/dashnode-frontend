@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { ArrowRight, ChevronRight, Layers } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { LANDING_FEATURES, LANDING_MVPS, LANDING_TRACEABILITY } from './landingContent';
+import { LandingFooter } from './LandingFooter';
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -12,6 +14,15 @@ function scrollTo(id: string) {
  * Public presentation page (HU_DN_01_01). Static content only; no protected data.
  */
 export default function LandingPage() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const scrollTo = (location.state as { scrollTo?: string } | null)?.scrollTo;
+    if (scrollTo) {
+      document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [location.state]);
+
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-[#F9FAFB]">
       <a href="#main" className="skip-link">
@@ -40,13 +51,9 @@ export default function LandingPage() {
           >
             MVPs
           </button>
-          <button
-            type="button"
-            onClick={() => scrollTo('about')}
-            className="transition-colors hover:text-white"
-          >
+          <Link to={PATHS.about} className="transition-colors hover:text-white">
             Acerca de
-          </button>
+          </Link>
         </div>
         <ButtonLink to={PATHS.login} size="sm">
           Iniciar sesión
@@ -235,7 +242,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="px-6 py-20">
+        <section id="traceability" className="px-6 py-20">
           <div className="mx-auto max-w-4xl text-center">
             <p className="mb-3 text-xs font-medium uppercase tracking-widest text-emerald-400">
               Trazabilidad
@@ -285,63 +292,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer id="about" className="border-t border-white/6 px-6 py-10">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-8 grid gap-8 md:grid-cols-4">
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500">
-                  <Layers size={13} className="text-white" aria-hidden="true" />
-                </div>
-                <span className="text-sm font-bold">DashNode</span>
-              </div>
-              <p className="text-xs leading-relaxed text-[#6B7280]">
-                Plataforma inteligente para gestión y seguimiento de proyectos de software.
-              </p>
-            </div>
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#F9FAFB]">
-                Producto
-              </p>
-              <ul className="flex flex-col gap-2 text-xs text-[#6B7280]">
-                {['Capacidades', 'MVPs', 'Trazabilidad', 'Seguridad'].map((l) => (
-                  <li key={l}>{l}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#F9FAFB]">
-                Equipo
-              </p>
-              <ul className="flex flex-col gap-2 text-xs text-[#6B7280]">
-                {['Andrey Quiceno', 'Jhorman Gómez', 'Iván Ausecha', 'David Enciso'].map((n) => (
-                  <li key={n}>{n}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#F9FAFB]">
-                Institución
-              </p>
-              <ul className="flex flex-col gap-2 text-xs text-[#6B7280]">
-                <li>Universidad del Valle</li>
-                <li>Ingeniería de Sistemas y Computación</li>
-                <li>Proyecto Integrador II</li>
-                <li>v1.0 conceptual</li>
-              </ul>
-            </div>
-          </div>
-          <div className="flex items-center justify-between border-t border-white/6 pt-6">
-            <p className="text-xs text-[#6B7280]">© 2026 DashNode · Universidad del Valle</p>
-            <Link
-              to="#about"
-              className="text-xs text-[#6B7280] transition-colors hover:text-[#9CA3AF]"
-            >
-              Acerca del proyecto
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter onLanding />
     </div>
   );
 }

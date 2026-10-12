@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useSetFlash } from '@/app/FlashContext';
 import { PATHS } from '@/app/paths';
 import { Alert } from '@/components/ui/Alert';
@@ -163,16 +163,27 @@ export default function RegisterPage() {
           required
         />
 
-        {formError ? <Alert variant="error">{formError}</Alert> : null}
+        {formError ? (
+          <Alert variant="error" onDismiss={() => setFormError(null)}>
+            {formError}
+          </Alert>
+        ) : null}
 
         <div className="mt-1 flex gap-3">
           <ButtonLink to={PATHS.login} variant="outline" className="flex-1">
-            Cancelar
+            Iniciar sesión
           </ButtonLink>
           <Button type="submit" className="flex-1" disabled={anyEmpty} loading={submitting}>
             Registrarme
           </Button>
         </div>
+
+        <Link
+          to={PATHS.landing}
+          className="text-center text-sm text-blue-300 underline underline-offset-4 hover:text-blue-200"
+        >
+          Volver
+        </Link>
       </form>
     </AuthLayout>
   );

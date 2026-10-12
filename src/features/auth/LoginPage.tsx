@@ -80,7 +80,7 @@ export default function LoginPage() {
   return (
     <AuthLayout title="Inicio de sesión" subtitle="Ingrese con su correo y contraseña.">
       {flash ? (
-        <Alert variant={flash.kind} className="mb-4">
+        <Alert variant={flash.kind} className="mb-4" onDismiss={dismiss}>
           {flash.message}
         </Alert>
       ) : null}
@@ -116,7 +116,11 @@ export default function LoginPage() {
           required
         />
 
-        {formError ? <Alert variant="error">{formError}</Alert> : null}
+        {formError ? (
+          <Alert variant="error" onDismiss={() => setFormError(null)}>
+            {formError}
+          </Alert>
+        ) : null}
 
         <Button
           type="submit"
@@ -139,6 +143,12 @@ export default function LoginPage() {
             className="text-blue-300 underline underline-offset-4 hover:text-blue-200"
           >
             Registrarme como Gerente
+          </Link>
+          <Link
+            to={PATHS.landing}
+            className="text-blue-300 underline underline-offset-4 hover:text-blue-200"
+          >
+            Volver
           </Link>
         </div>
       </form>

@@ -88,12 +88,12 @@ describe('HU_DN_01_02 - form (criteria 1 and 2)', () => {
     expect(screen.getByLabelText('Contraseña')).toHaveAttribute('type', 'text');
   });
 
-  it("'Cancelar' returns to the login without saving (2.7)", async () => {
+  it("'Iniciar sesión' returns to the login without saving (2.7)", async () => {
     const calls = mockFetch(() => ok({}));
     const user = userEvent.setup();
     renderPage();
     await user.type(screen.getByLabelText('Nombre completo'), VALID.name);
-    await user.click(screen.getByRole('link', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('link', { name: 'Iniciar sesión' }));
     expect(screen.getByText('pantalla de inicio de sesión')).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
