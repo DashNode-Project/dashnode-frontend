@@ -27,6 +27,10 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface LogoutResult {
+  message: string;
+}
+
 /** What the client may know about its session (never the token). */
 export interface SessionInfo {
   user: AuthUser;

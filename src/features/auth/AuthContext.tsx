@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { loginRequest } from './api';
+import { useSetFlash } from '@/app/FlashContext';
+import { PATHS } from '@/app/paths';
+import { MESSAGES } from '@/lib/messages';
+import { loginRequest, logoutRequest } from './api';
 import type { AuthUser, LoginPayload } from './types';
 
 interface AuthState {
@@ -12,7 +15,14 @@ interface AuthApi extends AuthState {
   isAuthenticated: boolean;
   /** Opens a session. Rejects with the API error so the screen can show its message. */
   login: (payload: LoginPayload) => Promise<AuthUser>;
+  /**
+   * Invalidates the session in the server and clears the client state. Rejects (keeping the
+   * session untouched) when the server could not be reached, so the screen can report it.
+   */
+  logout: () => Promise<void>;
 }
+
+const SIGNED_OUT: AuthState = { user: null, expiresAt: null };
 
 const AuthContext = createContext<AuthApi | null>(null);
 
@@ -21,7 +31,8 @@ const AuthContext = createContext<AuthApi | null>(null);
  * JavaScript cannot read; nothing about the session is written to web storage.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ user: null, expiresAt: null });
+  const [state, setState] = useState<AuthState>(SIGNED_OUT);
+  const setFlash = useSetFlash();
 
   const login = useCallback(async (payload: LoginPayload) => {
     const session = await loginRequest(payload);
@@ -29,9 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return session.user;
   }, []);
 
+  const logout = useCallback(async () => {
+    await logoutRequest();
+    // The message is scheduled first: clearing the user redirects to the login right away.
+    setFlash({ kind: 'success', message: MESSAGES.loggedOut }, PATHS.login);
+    setState(SIGNED_OUT);
+  }, [setFlash]);
+
   const value = useMemo<AuthApi>(
-    () => ({ ...state, isAuthenticated: state.user !== null, login }),
-    [state, login],
+    () => ({ ...state, isAuthenticated: state.user !== null, login, logout }),
+    [state, login, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
