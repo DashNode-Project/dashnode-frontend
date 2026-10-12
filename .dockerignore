@@ -1,0 +1,15 @@
+.git
+.githooks
+.github
+node_modules
+dist
+coverage
+docs
+scripts
+.env
+.env.*
+!.env.example
+*.log
+Dockerfile
+docker-compose.yml
+.dockerignore
