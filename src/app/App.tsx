@@ -16,6 +16,8 @@ const ForgotPasswordPage = lazy(() => import('@/features/auth/ForgotPasswordPage
 const SetPasswordPage = lazy(() => import('@/features/auth/SetPasswordPage'));
 const HomePage = lazy(() => import('@/features/home/HomePage'));
 const UsersPage = lazy(() => import('@/features/users/UsersPage'));
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
+const PermissionsPage = lazy(() => import('@/features/permissions/PermissionsPage'));
 
 function PageLoading() {
   return (
@@ -44,6 +46,8 @@ export function AppRoutes() {
 
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
+                  <Route path={PATHS.profile} element={<ProfilePage />} />
+                  <Route path={PATHS.permissions} element={<PermissionsPage />} />
                   <Route element={<RequireRole allow="admin" />}>
                     <Route path={PATHS.homeAdmin} element={<HomePage />} />
                     <Route path={PATHS.users} element={<UsersPage />} />

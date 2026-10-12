@@ -1,4 +1,4 @@
-import { Home, Users } from 'lucide-react';
+import { Home, User, Users } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -40,6 +40,15 @@ export function SideNav() {
           Usuarios
         </NavLink>
       ) : null}
+      <NavLink
+        to={PATHS.profile}
+        className={({ isActive }) =>
+          `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+        }
+      >
+        <User size={16} aria-hidden="true" />
+        Perfil
+      </NavLink>
       {items.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
