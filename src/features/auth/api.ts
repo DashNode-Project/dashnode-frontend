@@ -20,3 +20,8 @@ export function loginRequest(payload: LoginPayload): Promise<SessionInfo> {
 export function logoutRequest(): Promise<LogoutResult> {
   return apiRequest<LogoutResult>('/auth/logout', { method: 'POST' });
 }
+
+/** Asks the server whether the browser's session cookie is still valid (HU_DN_01_05). */
+export function sessionRequest(): Promise<SessionInfo> {
+  return apiRequest<SessionInfo>('/auth/session');
+}

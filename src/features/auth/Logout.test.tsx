@@ -5,17 +5,12 @@ import { axe } from 'jest-axe';
 import { PATHS } from '@/app/paths';
 import { currentPath, renderApp, signIn } from '@/test/app';
 import { makeSession } from '@/test/factories';
-import { apiError, mockFetch, ok } from '@/test/fetchMock';
-import type { RecordedCall } from '@/test/fetchMock';
+import { apiError, callsTo, mockApi, ok } from '@/test/fetchMock';
 import type { Role } from './types';
 
 /** Server double: login succeeds, logout answers with `logout`. */
-function server(role: Role, logout: (call: RecordedCall) => ReturnType<typeof ok>) {
-  return mockFetch((call) => {
-    if (call.url.endsWith('/auth/login')) return ok(makeSession(role));
-    if (call.url.endsWith('/auth/logout')) return logout(call);
-    return apiError(404, 'NOT_FOUND', 'x');
-  });
+function server(role: Role, logout: Parameters<typeof mockApi>[0]['logout']) {
+  return mockApi({ login: ok(makeSession(role)), logout });
 }
 
 async function openMenu(user: ReturnType<typeof userEvent.setup>) {
@@ -89,7 +84,7 @@ describe('HU_DN_01_04 - success (criteria 3, 4 and 5)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Inicio de sesión' })).toBeInTheDocument();
     expect(await screen.findByRole('status')).toHaveTextContent('Sesión cerrada correctamente.');
-    const logouts = calls.filter((call) => call.url.endsWith('/auth/logout'));
+    const logouts = callsTo(calls, 'logout');
     expect(logouts).toHaveLength(1);
     expect(logouts[0]).toMatchObject({ method: 'POST', credentials: 'include' });
   });

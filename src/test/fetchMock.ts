@@ -47,3 +47,41 @@ export function mockFetch(handler: Handler): RecordedCall[] {
   vi.stubGlobal('fetch', fake);
   return calls;
 }
+
+type Route = MockReply | ((call: RecordedCall) => MockReply | Promise<MockReply>);
+
+const ENDPOINTS = {
+  session: { method: 'GET', suffix: '/auth/session' },
+  login: { method: 'POST', suffix: '/auth/login' },
+  logout: { method: 'POST', suffix: '/auth/logout' },
+  register: { method: 'POST', suffix: '/auth/register' },
+} as const;
+
+export type Endpoint = keyof typeof ENDPOINTS;
+
+/**
+ * Route-based API double. Unlisted endpoints answer 404 except `session`, which defaults to
+ * "no session" because every protected or guest screen asks the server about it.
+ */
+export function mockApi(routes: Partial<Record<Endpoint, Route>>): RecordedCall[] {
+  const withDefaults: Partial<Record<Endpoint, Route>> = {
+    session: apiError(401, 'NOT_AUTHENTICATED', 'Debe iniciar sesión para continuar.'),
+    ...routes,
+  };
+  return mockFetch((call) => {
+    for (const [name, endpoint] of Object.entries(ENDPOINTS)) {
+      if (call.method === endpoint.method && call.url.endsWith(endpoint.suffix)) {
+        const route = withDefaults[name as Endpoint];
+        if (route === undefined) break;
+        return typeof route === 'function' ? route(call) : route;
+      }
+    }
+    return apiError(404, 'NOT_FOUND', 'Not found');
+  });
+}
+
+/** Calls made to one endpoint. */
+export function callsTo(calls: RecordedCall[], endpoint: Endpoint): RecordedCall[] {
+  const { method, suffix } = ENDPOINTS[endpoint];
+  return calls.filter((call) => call.method === method && call.url.endsWith(suffix));
+}

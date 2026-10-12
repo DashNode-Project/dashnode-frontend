@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { render, screen } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter, useLocation } from 'react-router';
@@ -12,8 +13,8 @@ function Where() {
 }
 
 /** Renders the whole application plus a few helper links to navigate without reloading. */
-export function renderApp(path: string = PATHS.login) {
-  return render(
+export function renderApp(path: string = PATHS.login, options: { strict?: boolean } = {}) {
+  const tree = (
     <MemoryRouter initialEntries={[path]}>
       <nav aria-label="test">
         <Link to={PATHS.landing}>ir-inicio</Link>
@@ -23,8 +24,9 @@ export function renderApp(path: string = PATHS.login) {
       </nav>
       <Where />
       <AppRoutes />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  return render(options.strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 export const currentPath = () => screen.getByTestId('where').textContent;

@@ -1,9 +1,6 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { RefreshCw } from 'lucide-react';
-import { Alert } from '@/components/ui/Alert';
-import { Button } from '@/components/ui/Button';
-import { MESSAGES } from '@/lib/messages';
+import { LoadFailureScreen } from './LoadFailureScreen';
 
 interface Props {
   children: ReactNode;
@@ -42,17 +39,6 @@ export class LoadFailureBoundary extends Component<Props, State> {
 
   override render(): ReactNode {
     if (!this.state.failed) return this.props.children;
-    return (
-      <main
-        id="main"
-        className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center"
-      >
-        <Alert variant="error">{MESSAGES.loadFailure}</Alert>
-        <Button variant="outline" onClick={this.retry}>
-          <RefreshCw size={14} aria-hidden="true" />
-          Reintentar
-        </Button>
-      </main>
-    );
+    return <LoadFailureScreen onRetry={this.retry} />;
   }
 }
