@@ -5,8 +5,11 @@ import { useAuth } from '@/features/auth/AuthContext';
 import {
   adminRequestPasswordReset,
   createUserByAdmin,
+  deactivateUserByAdmin,
+  fetchPendingAssignments,
   inviteDeveloper,
   listAdminUsers,
+  reactivateUserByAdmin,
   updateUserByAdmin,
   type AdminUserSummary,
 } from '@/features/auth/api';
@@ -17,7 +20,6 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
-import { notifyUnderDevelopment } from '@/lib/underDevelopment';
 import { USER_MESSAGES } from './messages';
 
 type StaffRole = 'manager' | 'developer';
@@ -57,6 +59,11 @@ export default function UsersPage() {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof UserFormState, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [resetTarget, setResetTarget] = useState<AdminUserSummary | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<AdminUserSummary | null>(null);
+  const [reactivateTarget, setReactivateTarget] = useState<AdminUserSummary | null>(null);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const [pendingError, setPendingError] = useState<string | null>(null);
+  const [pendingLoading, setPendingLoading] = useState(false);
 
   const loadUsers = useCallback(async () => {
     if (!isAdmin) return;
@@ -194,6 +201,75 @@ export default function UsersPage() {
       } else {
         setBanner({ kind: 'error', message: error.message });
       }
+    } else {
+      setBanner({ kind: 'error', message: MESSAGES.technicalFailure });
+    }
+  }
+
+  async function openDeactivate(u: AdminUserSummary) {
+    setDeactivateTarget(u);
+    setPendingCount(null);
+    setPendingError(null);
+    setPendingLoading(true);
+    try {
+      const result = await fetchPendingAssignments(u.id);
+      setPendingCount(result.pending_count);
+    } catch (error) {
+      if (error instanceof ApiError && !isTechnicalFailure(error)) {
+        setPendingError(USER_MESSAGES.pendingLoadFailure);
+      } else {
+        setPendingError(USER_MESSAGES.pendingLoadFailure);
+      }
+    } finally {
+      setPendingLoading(false);
+    }
+  }
+
+  async function confirmDeactivate() {
+    if (!deactivateTarget || submitting) return;
+    setSubmitting(true);
+    setBanner(null);
+    try {
+      const result = await deactivateUserByAdmin(deactivateTarget.id);
+      setBanner({ kind: 'success', message: result.message });
+      setDeactivateTarget(null);
+      await loadUsers();
+    } catch (error) {
+      mapLifecycleError(error);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function confirmReactivate() {
+    if (!reactivateTarget || submitting) return;
+    setSubmitting(true);
+    setBanner(null);
+    try {
+      const result = await reactivateUserByAdmin(reactivateTarget.id);
+      setBanner({ kind: 'success', message: result.message });
+      setReactivateTarget(null);
+      await loadUsers();
+    } catch (error) {
+      mapLifecycleError(error);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function mapLifecycleError(error: unknown) {
+    if (error instanceof ApiError && !isTechnicalFailure(error)) {
+      if (error.code === 'SELF_DEACTIVATE_BLOCKED') {
+        setBanner({ kind: 'error', message: USER_MESSAGES.selfDeactivateBlocked });
+      } else if (error.code === 'MANAGER_DEACTIVATE_BLOCKED') {
+        setBanner({ kind: 'error', message: USER_MESSAGES.managerDeactivateBlocked });
+      } else if (error.code === 'REACTIVATE_NOT_INACTIVE') {
+        setBanner({ kind: 'error', message: error.message });
+      } else {
+        setBanner({ kind: 'error', message: error.message });
+      }
+      setDeactivateTarget(null);
+      setReactivateTarget(null);
     } else {
       setBanner({ kind: 'error', message: MESSAGES.technicalFailure });
     }
@@ -344,14 +420,25 @@ export default function UsersPage() {
                           >
                             Editar
                           </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => notifyUnderDevelopment('users:deactivate')}
-                          >
-                            Desactivar
-                          </Button>
+                          {u.is_active ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void openDeactivate(u)}
+                            >
+                              Desactivar
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setReactivateTarget(u)}
+                            >
+                              Reactivar
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             size="sm"
@@ -427,6 +514,53 @@ export default function UsersPage() {
           submitting={submitting}
           onCancel={() => setResetTarget(null)}
           onConfirm={() => void confirmReset()}
+        />
+      ) : null}
+
+      {deactivateTarget ? (
+        <ConfirmDialog
+          title="Desactivar usuario"
+          message={
+            <>
+              <span>{USER_MESSAGES.deactivateConfirm}</span>
+              {pendingLoading ? (
+                <span className="mt-3 block text-xs text-[#9CA3AF]">Cargando asignaciones…</span>
+              ) : null}
+              {pendingError ? (
+                <span className="mt-3 block text-xs text-red-300">{pendingError}</span>
+              ) : null}
+              {!pendingLoading &&
+              pendingError === null &&
+              pendingCount !== null &&
+              pendingCount > 0 ? (
+                <span className="mt-3 block rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                  {USER_MESSAGES.pendingTasksNotice(pendingCount)}
+                </span>
+              ) : null}
+            </>
+          }
+          confirmLabel="Confirmar"
+          submitting={submitting || pendingLoading}
+          onCancel={() => setDeactivateTarget(null)}
+          onConfirm={() => void confirmDeactivate()}
+          extraActions={
+            pendingCount !== null && pendingCount > 0 ? (
+              <Button type="button" variant="outline" size="sm" disabled>
+                Ir a reasignar tareas
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      {reactivateTarget ? (
+        <ConfirmDialog
+          title="Reactivar usuario"
+          message={USER_MESSAGES.reactivateConfirm}
+          confirmLabel="Confirmar"
+          submitting={submitting}
+          onCancel={() => setReactivateTarget(null)}
+          onConfirm={() => void confirmReactivate()}
         />
       ) : null}
     </div>
@@ -536,6 +670,7 @@ function ConfirmDialog({
   submitting,
   onCancel,
   onConfirm,
+  extraActions,
 }: {
   title: string;
   message: ReactNode;
@@ -543,6 +678,7 @@ function ConfirmDialog({
   submitting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  extraActions?: ReactNode;
 }) {
   return (
     <div
@@ -556,7 +692,8 @@ function ConfirmDialog({
           {title}
         </h2>
         <p className="mb-6 text-sm text-[#9CA3AF]">{message}</p>
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {extraActions}
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>

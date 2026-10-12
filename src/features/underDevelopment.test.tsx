@@ -10,14 +10,13 @@ import { mockApi, ok } from '@/test/fetchMock';
 import type { Role } from '@/features/auth/types';
 
 const EXPECTED_NAV: Record<Role, string[]> = {
-  admin: ['Perfil'],
+  admin: [],
   manager: [
     'Proyectos',
     'Mis tareas',
     'Reuniones',
     'Calendario',
     'Disponibilidad',
-    'Perfil',
     'Manual de usuario',
   ],
   developer: [
@@ -26,7 +25,6 @@ const EXPECTED_NAV: Record<Role, string[]> = {
     'Reuniones',
     'Calendario',
     'Disponibilidad',
-    'Perfil',
     'Manual de usuario',
   ],
 };

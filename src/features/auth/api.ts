@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/api/client';
+import { apiFormRequest, apiRequest } from '@/lib/api/client';
 import type {
   LoginPayload,
   LogoutResult,
@@ -120,4 +120,47 @@ export function updateUserByAdmin(
     method: 'PATCH',
     body: payload,
   });
+}
+
+export function deactivateUserByAdmin(userId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/auth/admin/users/${userId}/deactivate`, {
+    method: 'POST',
+  });
+}
+
+export function reactivateUserByAdmin(userId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/auth/admin/users/${userId}/reactivate`, {
+    method: 'POST',
+  });
+}
+
+export function fetchPendingAssignments(userId: string): Promise<{ pending_count: number }> {
+  return apiRequest<{ pending_count: number }>(`/auth/admin/users/${userId}/pending-assignments`);
+}
+
+export interface ProfileData {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  avatar_url: string | null;
+}
+
+export interface ProfileResponse {
+  message?: string | null;
+  profile: ProfileData;
+}
+
+export function fetchProfile(): Promise<ProfileResponse> {
+  return apiRequest<ProfileResponse>('/auth/profile');
+}
+
+export function updateProfile(payload: {
+  name: string;
+  avatar?: File | null;
+}): Promise<ProfileResponse> {
+  const formData = new FormData();
+  formData.set('name', payload.name);
+  if (payload.avatar) formData.set('avatar', payload.avatar);
+  return apiFormRequest<ProfileResponse>('/auth/profile', { method: 'PATCH', formData });
 }

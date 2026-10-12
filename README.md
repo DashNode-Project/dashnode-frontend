@@ -1,7 +1,15 @@
 # DashNode frontend
 
-Cliente web de DashNode (React 19 + Vite + TypeScript). Esta rama implementa
-la épica EP-01: autenticación y sesiones.
+![Node](https://img.shields.io/badge/node-22%2B-339933?logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/typescript-5.x-3178C6?logo=typescript&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+Cliente web de DashNode (React 19 + Vite + TypeScript). Incluye **EP-01** (autenticación y sesiones) y **EP-02** (administración de usuarios, ciclo de vida de cuenta, matriz de permisos y perfil).
+
+- [Changelog](./CHANGELOG.md)
+- [License](./LICENSE)
+- [Guía de despliegue](./docs/deployment-guide.md)
 
 El directorio `docs/` del mockup de Figma se conserva. La aplicación ya no usa
 datos sintéticos ni `localStorage`: habla con el backend real mediante cookie
@@ -73,14 +81,17 @@ Ejemplo E2E con cuentas de seed del backend:
 node scripts/e2e-stack.mjs --base http://localhost:8080 --env-file ../dashnode-backend/.env
 ```
 
-## Rutas EP-01
+## Rutas principales
 
 - `/` presentación pública
 - `/iniciar-sesion` inicio de sesión
 - `/registro` registro de Gerente
 - `/inicio/administrador`, `/inicio/gerente`, `/inicio/desarrollador` inicio por rol
+- `/usuarios` administración de usuarios (Administrador / invitaciones Gerente)
+- `/mi-perfil` perfil y avatar (HU_DN_01_21)
+- `/permisos-y-roles` matriz informativa (HU_DN_01_20)
 
-Las acciones de módulos posteriores registran en consola
+Otras entradas del menú lateral siguen marcadas como fuera de alcance y muestran
 `Funcionalidad en desarrollo, no disponible`.
 
 ## Documentación FRAMAI

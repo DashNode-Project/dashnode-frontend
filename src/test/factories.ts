@@ -18,8 +18,9 @@ export function makeUser(role: Role, overrides: Partial<AuthUser> = {}): AuthUse
   };
 }
 
-export function makeSession(role: Role, expiresAt = '2026-10-12T20:00:00Z'): SessionInfo {
-  return { user: makeUser(role), expires_at: expiresAt };
+export function makeSession(role: Role, expiresAt?: string): SessionInfo {
+  const expires = expiresAt ?? new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+  return { user: makeUser(role), expires_at: expires };
 }
 
 /** Value typed in tests; built dynamically so secret scanners do not mistake it for a secret. */

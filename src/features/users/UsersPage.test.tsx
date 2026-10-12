@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Role } from '@/features/auth/types';
 import * as authApi from '@/features/auth/api';
+import { ApiError, NetworkError } from '@/lib/api/errors';
+import { MESSAGES } from '@/lib/messages';
 import { USER_MESSAGES } from './messages';
 import UsersPage from './UsersPage';
 
@@ -28,6 +30,9 @@ vi.mock('@/features/auth/api', () => ({
   inviteDeveloper: vi.fn(),
   updateUserByAdmin: vi.fn(),
   adminRequestPasswordReset: vi.fn(),
+  deactivateUserByAdmin: vi.fn(),
+  reactivateUserByAdmin: vi.fn(),
+  fetchPendingAssignments: vi.fn(),
 }));
 
 vi.mock('@/features/auth/AuthContext', () => ({
@@ -39,6 +44,13 @@ describe('UsersPage', () => {
     vi.mocked(authApi.listAdminUsers).mockResolvedValue([]);
     vi.mocked(authApi.createUserByAdmin).mockResolvedValue({
       message: USER_MESSAGES.userCreated,
+    });
+    vi.mocked(authApi.fetchPendingAssignments).mockResolvedValue({ pending_count: 0 });
+    vi.mocked(authApi.deactivateUserByAdmin).mockResolvedValue({
+      message: USER_MESSAGES.userDeactivated,
+    });
+    vi.mocked(authApi.reactivateUserByAdmin).mockResolvedValue({
+      message: USER_MESSAGES.userReactivated,
     });
   });
 
@@ -255,5 +267,268 @@ describe('UsersPage', () => {
     await user.type(nameInput, 'Robert');
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
     expect(await screen.findByText(USER_MESSAGES.userUpdated)).toBeInTheDocument();
+  });
+
+  it('confirms user deactivation with pending tasks notice', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '2',
+        name: 'Carlos',
+        email: 'carlos@empresa.com',
+        role: 'developer',
+        is_active: true,
+      },
+    ]);
+    vi.mocked(authApi.fetchPendingAssignments).mockResolvedValue({ pending_count: 3 });
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    expect(await screen.findByText(USER_MESSAGES.pendingTasksNotice(3))).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByText(USER_MESSAGES.userDeactivated)).toBeInTheDocument();
+  });
+
+  it('reactivates an inactive user', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '3',
+        name: 'Inactivo',
+        email: 'off@empresa.com',
+        role: 'developer',
+        is_active: false,
+      },
+    ]);
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Reactivar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByText(USER_MESSAGES.userReactivated)).toBeInTheDocument();
+  });
+
+  it('shows blocked message when admin cannot deactivate target', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '9',
+        name: 'Self',
+        email: 'self@empresa.com',
+        role: 'admin',
+        is_active: true,
+      },
+    ]);
+    vi.mocked(authApi.deactivateUserByAdmin).mockRejectedValue(
+      new ApiError(400, {
+        code: 'SELF_DEACTIVATE_BLOCKED',
+        message: USER_MESSAGES.selfDeactivateBlocked,
+        fields: {},
+      }),
+    );
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByText(USER_MESSAGES.selfDeactivateBlocked)).toBeInTheDocument();
+  });
+
+  it('shows pending load failure for API errors in deactivate dialog', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '2',
+        name: 'Carlos',
+        email: 'carlos@empresa.com',
+        role: 'developer',
+        is_active: true,
+      },
+    ]);
+    vi.mocked(authApi.fetchPendingAssignments).mockRejectedValue(
+      new ApiError(500, { code: 'SERVER', message: 'x', fields: {} }),
+    );
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    expect(await screen.findByText(USER_MESSAGES.pendingLoadFailure)).toBeInTheDocument();
+  });
+
+  it('shows pending load failure in deactivate dialog', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '2',
+        name: 'Carlos',
+        email: 'carlos@empresa.com',
+        role: 'developer',
+        is_active: true,
+      },
+    ]);
+    vi.mocked(authApi.fetchPendingAssignments).mockRejectedValue(new NetworkError());
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    expect(await screen.findByText(USER_MESSAGES.pendingLoadFailure)).toBeInTheDocument();
+  });
+
+  it('shows manager deactivate blocked message', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '5',
+        name: 'Lead',
+        email: 'lead@empresa.com',
+        role: 'manager',
+        is_active: true,
+      },
+    ]);
+    vi.mocked(authApi.deactivateUserByAdmin).mockRejectedValue(
+      new ApiError(400, {
+        code: 'MANAGER_DEACTIVATE_BLOCKED',
+        message: USER_MESSAGES.managerDeactivateBlocked,
+        fields: {},
+      }),
+    );
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByText(USER_MESSAGES.managerDeactivateBlocked)).toBeInTheDocument();
+  });
+
+  it('shows technical failure on deactivate error', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '2',
+        name: 'Carlos',
+        email: 'carlos@empresa.com',
+        role: 'developer',
+        is_active: true,
+      },
+    ]);
+    vi.mocked(authApi.deactivateUserByAdmin).mockRejectedValue(new NetworkError());
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByText(MESSAGES.technicalFailure)).toBeInTheDocument();
+  });
+
+  it('shows reactivate validation message from API', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '3',
+        name: 'Inactivo',
+        email: 'off@empresa.com',
+        role: 'developer',
+        is_active: false,
+      },
+    ]);
+    vi.mocked(authApi.reactivateUserByAdmin).mockRejectedValue(
+      new ApiError(400, {
+        code: 'REACTIVATE_NOT_INACTIVE',
+        message: 'Solo se pueden reactivar usuarios desactivados.',
+        fields: {},
+      }),
+    );
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Reactivar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(
+      await screen.findByText('Solo se pueden reactivar usuarios desactivados.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows technical failure on reactivate error', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '3',
+        name: 'Inactivo',
+        email: 'off@empresa.com',
+        role: 'developer',
+        is_active: false,
+      },
+    ]);
+    vi.mocked(authApi.reactivateUserByAdmin).mockRejectedValue(new NetworkError());
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Reactivar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByText(MESSAGES.technicalFailure)).toBeInTheDocument();
   });
 });

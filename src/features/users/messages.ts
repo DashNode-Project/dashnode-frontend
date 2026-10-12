@@ -11,4 +11,17 @@ export const USER_MESSAGES = {
   filterEmpty: 'No se encontraron usuarios con los filtros aplicados.',
   managerRoleBlocked:
     'No puede cambiar el rol de un Gerente responsable de proyectos. Reasigne primero la responsabilidad.',
+  deactivateConfirm:
+    '¿Está seguro de que desea desactivar este usuario? Perderá el acceso al sistema de inmediato.',
+  reactivateConfirm: '¿Está seguro de que desea reactivar este usuario?',
+  userDeactivated: 'Usuario desactivado correctamente.',
+  userReactivated: 'Usuario reactivado correctamente.',
+  selfDeactivateBlocked: 'No puede desactivar su propia cuenta de Administrador.',
+  managerDeactivateBlocked:
+    'No puede desactivar a un Gerente responsable de proyectos. Reasigne primero la responsabilidad.',
+  pendingTasksNotice: (count: number) =>
+    `El usuario tiene ${count} tareas/historias pendientes asignadas. Podrá reasignarlas desde el backlog.`,
+  pendingLoadFailure: 'No fue posible cargar la información. Intente nuevamente.',
+  avatarInvalid: 'El avatar debe ser una imagen PNG, JPG o WEBP de hasta 2 MB.',
+  profileUpdated: 'Perfil actualizado correctamente.',
 } as const;

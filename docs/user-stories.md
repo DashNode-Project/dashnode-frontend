@@ -528,3 +528,15 @@
 | HU_DN_01_16 | Implementado | Modal «Editar usuario», `PATCH /auth/admin/users/{id}`, mensajes literales |
 
 ---
+
+## Estado de implementación — EP-02 (HU_DN_01_17 … HU_DN_01_21, Sprint 1)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_01_17 | Implementado | `UsersPage` diálogo Desactivar/Confirmar, `POST .../deactivate`, mensajes literales |
+| HU_DN_01_18 | Implementado | Acción Reactivar + confirmación, `POST .../reactivate` |
+| HU_DN_01_19 | Implementado | Aviso dinámico de tareas pendientes al abrir modal de desactivación |
+| HU_DN_01_20 | Implementado | `PermissionsPage`, enlace «Permisos y roles» en menú de usuario |
+| HU_DN_01_21 | Implementado | `ProfilePage`, subida multipart, `applySessionUser` en sesión |
+
+---
