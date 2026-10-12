@@ -525,5 +525,6 @@
 | HU_DN_01_12 | Implementado | «Invitar Desarrollador», `POST /auth/manager/users/invite`, tests invite en `UsersPage.test.tsx` |
 | HU_DN_01_13 | Implementado | UI sin rol Administrador; servidor 403 en manipulación de rol admin |
 | HU_DN_01_14 | Implementado | Tabla con filtros, estados Activo/Desactivado, `UsersAdmin.integration.test.tsx` |
+| HU_DN_01_16 | Implementado | Modal «Editar usuario», `PATCH /auth/admin/users/{id}`, mensajes literales |
 
 ---
