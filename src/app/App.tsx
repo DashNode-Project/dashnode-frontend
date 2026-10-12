@@ -2,9 +2,11 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { LoadFailureBoundary } from '@/components/LoadFailureBoundary';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { FlashProvider } from './FlashContext';
 import { PATHS } from './paths';
 
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'));
+const RegisterPage = lazy(() => import('@/features/auth/RegisterPage'));
 
 function PageLoading() {
   return (
@@ -16,14 +18,17 @@ function PageLoading() {
 
 export function AppRoutes() {
   return (
-    <LoadFailureBoundary>
-      <Suspense fallback={<PageLoading />}>
-        <Routes>
-          <Route path={PATHS.landing} element={<LandingPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
-    </LoadFailureBoundary>
+    <FlashProvider>
+      <LoadFailureBoundary>
+        <Suspense fallback={<PageLoading />}>
+          <Routes>
+            <Route path={PATHS.landing} element={<LandingPage />} />
+            <Route path={PATHS.register} element={<RegisterPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </LoadFailureBoundary>
+    </FlashProvider>
   );
 }
 

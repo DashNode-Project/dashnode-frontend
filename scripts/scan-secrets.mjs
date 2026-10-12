@@ -57,7 +57,11 @@ for (const file of listFiles()) {
     }
     if (!TEST_FILE.test(file)) {
       const match = ASSIGNMENT.exec(line);
-      if (match && !PLACEHOLDER.test(match[2] ?? '')) {
+      const value = match?.[2] ?? '';
+      // Identifier-like names ('password', 'confirmPassword') are not secrets: require a mix of
+      // letters and digits, or a long opaque value.
+      const looksSecret = (/\d/.test(value) && /[A-Za-z]/.test(value)) || value.length >= 24;
+      if (match && looksSecret && !PLACEHOLDER.test(value)) {
         findings.push(`${file}:${index + 1}: hard-coded credential-like literal`);
       }
     }
