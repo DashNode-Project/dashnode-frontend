@@ -9,6 +9,7 @@ import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
+import { notifyUnderDevelopment } from '@/lib/underDevelopment';
 import { useAuth } from './AuthContext';
 import { AuthLayout } from './components/AuthLayout';
 import { homePathFor } from './roles';
@@ -125,6 +126,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-2 text-sm">
           <button
             type="button"
+            onClick={() => notifyUnderDevelopment('forgot-password')}
             className="text-blue-300 underline underline-offset-4 hover:text-blue-200"
           >
             ¿Olvidó su contraseña?
