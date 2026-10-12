@@ -1,17 +1,10 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
-type Size = 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant;
-  size?: Size;
-  loading?: boolean;
-  iconRight?: ReactNode;
-}
-
-const variants: Record<Variant, string> = {
+const variants: Record<ButtonVariant, string> = {
   primary: 'bg-blue-500 hover:bg-blue-400 text-white border-transparent',
   secondary: 'bg-[#272A38] hover:bg-[#2E3245] text-[#F9FAFB] border-white/10',
   ghost: 'bg-transparent hover:bg-white/6 text-[#9CA3AF] hover:text-[#F9FAFB] border-transparent',
@@ -19,11 +12,27 @@ const variants: Record<Variant, string> = {
   danger: 'bg-red-600 hover:bg-red-500 text-white border-transparent',
 };
 
-const sizes: Record<Size, string> = {
+const sizes: Record<ButtonSize, string> = {
   sm: 'h-8 px-3 text-sm gap-1.5 rounded-md',
   md: 'h-10 px-4 text-sm gap-2 rounded-md',
   lg: 'h-11 px-5 text-sm gap-2 rounded-lg',
 };
+
+/** Shared look of buttons and button-like links. */
+export function buttonClasses(
+  variant: ButtonVariant = 'primary',
+  size: ButtonSize = 'md',
+  extra = '',
+): string {
+  return `inline-flex items-center justify-center whitespace-nowrap border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${extra}`;
+}
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+  iconRight?: ReactNode;
+}
 
 export function Button({
   variant = 'primary',
@@ -42,7 +51,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex items-center justify-center whitespace-nowrap border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={buttonClasses(variant, size, className)}
     >
       {loading && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
       {children}
