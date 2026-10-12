@@ -512,7 +512,15 @@
 | HU_DN_01_07 | Implementado | `SetPasswordPage`, `POST /auth/password-reset/confirm`, `SetPasswordPage.test.tsx` |
 | HU_DN_01_08 | Implementado | `RequireAuth` guarda `returnTo`; login redirige tras autenticación |
 | HU_DN_01_09 | Implementado | `MESSAGES.accessDenied`; panel admin muestra 403 literal |
-| HU_DN_01_10 | Implementado | `AdminUsersPanel`, modal y `POST /auth/admin/users/{id}/password-reset` |
+| HU_DN_01_10 | Implementado | `UsersPage` restablecer contraseña, `POST /auth/admin/users/{id}/password-reset` |
 | Landing (extra) | Implementado | Navbar, preview, roadmap, trazabilidad, CTA registro, footer demo; panel auth izquierdo (lg+) |
+
+---
+
+## Estado de implementación — EP-02 (HU_DN_01_11 … HU_DN_01_16, Sprint 1)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_01_11 | Implementado | `UsersPage` formulario «Crear usuario», `POST /auth/admin/users`, tests `UsersPage.test.tsx` |
 
 ---

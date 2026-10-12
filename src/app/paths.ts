@@ -9,4 +9,5 @@ export const PATHS = {
   homeAdmin: '/inicio/administrador',
   homeManager: '/inicio/gerente',
   homeDeveloper: '/inicio/desarrollador',
+  users: '/usuarios',
 } as const;

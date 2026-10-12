@@ -1,5 +1,6 @@
-import { Home } from 'lucide-react';
+import { Home, Users } from 'lucide-react';
 import { NavLink } from 'react-router';
+import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
 import { homePathFor } from '@/features/auth/roles';
 import { notifyUnderDevelopment } from '@/lib/underDevelopment';
@@ -28,6 +29,17 @@ export function SideNav() {
         <Home size={16} aria-hidden="true" />
         Inicio
       </NavLink>
+      {user.role === 'admin' || user.role === 'manager' ? (
+        <NavLink
+          to={PATHS.users}
+          className={({ isActive }) =>
+            `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+          }
+        >
+          <Users size={16} aria-hidden="true" />
+          Usuarios
+        </NavLink>
+      ) : null}
       {items.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
