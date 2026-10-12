@@ -523,5 +523,6 @@
 | --- | --- | --- |
 | HU_DN_01_11 | Implementado | `UsersPage` formulario «Crear usuario», `POST /auth/admin/users`, tests `UsersPage.test.tsx` |
 | HU_DN_01_12 | Implementado | «Invitar Desarrollador», `POST /auth/manager/users/invite`, tests invite en `UsersPage.test.tsx` |
+| HU_DN_01_13 | Implementado | UI sin rol Administrador; servidor 403 en manipulación de rol admin |
 
 ---
