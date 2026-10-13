@@ -1,4 +1,4 @@
-import { FolderOpen, Home, User, Users } from 'lucide-react';
+import { Clock, FolderOpen, Home, User, Users } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -59,6 +59,15 @@ export function SideNav() {
       >
         <User size={16} aria-hidden="true" />
         Perfil
+      </NavLink>
+      <NavLink
+        to={PATHS.availability}
+        className={({ isActive }) =>
+          `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+        }
+      >
+        <Clock size={16} aria-hidden="true" />
+        Disponibilidad
       </NavLink>
       {items.map(({ id, label, icon: Icon }) => (
         <button

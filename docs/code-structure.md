@@ -51,3 +51,21 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - `Dockerfile` — build Node 22, runtime nginx-unprivileged, healthcheck `/healthz`
 - `nginx/default.conf.template` — SPA + proxy `/api/` al backend (mismo origen)
 - `docker-compose.yml` — red externa `dashnode-net`, alias `dashnode-api`
+
+## EP-04 / EP-05 — Disponibilidad y Reuniones (HU_DN_02_32 … HU_DN_02_34, HU_DN_03_35 … HU_DN_03_36)
+
+- Ruta principal: `/disponibilidad` (`AvailabilityPage`) accesible en `SideNav`.
+- Componentes en `src/features/availability/components/`:
+  - `WeeklyGrid.tsx`: Cuadrícula 7 días x 24 horas, alternancia interactiva de celdas, navegación de semanas que inician en lunes, detección de cambios y badge de herencia.
+  - `TeamAvailabilityGrid.tsx`: Rejilla semanal de equipo visible para Administrador y Gerente con indicadores textuales ("D" / "ND") y visuales.
+  - `ScheduleMeetingSection.tsx`: Formulario de criterios de búsqueda (intervalo 24h, días, participantes, duración en horas completas), resultados agrupados en formato 24h y modal para agendar reunión.
+- Capa de soporte y API en `src/features/availability/`:
+  - `api.ts`: Cliente HTTP para `/api/v1/availability/*`.
+  - `types.ts`: Tipos TypeScript para disponibilidad, slots y reuniones.
+  - `messages.ts`: Mensajes literales verbatim de los criterios de aceptación.
+  - `utils.ts`: Cálculo de semanas, horas y validación de criterios.
+- Pruebas en `src/features/availability/`:
+  - `validation.test.ts`: Pruebas de utilidades y validación de reglas de negocio.
+  - `AvailabilityPage.test.tsx`: Pruebas de integración para las 5 historias de usuario.
+  - `api.test.ts`: Pruebas unitarias del cliente API.
+

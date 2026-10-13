@@ -559,3 +559,23 @@
 Notificaciones: `lib/toast/ToastProvider.tsx` (10 s, esquina inferior derecha); `UnderDevelopmentBridge` reemplaza el aviso fijo en `AppShell`.
 
 ---
+
+## Estado de implementación — EP-04 Disponibilidad del equipo (HU_DN_02_32 … HU_DN_02_34, Sprint 3)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_02_32 | Implementado | `AvailabilityPage` ruta `/disponibilidad`, componente `WeeklyGrid`, cuadrícula interactiva 7 días x 24h, alternancia disponible/no disponible, selector de semana con inicio en lunes, botones guardar/cancelar cambios, mensajes literales (`AVAILABILITY_SAVED`, `NO_CHANGES_TO_SAVE`), tests `AvailabilityPage.test.tsx`. |
+| HU_DN_02_33 | Implementado | Reutilización de disponibilidad previa, visualización de badge/indicador «Heredada» cuando `is_inherited: true` sin reingreso de datos, tests en `AvailabilityPage.test.tsx`. |
+| HU_DN_02_34 | Implementado | Componente `TeamAvailabilityGrid` en pestaña «Equipo» (solo Administrador y Gerente; Desarrollador denegado), una fila por usuario y 24 columnas horarias por día, indicadores textuales («D» / «ND») y visuales, tests en `AvailabilityPage.test.tsx`. |
+
+---
+
+## Estado de implementación — EP-05 Agendamiento y reuniones (HU_DN_03_35 … HU_DN_03_36, Sprint 3)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_03_35 | Implementado | Componente `ScheduleMeetingSection` con validación estricta de formulario: intervalo horario (inicio < fin), al menos un día, al menos un participante, duración en horas completas que quepa en el intervalo. Botón «Buscar horarios» inhabilitado hasta cumplir criterios. Tests en `validation.test.ts` y `AvailabilityPage.test.tsx`. |
+| HU_DN_03_36 | Implementado | Búsqueda y cálculo de horarios disponibles en 24h agrupados por día excluyendo reuniones programadas, mensaje literal de no disponibilidad (`NO_AVAILABLE_SLOTS`), modal de confirmación y agendamiento de reunión (`createMeeting`) con notificación toast (`meetingCreated`). Tests en `AvailabilityPage.test.tsx`. |
+
+
+---
