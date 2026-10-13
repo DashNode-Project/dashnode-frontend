@@ -79,3 +79,23 @@ Modo de proyecto: `MOCKUP_PRODUCTIONIZATION`.
 | HU_DN_02_26 | Eliminar (admin), confirmación | `ProjectDetailPage.admin.test.tsx` |
 
 Toast global: `ToastProvider` + `UnderDevelopmentBridge` (10 s, inferior derecha). Validación local: `npm run check` — 209 tests, cobertura ≥ umbrales (2026-10-12).
+
+## EP-04 / EP-05 — Disponibilidad y Reuniones (ramas `feature/ep-04-availability-dis`, `feature/ep-05-meetings-age`)
+
+| HU | UI | Tests |
+|---|---|---|
+| HU_DN_02_32 | `AvailabilityPage`, `WeeklyGrid` con 7 días x 24h, alternancia disponible/no disponible, selector de lunes, mensajes literales | `AvailabilityPage.test.tsx`, `validation.test.ts` |
+| HU_DN_02_33 | Prellenado de semana con badge/indicador de herencia cuando no hay registro propio | `AvailabilityPage.test.tsx` |
+| HU_DN_02_34 | `TeamAvailabilityGrid` en pestaña «Equipo» (Admin y Gerente; Desarrollador bloqueado), 24 columnas con indicadores textuales («D» / «ND») y visuales | `AvailabilityPage.test.tsx` |
+| HU_DN_03_35 | Formulario en `ScheduleMeetingSection`: validación de intervalo, días, participantes y duración en horas completas, botón bloqueado hasta validez | `validation.test.ts`, `AvailabilityPage.test.tsx` |
+| HU_DN_03_36 | Lista de horarios disponibles calculados en formato 24h excluyendo reuniones agendadas, modal para agendar reunión y notificación toast | `AvailabilityPage.test.tsx`, `api.test.ts` |
+
+Validación local:
+- `npm run check`: 238 tests pasando (34 archivos de test).
+- Cobertura de líneas: ~90 % (umbral mínimo 80 %).
+- TypeScript: `npm run typecheck` limpio (0 errores).
+- Linter: `npm run lint` limpio (0 advertencias, 0 errores).
+- Formato: `npm run format:check` limpio (Prettier verificado).
+- Seguridad: `node scripts/scan-secrets.mjs` limpio (0 secretos).
+- Compilación: `npm run build` genera bundle de producción optimizado sin errores.
+

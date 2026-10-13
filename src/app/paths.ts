@@ -13,6 +13,7 @@ export const PATHS = {
   profile: '/mi-perfil',
   permissions: '/permisos-y-roles',
   projects: '/proyectos',
+  availability: '/disponibilidad',
 } as const;
 
 export function projectTabPath(projectId: string, tab: string): string {

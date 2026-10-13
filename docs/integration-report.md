@@ -125,3 +125,28 @@ Contrato alineado con backend (`features/projects/api.ts`). Mensajes de éxito/e
 |---|---|
 | `npm run check` | Verde (209 tests, coverage ≥ 80/75 %) |
 | Backend `pytest` | 256 passed |
+
+---
+
+## EP-04 y EP-05 — Disponibilidad y Reuniones (HU_DN_02_32 … HU_DN_02_34, HU_DN_03_35 … HU_DN_03_36)
+
+**Ramas:** `feature/ep-04-availability-dis`, `feature/ep-05-meetings-age` (backend + frontend). Rutas SPA: `/disponibilidad` en `SideNav`.
+
+### Contrato de integración API
+
+| Método | Ruta | Roles | Descripción / Mensaje de éxito |
+|---|---|---|---|
+| GET | `/api/v1/availability/mine?week=YYYY-MM-DD` | Autenticado | Consulta disponibilidad propia y marca si es heredada (`is_inherited`). |
+| POST | `/api/v1/availability/mine` | Autenticado | Guarda bloques horarios en 24h (formato UTC). Éxito: «Disponibilidad guardada correctamente.». Si no hay cambios: 400 «No hay cambios por guardar.». |
+| GET | `/api/v1/availability/team?week=YYYY-MM-DD` | Admin, Gerente | Rejilla semanal de disponibilidad de usuarios visibles con indicadores textuales ("D" / "ND") y visuales. Desarrollador: 403 `AccessDeniedError`. |
+| POST | `/api/v1/availability/search-slots` | Admin, Gerente | Búsqueda e intersección de franjas horarias libres según criterios (intervalo, días, participantes, duración en horas completas). Excluye reuniones agendadas. Si vacío: 400 «No hay horarios disponibles para los criterios seleccionados.». |
+| POST | `/api/v1/availability/meetings` | Admin, Gerente | Crea y agenda reunión. Éxito: «Reunión agendada correctamente.». |
+| GET | `/api/v1/availability/meetings` | Autenticado | Lista reuniones programadas para el usuario autenticado. |
+
+Frontend: `/disponibilidad` (pestañas «Mi disponibilidad», «Equipo», «Agendar reunión»). Integración estricta con la plantilla visual Figma en `demo/`. Notificaciones toast con mensajes literales de los criterios de aceptación.
+
+| Control | Resultado (2026-10-13) |
+|---|---|
+| Frontend `npm run check` | Verde (238 tests pasados, cobertura ~90 %, tsc/lint/prettier/secrets limpio) |
+| Backend `pytest` | Verde (277 tests pasados, cobertura 89 %, ruff/mypy/import-linter limpio) |
+

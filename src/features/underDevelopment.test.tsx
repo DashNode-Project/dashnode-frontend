@@ -15,8 +15,8 @@ import type { Role } from '@/features/auth/types';
 
 const EXPECTED_NAV: Record<Role, string[]> = {
   admin: [],
-  manager: ['Mis tareas', 'Reuniones', 'Calendario', 'Disponibilidad', 'Manual de usuario'],
-  developer: ['Mis tareas', 'Reuniones', 'Calendario', 'Disponibilidad', 'Manual de usuario'],
+  manager: ['Mis tareas', 'Reuniones', 'Calendario', 'Manual de usuario'],
+  developer: ['Mis tareas', 'Reuniones', 'Calendario', 'Manual de usuario'],
 };
 
 async function authenticated(role: Role) {
@@ -70,6 +70,12 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     await authenticated('admin');
     const users = screen.getByRole('link', { name: 'Usuarios' });
     expect(users).toHaveAttribute('href', PATHS.users);
+  });
+
+  it('exposes Disponibilidad as a real route for manager and developer', async () => {
+    await authenticated('manager');
+    const avail = screen.getByRole('link', { name: 'Disponibilidad' });
+    expect(avail).toHaveAttribute('href', PATHS.availability);
   });
 
   it('keeps the role start screen as the only working navigation entry', async () => {
