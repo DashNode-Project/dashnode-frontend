@@ -3,7 +3,11 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { PATHS } from '@/app/paths';
-import { UNDER_DEVELOPMENT_MESSAGE } from '@/lib/underDevelopment';
+import {
+  notifyUnderDevelopment,
+  registerUnderDevelopmentToast,
+  UNDER_DEVELOPMENT_MESSAGE,
+} from '@/lib/underDevelopment';
 import { currentPath, renderApp, signIn } from '@/test/app';
 import { makeSession } from '@/test/factories';
 import { mockApi, ok } from '@/test/fetchMock';
@@ -11,22 +15,8 @@ import type { Role } from '@/features/auth/types';
 
 const EXPECTED_NAV: Record<Role, string[]> = {
   admin: [],
-  manager: [
-    'Proyectos',
-    'Mis tareas',
-    'Reuniones',
-    'Calendario',
-    'Disponibilidad',
-    'Manual de usuario',
-  ],
-  developer: [
-    'Proyectos',
-    'Mis tareas',
-    'Reuniones',
-    'Calendario',
-    'Disponibilidad',
-    'Manual de usuario',
-  ],
+  manager: ['Mis tareas', 'Reuniones', 'Calendario', 'Disponibilidad', 'Manual de usuario'],
+  developer: ['Mis tareas', 'Reuniones', 'Calendario', 'Disponibilidad', 'Manual de usuario'],
 };
 
 async function authenticated(role: Role) {
@@ -46,6 +36,14 @@ async function authenticated(role: Role) {
 describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible"', () => {
   it('uses the literal message', () => {
     expect(UNDER_DEVELOPMENT_MESSAGE).toBe('Funcionalidad en desarrollo, no disponible');
+  });
+
+  it('forwards notices to the registered toast listener', () => {
+    const listener = vi.fn();
+    const unregister = registerUnderDevelopmentToast(listener);
+    notifyUnderDevelopment('nav:test');
+    expect(listener).toHaveBeenCalledWith(UNDER_DEVELOPMENT_MESSAGE, 'info');
+    unregister();
   });
 
   it.each<Role>(['admin', 'manager', 'developer'])(

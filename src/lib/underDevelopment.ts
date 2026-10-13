@@ -3,11 +3,24 @@ export const UNDER_DEVELOPMENT_MESSAGE = 'Funcionalidad en desarrollo, no dispon
 
 export const UNDER_DEVELOPMENT_EVENT = 'dashnode:under-development';
 
+type ToastListener = (message: string, variant: 'info') => void;
+
+let toastListener: ToastListener | null = null;
+
+/** Wire ToastProvider to under-development notices (called once from App). */
+export function registerUnderDevelopmentToast(listener: ToastListener): () => void {
+  toastListener = listener;
+  return () => {
+    toastListener = null;
+  };
+}
+
 /**
- * Handler for every control whose feature does not belong to EP-01 (authentication and
- * sessions). Logs for tracing and raises a dismissible in-app notice.
+ * Handler for controls whose feature is not implemented yet. Logs for tracing and shows a
+ * transient toolkit toast (right side, auto-dismiss).
  */
 export function notifyUnderDevelopment(feature: string): void {
   console.info(UNDER_DEVELOPMENT_MESSAGE, { feature });
+  toastListener?.(UNDER_DEVELOPMENT_MESSAGE, 'info');
   window.dispatchEvent(new CustomEvent(UNDER_DEVELOPMENT_EVENT, { detail: { feature } }));
 }
