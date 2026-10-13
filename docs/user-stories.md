@@ -702,7 +702,7 @@ Notificaciones: `lib/toast/ToastProvider.tsx` (10 s, esquina inferior derecha); 
 7. Fallo técnico: ante un error no anticipado (caída del servicio o tiempo de espera agotado) se muestra 'No fue posible completar la operación. Intente nuevamente.' sin alterar datos.
 
 **Fecha recepción:** 2026-10-13  
-**Estado:** IN_PROGRESS
+**Estado:** COMPLETED
 
 ---
 
@@ -722,7 +722,7 @@ Notificaciones: `lib/toast/ToastProvider.tsx` (10 s, esquina inferior derecha); 
 7. Fallo técnico: ante un error no anticipado (caída del servicio o tiempo de espera agotado) se muestra 'No fue posible completar la operación. Intente nuevamente.' sin alterar datos.
 
 **Fecha recepción:** 2026-10-13  
-**Estado:** IN_PROGRESS
+**Estado:** COMPLETED
 
 ---
 
@@ -742,7 +742,7 @@ Notificaciones: `lib/toast/ToastProvider.tsx` (10 s, esquina inferior derecha); 
 6. Fallo técnico: ante un error no anticipado (caída del servicio o tiempo de espera agotado) se muestra 'No fue posible completar la operación. Intente nuevamente.' sin alterar datos.
 
 **Fecha recepción:** 2026-10-13  
-**Estado:** IN_PROGRESS
+**Estado:** COMPLETED
 
 ---
 
@@ -763,4 +763,4 @@ Notificaciones: `lib/toast/ToastProvider.tsx` (10 s, esquina inferior derecha); 
 6. Fallo técnico: ante un error no anticipado (caída del servicio o tiempo de espera agotado) se muestra 'No fue posible completar la operación. Intente nuevamente.' sin alterar datos.
 
 **Fecha recepción:** 2026-10-13  
-**Estado:** IN_PROGRESS
+**Estado:** COMPLETED
