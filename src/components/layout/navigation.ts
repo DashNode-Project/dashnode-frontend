@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, CheckSquare, Clock, FolderOpen, Video } from 'lucide-react';
+import { BookOpen, CalendarDays, CheckSquare, Clock, Video } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Role } from '@/features/auth/types';
 
@@ -15,7 +15,6 @@ export interface NavItem {
  * disponible". The role start screen ("Inicio") is the only functional entry.
  */
 export const OUT_OF_SCOPE_NAV: readonly NavItem[] = [
-  { id: 'projects', label: 'Proyectos', icon: FolderOpen, roles: ['manager', 'developer'] },
   { id: 'my-tasks', label: 'Mis tareas', icon: CheckSquare, roles: ['manager', 'developer'] },
   { id: 'meetings', label: 'Reuniones', icon: Video, roles: ['manager', 'developer'] },
   { id: 'calendar', label: 'Calendario', icon: CalendarDays, roles: ['manager', 'developer'] },
