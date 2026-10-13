@@ -67,3 +67,15 @@ Modo de proyecto: `MOCKUP_PRODUCTIONIZATION`.
 | Proyectos, tareas, reuniones, docs, issues, usuarios, IA, búsqueda, notificaciones, recuperar contraseña | FUERA_DE_ALCANCE | `notifyUnderDevelopment` |
 | Datos sintéticos / credenciales de demo / persistencia localStorage | SINTÉTICO | Eliminado |
 | Artefactos Figma Make (plugins, estado simulado) | ARTEFACTO | Eliminado; `docs/` conservado |
+
+## EP-03 — Proyectos (rama `feature/ep-03-projects-pro`)
+
+| HU | UI | Tests |
+|---|---|---|
+| HU_DN_02_22 | `ProjectsPage`, modal «Crear proyecto», filtro por estado | `ProjectsPage.test.tsx`, `ProjectFormFields.test.tsx` |
+| HU_DN_02_23 | Modal «Editar proyecto» en `ProjectDetailPage` | `ProjectDetailPage.test.tsx` |
+| HU_DN_02_24 | Selector «Estado» con reversión en error | `ProjectDetailPage.test.tsx` |
+| HU_DN_02_25 | «Cambiar gerente responsable» | `ProjectDetailPage.test.tsx` |
+| HU_DN_02_26 | Eliminar (admin), confirmación | `ProjectDetailPage.admin.test.tsx` |
+
+Toast global: `ToastProvider` + `UnderDevelopmentBridge` (10 s, inferior derecha). Validación local: `npm run check` — 209 tests, cobertura ≥ umbrales (2026-10-12).

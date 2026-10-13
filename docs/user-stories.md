@@ -540,3 +540,17 @@
 | HU_DN_01_21 | Implementado | `ProfilePage`, subida multipart, `applySessionUser` en sesión |
 
 ---
+
+## Estado de implementación — EP-03 (HU_DN_02_22 … HU_DN_02_26, Sprint 2)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_02_22 | Implementado | `ProjectsPage` + modal «Crear proyecto», `features/projects/api.ts`, tests `ProjectsPage.test.tsx` |
+| HU_DN_02_23 | Implementado | `ProjectDetailPage` modal «Editar proyecto», tests en `ProjectDetailPage.test.tsx` |
+| HU_DN_02_24 | Implementado | Selector «Estado» en resumen, `updateProjectStatus`, tests de reversión en error |
+| HU_DN_02_25 | Implementado | «Cambiar gerente responsable», validación gerente obligatorio |
+| HU_DN_02_26 | Implementado | «Eliminar proyecto» solo admin, confirmación literal, `ProjectDetailPage.admin.test.tsx` |
+
+Notificaciones: `lib/toast/ToastProvider.tsx` (10 s, esquina inferior derecha); `UnderDevelopmentBridge` reemplaza el aviso fijo en `AppShell`.
+
+---
