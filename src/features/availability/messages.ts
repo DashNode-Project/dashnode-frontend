@@ -33,13 +33,25 @@ export const AVAILABILITY_MESSAGES = {
   // HU_DN_03_39 & HU_DN_03_40
   noMeetingsToShow: 'No hay reuniones para mostrar.',
 
-  // HU_DN_03_41
+  // HU_DN_03_41, HU_DN_03_42, HU_DN_03_44, HU_DN_03_45, HU_DN_03_46
   meetingDetailForbidden: 'Acceso denegado. No participa en esta reunión.',
   meetingCancelled: 'Reunión cancelada correctamente.',
-  meetingResponseRegistered: 'Respuesta registrada correctamente.',
-  meetingSummaryRegistered: 'Resumen y acta registrados correctamente.',
+  meetingResponseRegistered: 'Su respuesta ha sido registrada.',
+  meetingCancelledCannotRespond: 'La reunión fue cancelada; no es posible responder.',
+  meetingAlreadyPastCannotRespond: 'No es posible responder una reunión ya realizada.',
+  onlyCreatorCanCancel: 'Solo el creador de la reunión puede cancelarla.',
+  cancelConfirmMessage:
+    '¿Está seguro de que desea cancelar esta reunión? Se notificará a los participantes.',
+  meetingSummarySaved: 'Resumen y acta guardados correctamente.',
+  meetingSummaryRegistered: 'Resumen y acta guardados correctamente.',
+  summaryRequired: 'El resumen es obligatorio.',
   summaryTooLong: 'El resumen no puede superar 2000 caracteres.',
-  invalidMinutesUrl: 'El enlace del acta no tiene un formato de URL válido.',
+  invalidMinutesUrl: 'La URL del acta no tiene un formato válido.',
+  meetingNotCompleted: 'Solo se puede registrar resumen y acta en reuniones realizadas.',
+  googleCalendarOpenFailed:
+    'No fue posible abrir Google Calendar. Puede copiar los datos de la reunión.',
+  clipboardCopyFailed: 'No fue posible copiar los datos. Cópielos manualmente.',
+  meetingDataCopied: 'Datos de la reunión copiados.',
 } as const;
 
 export const DAY_NAMES: Record<string, string> = {

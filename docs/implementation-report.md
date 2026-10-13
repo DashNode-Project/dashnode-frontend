@@ -140,4 +140,53 @@ Validación local:
   - Fallo de carga: `'No fue posible cargar la información. Intente nuevamente.'`
   - Acceso denegado: `'Acceso denegado. No tiene permisos para realizar esta acción.'`
 
+---
+
+## Implementación de HU_DN_03_42, HU_DN_03_44, HU_DN_03_45 y HU_DN_03_46
+
+### 1. HU_DN_03_42 — Enviar a Google Calendar y Manejo de Portapapeles
+- **Componente:** `MeetingsPage.tsx`, `utils.ts` (`buildGoogleCalendarUrl`, `formatMeetingCopyData`), `messages.ts`.
+- **Comportamiento:**
+  - Generación de enlace de Google Calendar con título, horario UTC, duración, enlace, descripción y correos de participantes (`&add=...`).
+  - Detección de bloqueo de ventanas emergentes (`window.open` retornando null o error).
+  - Alerta contextual con botón `'Copiar datos de la reunión'` ante fallo de apertura.
+  - Mensaje de copia exitosa: `'Datos de la reunión copiados.'`.
+  - Mensaje ante fallo de apertura: `'No fue posible abrir Google Calendar. Puede copiar los datos de la reunión.'`.
+  - Mensaje ante fallo de portapapeles: `'No fue posible copiar los datos. Cópielos manualmente.'`.
+
+### 2. HU_DN_03_44 — Responder Convocatoria de Reunión
+- **Componente:** `MeetingsPage.tsx`, `api.ts` (`respondMeeting`), `messages.ts`.
+- **Comportamiento:**
+  - Botones `'Aceptar'` y `'Rechazar'` visibles exclusivamente para participantes convocados en reuniones programadas que aún no han ocurrido.
+  - Oculto si la reunión está cancelada o ya transcurrió en el tiempo.
+  - Mensaje de éxito: `'Su respuesta ha sido registrada.'`.
+  - Manejo de error si fue cancelada: `'La reunión fue cancelada; no es posible responder.'`.
+  - Manejo de error si ya ocurrió: `'No es posible responder una reunión ya realizada.'`.
+
+### 3. HU_DN_03_45 — Cancelar Reunión Programada y RN-AGE-05
+- **Componente:** `MeetingsPage.tsx`, `api.ts` (`cancelMeeting`), `messages.ts`.
+- **Comportamiento:**
+  - Botón de cancelación condicionado a `isUserCreator(m)` (solo quien creó la reunión puede cancelarla).
+  - Modal de confirmación con texto literal verbatim: `'¿Está seguro de que desea cancelar esta reunión? Se notificará a los participantes.'`.
+  - Botones del modal: `'Confirmar'` y `'Cancelar'`.
+  - Mensaje de éxito tras cancelar: `'Reunión cancelada correctamente.'`.
+  - Error 403 `ONLY_CREATOR_CAN_CANCEL`: `'Solo el creador de la reunión puede cancelarla.'`.
+
+### 4. HU_DN_03_46 — Registrar Resumen y Acta de Reunión
+- **Componente:** `MeetingsPage.tsx`, `api.ts` (`updateMeetingSummary`), `messages.ts`.
+- **Comportamiento:**
+  - Botón `'Registrar resumen y acta'` solo visible para reuniones realizadas (`isMeetingRealizada(m)`) y para el creador o Administrador.
+  - Validación de resumen obligatorio: `'El resumen es obligatorio.'`.
+  - Validación de longitud máxima: textarea limitado a 2000 caracteres con contador `X/2000` y validación `'El resumen no puede superar 2000 caracteres.'`.
+  - Validación de formato URL: `'La URL del acta no tiene un formato válido.'`.
+  - Si el backend rechaza porque no está realizada: `'Solo se puede registrar resumen y acta en reuniones realizadas.'`.
+  - Mensaje de éxito: `'Resumen y acta guardados correctamente.'`.
+
+#### Calidad Frontend:
+- `npm run typecheck`: 0 errores.
+- `npm run lint`: 0 errores, 0 advertencias.
+- `npm run format:check`: 100% de archivos formateados con Prettier.
+- `vitest run`: 269 tests pasados (35 suites).
+
+
 

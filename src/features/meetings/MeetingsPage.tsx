@@ -25,7 +25,11 @@ import { PATHS } from '@/app/paths';
 import { ApiError } from '@/lib/api/errors';
 import type { MeetingDTO } from '@/features/availability/types';
 import { AVAILABILITY_MESSAGES } from '@/features/availability/messages';
-import { buildGoogleCalendarUrl, isValidUrl } from '@/features/availability/utils';
+import {
+  buildGoogleCalendarUrl,
+  isValidUrl,
+  formatMeetingCopyData,
+} from '@/features/availability/utils';
 import {
   listMeetings,
   getMeetingDetail,
@@ -134,6 +138,9 @@ export default function MeetingsPage() {
   const [savingSummary, setSavingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
+  const [gcError, setGcError] = useState<string | null>(null);
+  const [clipboardError, setClipboardError] = useState<string | null>(null);
+
   const [respondingMeetingId, setRespondingMeetingId] = useState<string | null>(null);
 
   const loadMeetings = useCallback(async () => {
@@ -167,6 +174,20 @@ export default function MeetingsPage() {
 
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
+  const isMeetingRealizada = useCallback(
+    (m: MeetingDTO) => {
+      if (m.status === 'completed') return true;
+      if (m.status === 'cancelled') return false;
+      if (m.date < todayStr) return true;
+      if (m.date === todayStr) {
+        const nowTime = new Date().toTimeString().slice(0, 5);
+        return m.end_time <= nowTime;
+      }
+      return false;
+    },
+    [todayStr],
+  );
+
   const upcomingMeetings = useMemo(() => {
     return meetings
       .filter((m) => m.status !== 'cancelled' && m.date >= todayStr)
@@ -192,6 +213,8 @@ export default function MeetingsPage() {
   }, [activeTab, upcomingMeetings, pastMeetings, statusFilter]);
 
   const openDetail = async (m: MeetingDTO) => {
+    setGcError(null);
+    setClipboardError(null);
     try {
       const detail = await getMeetingDetail(m.id);
       setSelectedMeeting(detail);
@@ -214,6 +237,52 @@ export default function MeetingsPage() {
     showToast('Enlace copiado.', 'success');
   };
 
+  const handleOpenGoogleCalendar = (m: MeetingDTO) => {
+    setGcError(null);
+    setClipboardError(null);
+    const emails =
+      m.participants?.map((p) => p.email).filter((email): email is string => Boolean(email)) ?? [];
+    const gcUrl = buildGoogleCalendarUrl(
+      m.title,
+      m.date,
+      m.start_time,
+      m.duration,
+      m.project_name,
+      m.link,
+      m.description,
+      emails,
+    );
+    try {
+      const win = window.open(gcUrl, '_blank', 'noopener,noreferrer');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        setGcError(AVAILABILITY_MESSAGES.googleCalendarOpenFailed);
+        showToast(AVAILABILITY_MESSAGES.googleCalendarOpenFailed, 'error');
+      }
+    } catch {
+      setGcError(AVAILABILITY_MESSAGES.googleCalendarOpenFailed);
+      showToast(AVAILABILITY_MESSAGES.googleCalendarOpenFailed, 'error');
+    }
+  };
+
+  const handleCopyMeetingData = (m: MeetingDTO) => {
+    const text = formatMeetingCopyData(m);
+    if (!navigator?.clipboard?.writeText) {
+      setClipboardError(AVAILABILITY_MESSAGES.clipboardCopyFailed);
+      showToast(AVAILABILITY_MESSAGES.clipboardCopyFailed, 'error');
+      return;
+    }
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showToast(AVAILABILITY_MESSAGES.meetingDataCopied, 'success');
+        setClipboardError(null);
+      })
+      .catch(() => {
+        setClipboardError(AVAILABILITY_MESSAGES.clipboardCopyFailed);
+        showToast(AVAILABILITY_MESSAGES.clipboardCopyFailed, 'error');
+      });
+  };
+
   const handleConfirmCancel = async () => {
     if (!cancelModalMeeting) return;
     setCancelling(true);
@@ -225,8 +294,12 @@ export default function MeetingsPage() {
         setSelectedMeeting(null);
       }
       loadMeetings();
-    } catch {
-      showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'ONLY_CREATOR_CAN_CANCEL') {
+        showToast(AVAILABILITY_MESSAGES.onlyCreatorCanCancel, 'error');
+      } else {
+        showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+      }
     } finally {
       setCancelling(false);
     }
@@ -239,8 +312,14 @@ export default function MeetingsPage() {
       showToast(AVAILABILITY_MESSAGES.meetingResponseRegistered, 'success');
       setSelectedMeeting(updated);
       loadMeetings();
-    } catch {
-      showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'MEETING_CANCELLED') {
+        showToast(AVAILABILITY_MESSAGES.meetingCancelledCannotRespond, 'error');
+      } else if (err instanceof ApiError && err.code === 'MEETING_ALREADY_PAST') {
+        showToast(AVAILABILITY_MESSAGES.meetingAlreadyPastCannotRespond, 'error');
+      } else {
+        showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+      }
     } finally {
       setRespondingMeetingId(null);
     }
@@ -256,6 +335,11 @@ export default function MeetingsPage() {
   const handleSaveSummary = async () => {
     if (!summaryModalMeeting) return;
 
+    if (!summaryText.trim()) {
+      setSummaryError(AVAILABILITY_MESSAGES.summaryRequired);
+      return;
+    }
+
     if (summaryText.length > 2000) {
       setSummaryError(AVAILABILITY_MESSAGES.summaryTooLong);
       return;
@@ -270,17 +354,21 @@ export default function MeetingsPage() {
     setSummaryError(null);
     try {
       const updated = await updateMeetingSummary(summaryModalMeeting.id, {
-        summary: summaryText.trim() || null,
+        summary: summaryText.trim(),
         minutes_url: minutesUrlText.trim() || null,
       });
-      showToast(AVAILABILITY_MESSAGES.meetingSummaryRegistered, 'success');
+      showToast(AVAILABILITY_MESSAGES.meetingSummarySaved, 'success');
       setSummaryModalMeeting(null);
       if (selectedMeeting?.id === summaryModalMeeting.id) {
         setSelectedMeeting(updated);
       }
       loadMeetings();
-    } catch {
-      setSummaryError(AVAILABILITY_MESSAGES.technicalFailure);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'MEETING_NOT_COMPLETED') {
+        setSummaryError(AVAILABILITY_MESSAGES.meetingNotCompleted);
+      } else {
+        setSummaryError(AVAILABILITY_MESSAGES.technicalFailure);
+      }
     } finally {
       setSavingSummary(false);
     }
@@ -311,6 +399,11 @@ export default function MeetingsPage() {
       return m.participants.some((p) => p.user_id === user.id);
     }
     return m.participant_ids.includes(user.id);
+  };
+
+  const isUserCreator = (m: MeetingDTO) => {
+    if (!user) return false;
+    return m.creator_id === user.id;
   };
 
   const isUserCreatorOrAdmin = (m: MeetingDTO) => {
@@ -464,15 +557,6 @@ export default function MeetingsPage() {
               const isPast =
                 m.status === 'completed' || m.status === 'cancelled' || m.date < todayStr;
               const isCreator = isUserCreatorOrAdmin(m);
-              const gcUrl = buildGoogleCalendarUrl(
-                m.title,
-                m.date,
-                m.start_time,
-                m.duration,
-                m.project_name,
-                m.link,
-                m.description,
-              );
 
               return (
                 <div
@@ -574,26 +658,26 @@ export default function MeetingsPage() {
                   {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
                     {!isPast && m.link && (
-                      <>
-                        <a
-                          href={m.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Unirse a la videollamada"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-                        >
-                          <ExternalLink size={14} />
-                        </a>
-                        <a
-                          href={gcUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Enviar a Google Calendar"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                        >
-                          <CalendarPlus size={14} />
-                        </a>
-                      </>
+                      <a
+                        href={m.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Unirse a la videollamada"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    )}
+
+                    {!isPast && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenGoogleCalendar(m)}
+                        title="Enviar a Google Calendar"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                      >
+                        <CalendarPlus size={14} />
+                      </button>
                     )}
 
                     {m.link && (
@@ -607,7 +691,7 @@ export default function MeetingsPage() {
                       </button>
                     )}
 
-                    {isCreator && m.status === 'scheduled' && (
+                    {isUserCreator(m) && m.status === 'scheduled' && !isMeetingRealizada(m) && (
                       <button
                         type="button"
                         title="Cancelar reunión"
@@ -761,6 +845,32 @@ export default function MeetingsPage() {
               </button>
             </div>
 
+            {gcError && (
+              <div
+                role="alert"
+                className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg flex items-center justify-between gap-2"
+              >
+                <span>{gcError}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyMeetingData(selectedMeeting)}
+                  className="text-xs font-medium text-amber-300 hover:text-white underline underline-offset-2 shrink-0"
+                >
+                  Copiar datos de la reunión
+                </button>
+              </div>
+            )}
+
+            {clipboardError && (
+              <div
+                role="alert"
+                className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg flex items-center gap-2"
+              >
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{clipboardError}</span>
+              </div>
+            )}
+
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3 bg-[#1A1C28] p-3 rounded-lg border border-white/6 text-[#9CA3AF]">
                 <div>
@@ -847,34 +957,36 @@ export default function MeetingsPage() {
                 </div>
               </div>
 
-              {/* Participant Response Action (HU_DN_03_41) */}
-              {isUserParticipant(selectedMeeting) && selectedMeeting.status === 'scheduled' && (
-                <div className="bg-blue-500/8 border border-blue-500/20 p-3 rounded-lg flex items-center justify-between">
-                  <span className="text-xs text-blue-300 font-medium">
-                    ¿Asistirás a esta reunión?
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => handleRespond(selectedMeeting.id, 'aceptada')}
-                      disabled={respondingMeetingId === selectedMeeting.id}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-xs"
-                    >
-                      Aceptar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRespond(selectedMeeting.id, 'rechazada')}
-                      disabled={respondingMeetingId === selectedMeeting.id}
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 text-xs"
-                    >
-                      Rechazar
-                    </Button>
+              {/* Participant Response Action (HU_DN_03_44) */}
+              {isUserParticipant(selectedMeeting) &&
+                selectedMeeting.status === 'scheduled' &&
+                !isMeetingRealizada(selectedMeeting) && (
+                  <div className="bg-blue-500/8 border border-blue-500/20 p-3 rounded-lg flex items-center justify-between">
+                    <span className="text-xs text-blue-300 font-medium">
+                      ¿Asistirás a esta reunión?
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleRespond(selectedMeeting.id, 'aceptada')}
+                        disabled={respondingMeetingId === selectedMeeting.id}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-xs"
+                      >
+                        Aceptar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRespond(selectedMeeting.id, 'rechazada')}
+                        disabled={respondingMeetingId === selectedMeeting.id}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 text-xs"
+                      >
+                        Rechazar
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Summary and Minutes Section */}
               {selectedMeeting.summary && (
@@ -904,25 +1016,16 @@ export default function MeetingsPage() {
             {/* Modal Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-white/8 gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <a
-                  href={buildGoogleCalendarUrl(
-                    selectedMeeting.title,
-                    selectedMeeting.date,
-                    selectedMeeting.start_time,
-                    selectedMeeting.duration,
-                    selectedMeeting.project_name,
-                    selectedMeeting.link,
-                    selectedMeeting.description,
-                  )}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => handleOpenGoogleCalendar(selectedMeeting)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
                 >
                   <CalendarPlus size={13} />
                   Enviar a Google Calendar
-                </a>
+                </button>
 
-                {isUserCreatorOrAdmin(selectedMeeting) && (
+                {isMeetingRealizada(selectedMeeting) && isUserCreatorOrAdmin(selectedMeeting) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -930,28 +1033,30 @@ export default function MeetingsPage() {
                     className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 text-xs"
                   >
                     <FileText size={13} className="mr-1" />
-                    Registrar resumen y acta
+                    {selectedMeeting.summary ? 'Editar resumen' : 'Registrar resumen y acta'}
                   </Button>
                 )}
               </div>
 
-              {isUserCreatorOrAdmin(selectedMeeting) && selectedMeeting.status === 'scheduled' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCancelModalMeeting(selectedMeeting)}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
-                >
-                  <Trash2 size={13} className="mr-1" />
-                  Cancelar reunión
-                </Button>
-              )}
+              {isUserCreator(selectedMeeting) &&
+                selectedMeeting.status === 'scheduled' &&
+                !isMeetingRealizada(selectedMeeting) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCancelModalMeeting(selectedMeeting)}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
+                  >
+                    <Trash2 size={13} className="mr-1" />
+                    Cancelar reunión
+                  </Button>
+                )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Cancel Confirmation Modal (HU_DN_03_41) */}
+      {/* Cancel Confirmation Modal (HU_DN_03_45) */}
       {cancelModalMeeting && (
         <div
           role="dialog"
@@ -961,12 +1066,9 @@ export default function MeetingsPage() {
         >
           <div className="w-full max-w-sm bg-[#12131C] border border-white/10 rounded-xl shadow-2xl p-5 space-y-4">
             <h4 id="cancel-modal-title" className="text-sm font-semibold text-[#F9FAFB]">
-              Cancelar "{cancelModalMeeting.title}"
+              Cancelar reunión
             </h4>
-            <p className="text-xs text-[#9CA3AF]">
-              ¿Estás seguro de cancelar esta reunión? Solo el creador o un administrador puede
-              realizar esta acción.
-            </p>
+            <p className="text-xs text-[#9CA3AF]">{AVAILABILITY_MESSAGES.cancelConfirmMessage}</p>
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/8">
               <Button
                 variant="ghost"
@@ -974,7 +1076,7 @@ export default function MeetingsPage() {
                 onClick={() => setCancelModalMeeting(null)}
                 disabled={cancelling}
               >
-                No cancelar
+                Cancelar
               </Button>
               <Button
                 variant="primary"
@@ -983,7 +1085,7 @@ export default function MeetingsPage() {
                 disabled={cancelling}
                 className="bg-red-600 hover:bg-red-500 text-white"
               >
-                {cancelling ? 'Cancelando…' : 'Confirmar cancelación'}
+                {cancelling ? 'Cancelando…' : 'Confirmar'}
               </Button>
             </div>
           </div>

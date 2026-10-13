@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
@@ -221,7 +221,7 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     ).toBeInTheDocument();
   });
 
-  it('HU_DN_03_41: creator can cancel meeting with confirmation modal', async () => {
+  it('HU_DN_03_45: creator can cancel meeting with confirmation modal and literal message', async () => {
     vi.mocked(availabilityApi.cancelMeeting).mockResolvedValueOnce({
       ...mockMeetings[0]!,
       status: 'cancelled',
@@ -233,10 +233,12 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     const cancelIconBtn = await screen.findByTitle('Cancelar reunión');
     await user.click(cancelIconBtn);
 
-    // Cancel modal opens
-    expect(screen.getByText(/¿Estás seguro de cancelar esta reunión\?/i)).toBeInTheDocument();
+    // Cancel modal opens with literal confirmation message
+    expect(screen.getByText(AVAILABILITY_MESSAGES.cancelConfirmMessage)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
+
     const confirmCancelBtn = screen.getByRole('button', {
-      name: 'Confirmar cancelación',
+      name: 'Confirmar',
     });
     await user.click(confirmCancelBtn);
 
@@ -408,7 +410,7 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     ).toBeInTheDocument();
   });
 
-  it('handles cancellation and summary submission errors gracefully', async () => {
+  it('handles cancellation errors gracefully', async () => {
     vi.mocked(availabilityApi.cancelMeeting).mockRejectedValueOnce(new Error('Fail'));
     const user = userEvent.setup();
     renderPage();
@@ -416,9 +418,174 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     const cancelIconBtn = await screen.findByTitle('Cancelar reunión');
     await user.click(cancelIconBtn);
 
-    const confirmCancelBtn = screen.getByRole('button', { name: 'Confirmar cancelación' });
+    const confirmCancelBtn = screen.getByRole('button', { name: 'Confirmar' });
     await user.click(confirmCancelBtn);
 
     expect(await screen.findByText(AVAILABILITY_MESSAGES.technicalFailure)).toBeInTheDocument();
+  });
+
+  // HU_DN_03_42 Tests
+  it('HU_DN_03_42: opens Google Calendar with participant emails prefilled and handles popup blocker', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    vi.mocked(availabilityApi.getMeetingDetail).mockResolvedValueOnce(mockMeetings[0]!);
+    const user = userEvent.setup();
+    renderPage();
+
+    const meetingBtn = await screen.findByRole('button', { name: 'Daily Standup Alpha' });
+    await user.click(meetingBtn);
+
+    const dialog = await screen.findByRole('dialog');
+    const gcBtn = within(dialog).getByRole('button', { name: /Enviar a Google Calendar/i });
+    await user.click(gcBtn);
+
+    expect(openSpy).toHaveBeenCalled();
+    const calledUrl = openSpy.mock.calls[0]?.[0] as string;
+    expect(calledUrl).toContain('calendar.google.com');
+    expect(decodeURIComponent(calledUrl)).toContain('Daily Standup Alpha');
+    expect(decodeURIComponent(calledUrl)).toContain('add=user@test.com,dev@test.com');
+
+    expect(
+      await within(dialog).findByText(AVAILABILITY_MESSAGES.googleCalendarOpenFailed),
+    ).toBeInTheDocument();
+    const copyDataBtn = within(dialog).getByRole('button', { name: 'Copiar datos de la reunión' });
+    expect(copyDataBtn).toBeInTheDocument();
+
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextSpy },
+      writable: true,
+      configurable: true,
+    });
+
+    await user.click(copyDataBtn);
+    expect(writeTextSpy).toHaveBeenCalled();
+    expect(await screen.findByText(AVAILABILITY_MESSAGES.meetingDataCopied)).toBeInTheDocument();
+
+    openSpy.mockRestore();
+  });
+
+  it('HU_DN_03_42: shows clipboard copy error if clipboard fails', async () => {
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    vi.mocked(availabilityApi.getMeetingDetail).mockResolvedValueOnce(mockMeetings[0]!);
+    const user = userEvent.setup();
+    renderPage();
+
+    const meetingBtn = await screen.findByRole('button', { name: 'Daily Standup Alpha' });
+    await user.click(meetingBtn);
+
+    const dialog = await screen.findByRole('dialog');
+    const gcBtn = within(dialog).getByRole('button', { name: /Enviar a Google Calendar/i });
+    await user.click(gcBtn);
+
+    const copyDataBtn = await within(dialog).findByRole('button', {
+      name: 'Copiar datos de la reunión',
+    });
+    const writeTextSpy = vi.fn().mockRejectedValue(new Error('Clipboard denied'));
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextSpy },
+      writable: true,
+      configurable: true,
+    });
+
+    await user.click(copyDataBtn);
+    expect(
+      (await screen.findAllByText(AVAILABILITY_MESSAGES.clipboardCopyFailed)).length,
+    ).toBeGreaterThan(0);
+  });
+
+  // HU_DN_03_44 Tests
+  it('HU_DN_03_44: displays error when trying to respond to a cancelled or past meeting', async () => {
+    currentUserRole = 'developer';
+    currentUserId = 'user-dev';
+    vi.mocked(availabilityApi.getMeetingDetail).mockResolvedValueOnce(mockMeetings[0]!);
+    vi.mocked(availabilityApi.respondMeeting).mockRejectedValueOnce(
+      new ApiError(400, {
+        code: 'MEETING_CANCELLED',
+        message: AVAILABILITY_MESSAGES.meetingCancelledCannotRespond,
+        fields: {},
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    const meetingBtn = await screen.findByRole('button', { name: 'Daily Standup Alpha' });
+    await user.click(meetingBtn);
+
+    const acceptBtn = screen.getByRole('button', { name: 'Aceptar' });
+    await user.click(acceptBtn);
+
+    expect(
+      await screen.findByText(AVAILABILITY_MESSAGES.meetingCancelledCannotRespond),
+    ).toBeInTheDocument();
+  });
+
+  // HU_DN_03_45 Tests
+  it('HU_DN_03_45: non-creator developer cannot see cancel button on card or modal', async () => {
+    currentUserRole = 'developer';
+    currentUserId = 'user-other';
+    renderPage();
+
+    await screen.findByText('Daily Standup Alpha');
+    expect(screen.queryByTitle('Cancelar reunión')).not.toBeInTheDocument();
+  });
+
+  it('HU_DN_03_45: displays ONLY_CREATOR_CAN_CANCEL error message if cancellation rejected', async () => {
+    vi.mocked(availabilityApi.cancelMeeting).mockRejectedValueOnce(
+      new ApiError(403, {
+        code: 'ONLY_CREATOR_CAN_CANCEL',
+        message: AVAILABILITY_MESSAGES.onlyCreatorCanCancel,
+        fields: {},
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    const cancelIconBtn = await screen.findByTitle('Cancelar reunión');
+    await user.click(cancelIconBtn);
+
+    const confirmCancelBtn = screen.getByRole('button', { name: 'Confirmar' });
+    await user.click(confirmCancelBtn);
+
+    expect(await screen.findByText(AVAILABILITY_MESSAGES.onlyCreatorCanCancel)).toBeInTheDocument();
+  });
+
+  // HU_DN_03_46 Tests
+  it('HU_DN_03_46: validates empty summary before submitting', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /Pasadas/i }));
+    await user.click(screen.getByRole('button', { name: /Editar resumen/i }));
+
+    const textarea = screen.getByPlaceholderText(/Acuerdos principales/i);
+    await user.clear(textarea);
+
+    const saveBtn = screen.getByRole('button', { name: 'Guardar' });
+    await user.click(saveBtn);
+
+    expect(screen.getByText(AVAILABILITY_MESSAGES.summaryRequired)).toBeInTheDocument();
+    expect(availabilityApi.updateMeetingSummary).not.toHaveBeenCalled();
+  });
+
+  it('HU_DN_03_46: displays MEETING_NOT_COMPLETED error if meeting is not completed', async () => {
+    vi.mocked(availabilityApi.updateMeetingSummary).mockRejectedValueOnce(
+      new ApiError(400, {
+        code: 'MEETING_NOT_COMPLETED',
+        message: AVAILABILITY_MESSAGES.meetingNotCompleted,
+        fields: {},
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /Pasadas/i }));
+    await user.click(screen.getByRole('button', { name: /Editar resumen/i }));
+
+    const saveBtn = screen.getByRole('button', { name: 'Guardar' });
+    await user.click(saveBtn);
+
+    expect(await screen.findByText(AVAILABILITY_MESSAGES.meetingNotCompleted)).toBeInTheDocument();
   });
 });
