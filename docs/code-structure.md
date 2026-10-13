@@ -30,7 +30,9 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - `FlashContext` — mensajes de éxito (registro, logout)
 - `lib/api/client.ts` — `credentials: 'include'`, timeout, contrato `{error:{code,message,fields}}`
 - `features/auth/api.ts` — `register`, `login`, `logout`, `getSession`
-- `lib/underDevelopment.ts` — manejador único de funcionalidades fuera de alcance
+- `lib/underDevelopment.ts` — emite eventos de «Funcionalidad en desarrollo» hacia toast
+- `lib/toast/ToastProvider.tsx` — notificaciones temporales (10 s)
+- `features/projects/` — listado, detalle, validación cliente, mensajes HU (`messages.ts`)
 
 ### Catálogo de mensajes
 

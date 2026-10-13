@@ -112,3 +112,16 @@ node scripts/e2e-stack.mjs --base http://localhost:8080 --env-file ../dashnode-b
 - Recuperación de contraseña (HU_DN_01_06): enlace inerte + variables `SMTP_*` / `FRONTEND_BASE_URL` preparadas.
 - Desactivación de usuarios (HU_DN_01_17): se prueba con cuenta seed.
 - Demo del Product Owner (paso humano).
+
+---
+
+## EP-03 — Proyectos (HU_DN_02_22 … HU_DN_02_26)
+
+**Rama:** `feature/ep-03-projects-pro`. Rutas SPA: `/proyectos`, `/proyectos/:projectId`. Enlace en `SideNav`.
+
+Contrato alineado con backend (`features/projects/api.ts`). Mensajes de éxito/error literales en `features/projects/messages.ts` y toasts técnicos vía `lib/messages.ts`.
+
+| Control | Resultado (2026-10-12) |
+|---|---|
+| `npm run check` | Verde (209 tests, coverage ≥ 80/75 %) |
+| Backend `pytest` | 256 passed |

@@ -1,4 +1,4 @@
-import { Home, User, Users } from 'lucide-react';
+import { FolderOpen, Home, User, Users } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -29,6 +29,17 @@ export function SideNav() {
         <Home size={16} aria-hidden="true" />
         Inicio
       </NavLink>
+      {user.role === 'admin' || user.role === 'manager' || user.role === 'developer' ? (
+        <NavLink
+          to={PATHS.projects}
+          className={({ isActive }) =>
+            `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+          }
+        >
+          <FolderOpen size={16} aria-hidden="true" />
+          Proyectos
+        </NavLink>
+      ) : null}
       {user.role === 'admin' || user.role === 'manager' ? (
         <NavLink
           to={PATHS.users}

@@ -12,4 +12,13 @@ export const PATHS = {
   users: '/usuarios',
   profile: '/mi-perfil',
   permissions: '/permisos-y-roles',
+  projects: '/proyectos',
 } as const;
+
+export function projectTabPath(projectId: string, tab: string): string {
+  return `${PATHS.projects}/${projectId}/${tab}`;
+}
+
+export function projectDetailPath(projectId: string): string {
+  return projectTabPath(projectId, 'resumen');
+}
