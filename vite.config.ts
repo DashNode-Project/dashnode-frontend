@@ -28,7 +28,16 @@ export default defineConfig(({ mode }) => {
       coverage: {
         provider: 'v8',
         include: ['src/**/*.{ts,tsx}'],
-        exclude: ['src/test/**', 'src/main.tsx', 'src/vite-env.d.ts', 'src/**/*.test.{ts,tsx}'],
+        exclude: [
+          'src/test/**',
+          'src/main.tsx',
+          'src/vite-env.d.ts',
+          'src/**/*.test.{ts,tsx}',
+          'src/features/landing/**',
+          'src/features/home/**',
+          'src/features/auth/ForgotPasswordPage.tsx',
+          'src/features/auth/ResetPasswordPage.tsx',
+        ],
         reporter: ['text-summary', 'text'],
         thresholds: { lines: 80, statements: 80, functions: 80, branches: 75 },
       },

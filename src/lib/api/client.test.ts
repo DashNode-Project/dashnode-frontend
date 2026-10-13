@@ -48,6 +48,37 @@ describe('api client', () => {
     await expect(apiRequest('/auth/session')).rejects.toBeInstanceOf(NetworkError);
   });
 
+  it('throws when success response has no JSON body', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 200 })),
+    );
+    await expect(apiRequest('/projects')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('supports DELETE requests', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ message: 'ok' }), { status: 200 })),
+    );
+    await apiRequest('/projects/p1', { method: 'DELETE' });
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/projects/p1'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('posts multipart with POST and handles empty error bodies', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 502, statusText: 'Bad Gateway' })),
+    );
+    const formData = new FormData();
+    await expect(
+      apiFormRequest('/auth/profile', { method: 'POST', formData }),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+
   it('throws ApiError when multipart upload fails', async () => {
     vi.stubGlobal(
       'fetch',

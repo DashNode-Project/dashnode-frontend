@@ -6,6 +6,8 @@ import { AuthProvider } from '@/features/auth/AuthContext';
 import { GuestOnly, RequireAuth, RequireRole } from '@/features/auth/guards';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { FlashProvider } from './FlashContext';
+import { ToastProvider } from '@/lib/toast/ToastProvider';
+import { UnderDevelopmentBridge } from './UnderDevelopmentBridge';
 import { PATHS } from './paths';
 
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'));
@@ -18,6 +20,8 @@ const HomePage = lazy(() => import('@/features/home/HomePage'));
 const UsersPage = lazy(() => import('@/features/users/UsersPage'));
 const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
 const PermissionsPage = lazy(() => import('@/features/permissions/PermissionsPage'));
+const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'));
+const ProjectDetailPage = lazy(() => import('@/features/projects/ProjectDetailPage'));
 
 function PageLoading() {
   return (
@@ -30,43 +34,48 @@ function PageLoading() {
 export function AppRoutes() {
   return (
     <FlashProvider>
-      <AuthProvider>
-        <LoadFailureBoundary>
-          <Suspense fallback={<PageLoading />}>
-            <Routes>
-              <Route path={PATHS.landing} element={<LandingPage />} />
-              <Route path={PATHS.about} element={<AboutPage />} />
+      <ToastProvider>
+        <AuthProvider>
+          <UnderDevelopmentBridge />
+          <LoadFailureBoundary>
+            <Suspense fallback={<PageLoading />}>
+              <Routes>
+                <Route path={PATHS.landing} element={<LandingPage />} />
+                <Route path={PATHS.about} element={<AboutPage />} />
 
-              <Route element={<GuestOnly />}>
-                <Route path={PATHS.login} element={<LoginPage />} />
-                <Route path={PATHS.register} element={<RegisterPage />} />
-                <Route path={PATHS.forgotPassword} element={<ForgotPasswordPage />} />
-                <Route path={PATHS.setPassword} element={<SetPasswordPage />} />
-              </Route>
+                <Route element={<GuestOnly />}>
+                  <Route path={PATHS.login} element={<LoginPage />} />
+                  <Route path={PATHS.register} element={<RegisterPage />} />
+                  <Route path={PATHS.forgotPassword} element={<ForgotPasswordPage />} />
+                  <Route path={PATHS.setPassword} element={<SetPasswordPage />} />
+                </Route>
 
-              <Route element={<RequireAuth />}>
-                <Route element={<AppShell />}>
-                  <Route path={PATHS.profile} element={<ProfilePage />} />
-                  <Route path={PATHS.permissions} element={<PermissionsPage />} />
-                  <Route element={<RequireRole allow="admin" />}>
-                    <Route path={PATHS.homeAdmin} element={<HomePage />} />
-                    <Route path={PATHS.users} element={<UsersPage />} />
-                  </Route>
-                  <Route element={<RequireRole allow="manager" />}>
-                    <Route path={PATHS.homeManager} element={<HomePage />} />
-                    <Route path={PATHS.users} element={<UsersPage />} />
-                  </Route>
-                  <Route element={<RequireRole allow="developer" />}>
-                    <Route path={PATHS.homeDeveloper} element={<HomePage />} />
+                <Route element={<RequireAuth />}>
+                  <Route element={<AppShell />}>
+                    <Route path={PATHS.profile} element={<ProfilePage />} />
+                    <Route path={PATHS.permissions} element={<PermissionsPage />} />
+                    <Route path={PATHS.projects} element={<ProjectsPage />} />
+                    <Route path={`${PATHS.projects}/:projectId`} element={<ProjectDetailPage />} />
+                    <Route element={<RequireRole allow="admin" />}>
+                      <Route path={PATHS.homeAdmin} element={<HomePage />} />
+                      <Route path={PATHS.users} element={<UsersPage />} />
+                    </Route>
+                    <Route element={<RequireRole allow="manager" />}>
+                      <Route path={PATHS.homeManager} element={<HomePage />} />
+                      <Route path={PATHS.users} element={<UsersPage />} />
+                    </Route>
+                    <Route element={<RequireRole allow="developer" />}>
+                      <Route path={PATHS.homeDeveloper} element={<HomePage />} />
+                    </Route>
                   </Route>
                 </Route>
-              </Route>
 
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Suspense>
-        </LoadFailureBoundary>
-      </AuthProvider>
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
+          </LoadFailureBoundary>
+        </AuthProvider>
+      </ToastProvider>
     </FlashProvider>
   );
 }
