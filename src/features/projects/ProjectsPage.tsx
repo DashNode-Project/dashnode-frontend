@@ -190,7 +190,7 @@ export default function ProjectsPage() {
       ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-white/6 bg-[#12131C] p-8 text-center">
           <FolderOpen className="mx-auto mb-3 text-[#6B7280]" size={28} aria-hidden="true" />
-          <p className="text-sm text-[#9CA3AF]">No hay proyectos para mostrar.</p>
+          <p className="text-sm text-[#9CA3AF]">{PROJECT_MESSAGES.noProjectsAssigned}</p>
           {canCreate ? (
             <Button type="button" className="mt-4" onClick={() => void openCreate()}>
               Crear proyecto
@@ -212,9 +212,17 @@ export default function ProjectsPage() {
                   </span>
                 </div>
                 <p className="line-clamp-2 text-xs text-[#9CA3AF]">{project.description || '—'}</p>
-                <p className="mt-3 text-xs text-[#6B7280]">
+                <p className="mt-2 text-xs text-[#6B7280]">
+                  Gerente: {project.manager_name || '—'}
+                </p>
+                <p className="mt-1 text-xs text-[#6B7280]">
                   Prioridad: {PROJECT_PRIORITY_LABELS[project.priority] ?? project.priority}
                 </p>
+                {project.tech_stack.length > 0 ? (
+                  <p className="mt-2 line-clamp-1 text-xs text-[#9CA3AF]">
+                    Stack: {project.tech_stack.join(', ')}
+                  </p>
+                ) : null}
               </Link>
             </li>
           ))}

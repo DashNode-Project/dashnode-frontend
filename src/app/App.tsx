@@ -21,7 +21,9 @@ const UsersPage = lazy(() => import('@/features/users/UsersPage'));
 const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
 const PermissionsPage = lazy(() => import('@/features/permissions/PermissionsPage'));
 const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'));
-const ProjectDetailPage = lazy(() => import('@/features/projects/ProjectDetailPage'));
+const ProjectWorkspaceLayout = lazy(() => import('@/features/projects/ProjectWorkspaceLayout'));
+const ProjectSummaryTab = lazy(() => import('@/features/projects/ProjectDetailPage'));
+const ProjectModulePlaceholder = lazy(() => import('@/features/projects/ProjectModulePlaceholder'));
 
 function PageLoading() {
   return (
@@ -55,7 +57,14 @@ export function AppRoutes() {
                     <Route path={PATHS.profile} element={<ProfilePage />} />
                     <Route path={PATHS.permissions} element={<PermissionsPage />} />
                     <Route path={PATHS.projects} element={<ProjectsPage />} />
-                    <Route path={`${PATHS.projects}/:projectId`} element={<ProjectDetailPage />} />
+                    <Route
+                      path={`${PATHS.projects}/:projectId`}
+                      element={<ProjectWorkspaceLayout />}
+                    >
+                      <Route index element={<ProjectSummaryTab />} />
+                      <Route path="resumen" element={<ProjectSummaryTab />} />
+                      <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
+                    </Route>
                     <Route element={<RequireRole allow="admin" />}>
                       <Route path={PATHS.homeAdmin} element={<HomePage />} />
                       <Route path={PATHS.users} element={<UsersPage />} />

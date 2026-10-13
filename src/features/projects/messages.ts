@@ -9,6 +9,11 @@ export const PROJECT_MESSAGES = {
   managerUpdated: 'Gerente responsable actualizado correctamente.',
   deleted: 'Proyecto eliminado correctamente.',
   deleteConfirm: '¿Está seguro de que desea eliminar este proyecto?',
+  memberUserRequired: 'Debe seleccionar un usuario.',
+  memberAdded: 'Miembro agregado correctamente.',
+  memberRemoved: 'Miembro retirado correctamente.',
+  memberRemoveConfirm: '¿Está seguro de que desea retirar a este miembro del proyecto?',
+  noProjectsAssigned: 'No tiene proyectos asignados.',
 } as const;
 
 export const PROJECT_STATUS_LABELS: Record<string, string> = {

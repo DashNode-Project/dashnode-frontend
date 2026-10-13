@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/lib/toast/ToastProvider';
 import ProjectDetailPage from './ProjectDetailPage';
+import ProjectWorkspaceLayout from './ProjectWorkspaceLayout';
 import * as projectsApi from './api';
 import { PROJECT_MESSAGES } from './messages';
 
@@ -40,21 +41,29 @@ describe('HU_DN_02_26 — admin delete', () => {
   beforeEach(() => {
     vi.mocked(projectsApi.getProject).mockResolvedValue(sample);
     vi.mocked(projectsApi.deleteProject).mockResolvedValue({ message: PROJECT_MESSAGES.deleted });
+    vi.mocked(projectsApi.listProjectMembers).mockResolvedValue([]);
+    vi.mocked(projectsApi.getProjectHealth).mockResolvedValue({
+      progress_percent: 0,
+      velocity: 0,
+      open_issues: 0,
+    });
     vi.stubGlobal('location', { href: '' });
   });
 
   it('confirms project deletion', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={['/proyectos/p1']}>
+      <MemoryRouter initialEntries={['/proyectos/p1/resumen']}>
         <ToastProvider>
           <Routes>
-            <Route path="/proyectos/:projectId" element={<ProjectDetailPage />} />
+            <Route path="/proyectos/:projectId" element={<ProjectWorkspaceLayout />}>
+              <Route path="resumen" element={<ProjectDetailPage />} />
+            </Route>
           </Routes>
         </ToastProvider>
       </MemoryRouter>,
     );
-    await screen.findByRole('heading', { name: 'Alpha' });
+    await screen.findByRole('button', { name: 'Eliminar proyecto' });
     await user.click(screen.getByRole('button', { name: 'Eliminar proyecto' }));
     expect(await screen.findByText(PROJECT_MESSAGES.deleteConfirm)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));

@@ -107,7 +107,7 @@ describe('HU_DN_02_22 — ProjectsPage', () => {
 
     await waitFor(() => {
       expect(projectsApi.createProject).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith('/proyectos/p-new');
+      expect(mockNavigate).toHaveBeenCalledWith('/proyectos/p-new/resumen');
     });
     expect(await screen.findByRole('status')).toHaveTextContent(PROJECT_MESSAGES.created);
   });
@@ -154,7 +154,7 @@ describe('HU_DN_02_22 — ProjectsPage', () => {
     vi.mocked(projectsApi.listProjects).mockResolvedValue([]);
     const user = userEvent.setup();
     renderPage();
-    expect(await screen.findByText('No hay proyectos para mostrar.')).toBeInTheDocument();
+    expect(await screen.findByText(PROJECT_MESSAGES.noProjectsAssigned)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Crear proyecto' }));
     expect(await screen.findByRole('heading', { name: 'Crear proyecto' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));

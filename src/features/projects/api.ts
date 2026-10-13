@@ -10,6 +10,7 @@ export interface ProjectSummary {
   description: string;
   owner_id: string;
   manager_id: string;
+  manager_name?: string;
   priority: ProjectPriority;
   tech_stack: string[];
   meeting_link: string | null;
@@ -80,4 +81,50 @@ export async function deleteProject(projectId: string): Promise<{ message: strin
 
 export async function listActiveManagers(): Promise<AdminUserSummary[]> {
   return apiRequest<AdminUserSummary[]>('/auth/managers');
+}
+
+export interface ProjectMemberRow {
+  user_id: string;
+  name: string;
+  email: string;
+  role: string;
+  joined_at: string;
+}
+
+export interface ProjectHealth {
+  progress_percent: number;
+  velocity: number;
+  open_issues: number;
+}
+
+export async function listProjectMembers(projectId: string): Promise<ProjectMemberRow[]> {
+  return apiRequest<ProjectMemberRow[]>(`/projects/${projectId}/members`);
+}
+
+export async function getProjectHealth(projectId: string): Promise<ProjectHealth> {
+  return apiRequest<ProjectHealth>(`/projects/${projectId}/health`);
+}
+
+export async function listActiveUsers(query?: string): Promise<AdminUserSummary[]> {
+  const suffix = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : '';
+  return apiRequest<AdminUserSummary[]>(`/auth/active-users${suffix}`);
+}
+
+export async function addProjectMember(
+  projectId: string,
+  userId: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/projects/${projectId}/members`, {
+    method: 'POST',
+    body: { user_id: userId },
+  });
+}
+
+export async function removeProjectMember(
+  projectId: string,
+  userId: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/projects/${projectId}/members/${userId}`, {
+    method: 'DELETE',
+  });
 }

@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, ok } from '@/test/fetchMock';
 import {
+  addProjectMember,
   assignProjectManager,
   createProject,
   deleteProject,
   getProject,
+  getProjectHealth,
   listActiveManagers,
+  listActiveUsers,
+  listProjectMembers,
   listProjects,
+  removeProjectMember,
   updateProject,
   updateProjectStatus,
 } from './api';
@@ -57,6 +62,23 @@ describe('projects api', () => {
       if (call.url.includes('/auth/managers')) {
         return ok([]);
       }
+      if (call.url.includes('/auth/active-users')) {
+        return ok([
+          { id: 'u1', name: 'User', email: 'u@t.com', role: 'developer', is_active: true },
+        ]);
+      }
+      if (call.url.includes('/members/dev-1') && call.method === 'DELETE') {
+        return ok({ message: 'Miembro retirado correctamente.' });
+      }
+      if (call.url.includes('/members') && call.method === 'POST') {
+        return ok({ message: 'Miembro agregado correctamente.' }, 201);
+      }
+      if (call.url.includes('/members')) {
+        return ok([]);
+      }
+      if (call.url.includes('/health')) {
+        return ok({ progress_percent: 0, velocity: 0, open_issues: 0 });
+      }
       return ok({});
     });
     await expect(getProject('p1')).resolves.toMatchObject({ id: 'p1' });
@@ -65,5 +87,10 @@ describe('projects api', () => {
     await expect(assignProjectManager('p1', 'm1')).resolves.toHaveProperty('message');
     await expect(deleteProject('p1')).resolves.toHaveProperty('message');
     await expect(listActiveManagers()).resolves.toEqual([]);
+    await expect(listActiveUsers('ana')).resolves.toHaveLength(1);
+    await expect(listProjectMembers('p1')).resolves.toEqual([]);
+    await expect(getProjectHealth('p1')).resolves.toMatchObject({ open_issues: 0 });
+    await expect(addProjectMember('p1', 'dev-1')).resolves.toHaveProperty('message');
+    await expect(removeProjectMember('p1', 'dev-1')).resolves.toHaveProperty('message');
   });
 });
