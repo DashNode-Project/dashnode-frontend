@@ -99,3 +99,45 @@ Validación local:
 - Seguridad: `node scripts/scan-secrets.mjs` limpio (0 secretos).
 - Compilación: `npm run build` genera bundle de producción optimizado sin errores.
 
+---
+
+## EP-05 — Agendamiento y Reuniones (HU_DN_03_37 … HU_DN_03_41)
+
+### Análisis del Orquestador (Modo Lote / Épica)
+- **Fecha:** 2026-10-13
+- **Clasificación del lote:** FULL_STACK
+- **Complejidad:** MODERATE / COMPLEX (Score: 82/100)
+- **Políticas cargadas:** `policies.xml`, `adaptive-policies.xml`, `project-modes.xml`, `engineering-standards.xml` (seguridad, mensajes_literales, contrato_de_error, quality_gates, estrategia_de_pruebas, accesibilidad).
+- **Project Mode:** EXTEND_EXISTING en ambos repositorios.
+- **Ramas:** `feature/ep-05-meetings-age` (tanto backend como frontend).
+- **Prohibición de push:** No publicar ramas hasta verificación integral completa.
+
+#### Grafo de dependencias y flujo:
+1. `HU_DN_03_37`: Selección de horario disponible resultante de búsqueda (HU_DN_03_36) y apertura modal de confirmación en solo lectura (fecha, hora, duración, participantes).
+2. `HU_DN_03_38`: Programación de reunión desde ventana de confirmación (título ≤ 100 caracteres obligatorio, tipo obligatorio entre Daily/Planning/Review/Retro/General, proyecto asociado obligatorio con validación de membresía de todos los participantes y prellenado de enlace sugerido, enlace opcional con formato URL válido, rechazo de solapamiento concurrente para cualquier participante, persistencia, notificación a participantes y redirección a reuniones).
+3. `HU_DN_03_39`: Listado de reuniones (Próximas y Pasadas) con alcance por rol (Admin: todas; Gerente: propias y de sus proyectos; Desarrollador: solo participante), orden cronológico (próximas asc; pasadas sep), datos completos y estados.
+4. `HU_DN_03_40`: Vista calendario interactiva con conmutador Lista/Calendario con el mismo conjunto de reuniones, título y tipo distinguibles.
+5. `HU_DN_03_41`: Detalle de reunión desde lista o calendario, participantes y sus respuestas (pendiente, aceptada, rechazada), resumen y acta, acciones según rol ('Enviar a Google Calendar', 'Aceptar / Rechazar', 'Cancelar reunión', 'Registrar resumen y acta'), control de acceso por rol (Desarrollador denegado si no participa).
+
+#### Contrato Compartido:
+- **API Endpoints:**
+  - `POST /api/v1/availability/meetings`: Creación de reunión con campos `title`, `type`, `project_id`, `date`, `start_time`, `end_time`, `duration`, `link`, `participant_ids`.
+  - `GET /api/v1/availability/meetings`: Listado de reuniones filtradas por alcance de rol y parámetros opcionales.
+  - `GET /api/v1/availability/meetings/{id}`: Detalle completo de reunión con creador, participantes y respuestas.
+  - `POST /api/v1/availability/meetings/{id}/cancel`: Cancelación de reunión por creador.
+  - `POST /api/v1/availability/meetings/{id}/respond`: Registro de respuesta de participante ('aceptada' | 'rechazada').
+  - `POST /api/v1/availability/meetings/{id}/summary`: Registro de resumen (≤ 2000 chars) y URL de acta.
+- **Mensajes Literales Verbatim:**
+  - Título vacío: `'El título de la reunión es obligatorio.'`
+  - Tipo vacío: `'Seleccione el tipo de reunión.'`
+  - Enlace inválido: `'El enlace de la reunión no tiene un formato de URL válido.'`
+  - Proyecto vacío: `'Debe seleccionar un proyecto.'`
+  - Miembros no pertenecientes al proyecto: `'Todos los participantes deben ser miembros del proyecto seleccionado.'`
+  - Solapamiento concurrente: `'Uno o más participantes ya tienen una reunión en ese horario.'`
+  - Éxito al programar: `'Reunión programada correctamente.'`
+  - Éxito sin datos: `'No hay reuniones para mostrar.'`
+  - Fallo técnico genérico: `'No fue posible completar la operación. Intente nuevamente.'`
+  - Fallo de carga: `'No fue posible cargar la información. Intente nuevamente.'`
+  - Acceso denegado: `'Acceso denegado. No tiene permisos para realizar esta acción.'`
+
+

@@ -1,0 +1,1081 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router';
+import {
+  Calendar,
+  List,
+  Video,
+  Plus,
+  ExternalLink,
+  Copy,
+  Trash2,
+  CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FileText,
+  Link as LinkIcon,
+  X,
+  AlertCircle,
+} from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { TextField } from '@/components/ui/TextField';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useToast } from '@/lib/toast/ToastProvider';
+import { PATHS } from '@/app/paths';
+import { ApiError } from '@/lib/api/errors';
+import type { MeetingDTO } from '@/features/availability/types';
+import { AVAILABILITY_MESSAGES } from '@/features/availability/messages';
+import { buildGoogleCalendarUrl, isValidUrl } from '@/features/availability/utils';
+import {
+  listMeetings,
+  getMeetingDetail,
+  cancelMeeting,
+  respondMeeting,
+  updateMeetingSummary,
+} from '@/features/availability/api';
+
+const MONTH_NAMES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+const WEEKDAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+function getTypeBadgeStyle(type: string) {
+  switch (type.toLowerCase()) {
+    case 'daily':
+      return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+    case 'planning':
+      return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
+    case 'review':
+      return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    case 'retro':
+      return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+    default:
+      return 'bg-slate-500/15 text-slate-300 border-slate-500/30';
+  }
+}
+
+function getStatusBadge(status: string) {
+  switch (status.toLowerCase()) {
+    case 'completed':
+      return {
+        label: 'Completada',
+        style: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      };
+    case 'cancelled':
+      return {
+        label: 'Cancelada',
+        style: 'bg-red-500/15 text-red-400 border-red-500/30',
+      };
+    default:
+      return {
+        label: 'Programada',
+        style: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+      };
+  }
+}
+
+function getResponseBadge(response: string) {
+  switch (response.toLowerCase()) {
+    case 'aceptada':
+      return {
+        label: 'Aceptada',
+        style: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      };
+    case 'rechazada':
+      return {
+        label: 'Rechazada',
+        style: 'bg-red-500/15 text-red-400 border-red-500/30',
+      };
+    default:
+      return {
+        label: 'Pendiente',
+        style: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+      };
+  }
+}
+
+export default function MeetingsPage() {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
+  const [meetings, setMeetings] = useState<MeetingDTO[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [activeTab, setActiveTab] = useState<'proximas' | 'pasadas'>('proximas');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'completed' | 'cancelled'>(
+    'all',
+  );
+
+  // Calendar state
+  const [calYear, setCalYear] = useState(() => new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
+
+  // Modal states
+  const [selectedMeeting, setSelectedMeeting] = useState<MeetingDTO | null>(null);
+  const [cancelModalMeeting, setCancelModalMeeting] = useState<MeetingDTO | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const [summaryModalMeeting, setSummaryModalMeeting] = useState<MeetingDTO | null>(null);
+  const [summaryText, setSummaryText] = useState('');
+  const [minutesUrlText, setMinutesUrlText] = useState('');
+  const [savingSummary, setSavingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const [respondingMeetingId, setRespondingMeetingId] = useState<string | null>(null);
+
+  const loadMeetings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await listMeetings();
+      setMeetings(data);
+    } catch {
+      showToast(AVAILABILITY_MESSAGES.technicalLoadFailure, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await listMeetings();
+        if (!cancelled) setMeetings(data);
+      } catch {
+        if (!cancelled) showToast(AVAILABILITY_MESSAGES.technicalLoadFailure, 'error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
+
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const upcomingMeetings = useMemo(() => {
+    return meetings
+      .filter((m) => m.status !== 'cancelled' && m.date >= todayStr)
+      .sort((a, b) => {
+        const d = a.date.localeCompare(b.date);
+        return d !== 0 ? d : a.start_time.localeCompare(b.start_time);
+      });
+  }, [meetings, todayStr]);
+
+  const pastMeetings = useMemo(() => {
+    return meetings
+      .filter((m) => m.status === 'completed' || m.status === 'cancelled' || m.date < todayStr)
+      .sort((a, b) => {
+        const d = b.date.localeCompare(a.date);
+        return d !== 0 ? d : b.start_time.localeCompare(a.start_time);
+      });
+  }, [meetings, todayStr]);
+
+  const currentTabMeetings = useMemo(() => {
+    const base = activeTab === 'proximas' ? upcomingMeetings : pastMeetings;
+    if (statusFilter === 'all') return base;
+    return base.filter((m) => m.status === statusFilter);
+  }, [activeTab, upcomingMeetings, pastMeetings, statusFilter]);
+
+  const openDetail = async (m: MeetingDTO) => {
+    try {
+      const detail = await getMeetingDetail(m.id);
+      setSelectedMeeting(detail);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        showToast(AVAILABILITY_MESSAGES.meetingDetailForbidden, 'error');
+      } else {
+        showToast(AVAILABILITY_MESSAGES.technicalLoadFailure, 'error');
+      }
+    }
+  };
+
+  const handleCopyLink = (link: string | null) => {
+    if (!link) return;
+    try {
+      void navigator?.clipboard?.writeText?.(link);
+    } catch {
+      // ignore clipboard error in test/unsupported environments
+    }
+    showToast('Enlace copiado.', 'success');
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelModalMeeting) return;
+    setCancelling(true);
+    try {
+      await cancelMeeting(cancelModalMeeting.id);
+      showToast(AVAILABILITY_MESSAGES.meetingCancelled, 'success');
+      setCancelModalMeeting(null);
+      if (selectedMeeting?.id === cancelModalMeeting.id) {
+        setSelectedMeeting(null);
+      }
+      loadMeetings();
+    } catch {
+      showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleRespond = async (meetingId: string, response: 'aceptada' | 'rechazada') => {
+    setRespondingMeetingId(meetingId);
+    try {
+      const updated = await respondMeeting(meetingId, response);
+      showToast(AVAILABILITY_MESSAGES.meetingResponseRegistered, 'success');
+      setSelectedMeeting(updated);
+      loadMeetings();
+    } catch {
+      showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+    } finally {
+      setRespondingMeetingId(null);
+    }
+  };
+
+  const openSummaryModal = (m: MeetingDTO) => {
+    setSummaryModalMeeting(m);
+    setSummaryText(m.summary || '');
+    setMinutesUrlText(m.minutes_url || '');
+    setSummaryError(null);
+  };
+
+  const handleSaveSummary = async () => {
+    if (!summaryModalMeeting) return;
+
+    if (summaryText.length > 2000) {
+      setSummaryError(AVAILABILITY_MESSAGES.summaryTooLong);
+      return;
+    }
+
+    if (minutesUrlText.trim() && !isValidUrl(minutesUrlText.trim())) {
+      setSummaryError(AVAILABILITY_MESSAGES.invalidMinutesUrl);
+      return;
+    }
+
+    setSavingSummary(true);
+    setSummaryError(null);
+    try {
+      const updated = await updateMeetingSummary(summaryModalMeeting.id, {
+        summary: summaryText.trim() || null,
+        minutes_url: minutesUrlText.trim() || null,
+      });
+      showToast(AVAILABILITY_MESSAGES.meetingSummaryRegistered, 'success');
+      setSummaryModalMeeting(null);
+      if (selectedMeeting?.id === summaryModalMeeting.id) {
+        setSelectedMeeting(updated);
+      }
+      loadMeetings();
+    } catch {
+      setSummaryError(AVAILABILITY_MESSAGES.technicalFailure);
+    } finally {
+      setSavingSummary(false);
+    }
+  };
+
+  // Calendar cells
+  const calendarCells = useMemo(() => {
+    const firstDayIndex = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const cells: (number | null)[] = [];
+    for (let i = 0; i < firstDayIndex; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    return cells;
+  }, [calYear, calMonth]);
+
+  const meetingsByDay = useMemo(() => {
+    const map: Record<string, MeetingDTO[]> = {};
+    for (const m of meetings) {
+      if (!map[m.date]) map[m.date] = [];
+      map[m.date]?.push(m);
+    }
+    return map;
+  }, [meetings]);
+
+  const isUserParticipant = (m: MeetingDTO) => {
+    if (!user) return false;
+    if (m.participants && m.participants.length > 0) {
+      return m.participants.some((p) => p.user_id === user.id);
+    }
+    return m.participant_ids.includes(user.id);
+  };
+
+  const isUserCreatorOrAdmin = (m: MeetingDTO) => {
+    if (!user) return false;
+    return user.role === 'admin' || m.creator_id === user.id;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Section Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-[#F9FAFB]">Reuniones</h1>
+          <p className="text-xs text-[#9CA3AF] mt-0.5">
+            {upcomingMeetings.length} próximas · {pastMeetings.length} anteriores
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* View switcher (HU_DN_03_40) */}
+          <div className="flex items-center bg-[#1E1F2B] border border-white/10 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              aria-label="Vista Lista"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-[#9CA3AF] hover:text-[#F9FAFB]'
+              }`}
+            >
+              <List size={14} />
+              Lista
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('calendar')}
+              aria-label="Vista Calendario"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                viewMode === 'calendar'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-[#9CA3AF] hover:text-[#F9FAFB]'
+              }`}
+            >
+              <Calendar size={14} />
+              Calendario
+            </button>
+          </div>
+
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => navigate(PATHS.availability)}
+              className="flex items-center gap-1.5"
+            >
+              <Plus size={15} />
+              Programar reunión
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs and Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('proximas')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              activeTab === 'proximas'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                : 'text-[#9CA3AF] hover:text-[#F9FAFB] hover:bg-white/5'
+            }`}
+          >
+            Próximas ({upcomingMeetings.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('pasadas')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              activeTab === 'pasadas'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                : 'text-[#9CA3AF] hover:text-[#F9FAFB] hover:bg-white/5'
+            }`}
+          >
+            Pasadas ({pastMeetings.length})
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {(['all', 'scheduled', 'completed', 'cancelled'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                statusFilter === s
+                  ? 'bg-white/10 text-white'
+                  : 'text-[#6B7280] hover:text-[#9CA3AF] hover:bg-white/5'
+              }`}
+            >
+              {
+                {
+                  all: 'Todas',
+                  scheduled: 'Programadas',
+                  completed: 'Completadas',
+                  cancelled: 'Canceladas',
+                }[s]
+              }
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content Body */}
+      {loading ? (
+        <div className="flex items-center justify-center p-12 text-xs text-[#9CA3AF]">
+          Cargando reuniones…
+        </div>
+      ) : viewMode === 'list' ? (
+        /* List View (HU_DN_03_39) */
+        currentTabMeetings.length === 0 ? (
+          <div className="bg-[#12131C] border border-white/6 rounded-xl p-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 mx-auto flex items-center justify-center">
+              <Video size={22} />
+            </div>
+            <p className="text-sm font-medium text-[#F9FAFB]">
+              {AVAILABILITY_MESSAGES.noMeetingsToShow}
+            </p>
+            <p className="text-xs text-[#6B7280]">
+              {activeTab === 'proximas'
+                ? 'No tienes reuniones programadas próximamente.'
+                : 'No se encontraron reuniones anteriores.'}
+            </p>
+            {(user?.role === 'admin' || user?.role === 'manager') && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(PATHS.availability)}
+                className="mt-2"
+              >
+                Buscar disponibilidad
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {currentTabMeetings.map((m) => {
+              const statusInfo = getStatusBadge(m.status);
+              const isPast =
+                m.status === 'completed' || m.status === 'cancelled' || m.date < todayStr;
+              const isCreator = isUserCreatorOrAdmin(m);
+              const gcUrl = buildGoogleCalendarUrl(
+                m.title,
+                m.date,
+                m.start_time,
+                m.duration,
+                m.project_name,
+                m.link,
+                m.description,
+              );
+
+              return (
+                <div
+                  key={m.id}
+                  className="bg-[#12131C] border border-white/6 hover:border-white/12 rounded-xl p-4 transition-colors flex items-start gap-4"
+                >
+                  {/* Status Indicator Icon */}
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                      m.status === 'completed'
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : m.status === 'cancelled'
+                          ? 'bg-red-500/15 text-red-400'
+                          : 'bg-blue-500/15 text-blue-400'
+                    }`}
+                  >
+                    <Video size={18} />
+                  </div>
+
+                  {/* Meeting Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <button
+                        type="button"
+                        onClick={() => openDetail(m)}
+                        className="text-sm font-semibold text-[#F9FAFB] hover:text-blue-400 transition-colors text-left"
+                      >
+                        {m.title}
+                      </button>
+                      <span
+                        className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${getTypeBadgeStyle(
+                          m.type,
+                        )}`}
+                      >
+                        {m.type}
+                      </span>
+                      <span
+                        className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${statusInfo.style}`}
+                      >
+                        {statusInfo.label}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs text-[#6B7280] mb-2 flex-wrap">
+                      <span className="flex items-center gap-1 text-[#9CA3AF]">
+                        <Calendar size={12} />
+                        {m.date}
+                      </span>
+                      <span className="flex items-center gap-1 font-mono text-[#9CA3AF]">
+                        <Clock size={12} />
+                        {m.start_time} · {m.duration}min
+                      </span>
+                      {m.project_name && (
+                        <span className="text-blue-300/80 font-medium">{m.project_name}</span>
+                      )}
+                    </div>
+
+                    {m.summary && (
+                      <p className="text-xs text-[#9CA3AF] mb-2 line-clamp-2 italic bg-[#1A1C28] p-2 rounded border border-white/4">
+                        "{m.summary}"
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-3 flex-wrap text-xs">
+                      {m.participants && m.participants.length > 0 && (
+                        <div className="flex items-center gap-1 text-[#9CA3AF]">
+                          <span>Participantes:</span>
+                          <span className="font-medium text-[#F9FAFB]">
+                            {m.participants.length}
+                          </span>
+                        </div>
+                      )}
+
+                      {isPast && isCreator && (
+                        <button
+                          type="button"
+                          onClick={() => openSummaryModal(m)}
+                          className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors"
+                        >
+                          <FileText size={12} />
+                          {m.summary ? 'Editar resumen' : 'Registrar resumen y acta'}
+                        </button>
+                      )}
+
+                      {m.minutes_url && (
+                        <a
+                          href={m.minutes_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+                        >
+                          <LinkIcon size={12} />
+                          Ver acta
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!isPast && m.link && (
+                      <>
+                        <a
+                          href={m.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Unirse a la videollamada"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                        <a
+                          href={gcUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Enviar a Google Calendar"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                        >
+                          <CalendarPlus size={14} />
+                        </a>
+                      </>
+                    )}
+
+                    {m.link && (
+                      <button
+                        type="button"
+                        title="Copiar enlace"
+                        onClick={() => handleCopyLink(m.link)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-[#F9FAFB] hover:bg-white/8 transition-colors"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+
+                    {isCreator && m.status === 'scheduled' && (
+                      <button
+                        type="button"
+                        title="Cancelar reunión"
+                        onClick={() => setCancelModalMeeting(m)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        /* Calendar View (HU_DN_03_40) */
+        <div className="bg-[#12131C] border border-white/6 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-white/6">
+            <button
+              type="button"
+              onClick={() => {
+                if (calMonth === 0) {
+                  setCalMonth(11);
+                  setCalYear((y) => y - 1);
+                } else {
+                  setCalMonth((m) => m - 1);
+                }
+              }}
+              aria-label="Mes anterior"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-[#F9FAFB] hover:bg-white/8 transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <h2 className="text-sm font-semibold text-[#F9FAFB]">
+              {MONTH_NAMES[calMonth]} {calYear}
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                if (calMonth === 11) {
+                  setCalMonth(0);
+                  setCalYear((y) => y + 1);
+                } else {
+                  setCalMonth((m) => m + 1);
+                }
+              }}
+              aria-label="Mes siguiente"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-[#F9FAFB] hover:bg-white/8 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-[#6B7280] pb-1">
+            {WEEKDAY_NAMES.map((w) => (
+              <div key={w}>{w}</div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5">
+            {calendarCells.map((day, idx) => {
+              if (day === null) {
+                return <div key={`empty-${idx}`} className="min-h-[85px]" />;
+              }
+
+              const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(
+                day,
+              ).padStart(2, '0')}`;
+              const dayMeetings = meetingsByDay[dateStr] || [];
+              const isToday = dateStr === todayStr;
+
+              return (
+                <div
+                  key={`day-${day}`}
+                  className={`min-h-[85px] p-1.5 rounded-lg border transition-colors flex flex-col gap-1 ${
+                    isToday
+                      ? 'bg-blue-500/8 border-blue-500/40'
+                      : 'bg-[#1A1C28]/60 border-white/4 hover:border-white/10'
+                  }`}
+                >
+                  <span
+                    className={`text-[11px] font-medium ${
+                      isToday ? 'text-blue-400 font-bold' : 'text-[#9CA3AF]'
+                    }`}
+                  >
+                    {day}
+                  </span>
+
+                  <div className="flex-1 flex flex-col gap-1 overflow-y-auto max-h-[75px]">
+                    {dayMeetings.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => openDetail(m)}
+                        title={`${m.start_time} - ${m.title} (${m.type})`}
+                        className={`text-left text-[10px] px-1.5 py-0.5 rounded truncate border transition-colors ${getTypeBadgeStyle(
+                          m.type,
+                        )}`}
+                      >
+                        <span className="font-mono font-medium mr-1">{m.start_time}</span>
+                        <span>{m.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Meeting Detail Modal (HU_DN_03_41) */}
+      {selectedMeeting && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="meeting-detail-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-lg bg-[#12131C] border border-white/10 rounded-xl shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-white/8 pb-3">
+              <div>
+                <h3 id="meeting-detail-title" className="text-base font-semibold text-[#F9FAFB]">
+                  {selectedMeeting.title}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${getTypeBadgeStyle(
+                      selectedMeeting.type,
+                    )}`}
+                  >
+                    {selectedMeeting.type}
+                  </span>
+                  <span
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+                      getStatusBadge(selectedMeeting.status).style
+                    }`}
+                  >
+                    {getStatusBadge(selectedMeeting.status).label}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMeeting(null)}
+                aria-label="Cerrar detalle"
+                className="text-[#6B7280] hover:text-[#F9FAFB] p-1 rounded transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-[#1A1C28] p-3 rounded-lg border border-white/6 text-[#9CA3AF]">
+                <div>
+                  <span className="text-[#6B7280] block text-[10px]">Proyecto</span>
+                  <span className="font-medium text-[#F9FAFB]">
+                    {selectedMeeting.project_name || 'No especificado'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#6B7280] block text-[10px]">Fecha y horario</span>
+                  <span className="font-medium text-[#F9FAFB]">
+                    {selectedMeeting.date} ({selectedMeeting.start_time} –{' '}
+                    {selectedMeeting.end_time})
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#6B7280] block text-[10px]">Duración</span>
+                  <span className="font-medium text-[#F9FAFB]">
+                    {selectedMeeting.duration} minutos
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#6B7280] block text-[10px]">Convocada por</span>
+                  <span className="font-medium text-[#F9FAFB]">
+                    {selectedMeeting.creator_name || 'Organizador'}
+                  </span>
+                </div>
+              </div>
+
+              {selectedMeeting.link && (
+                <div className="flex items-center justify-between bg-[#1A1C28] px-3 py-2 rounded-lg border border-white/6">
+                  <span className="truncate max-w-[320px] text-blue-400 font-mono text-[11px]">
+                    {selectedMeeting.link}
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <a
+                      href={selectedMeeting.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                    >
+                      <ExternalLink size={12} />
+                      Unirse
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLink(selectedMeeting.link)}
+                      className="text-xs text-[#9CA3AF] hover:text-[#F9FAFB] px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <Copy size={12} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Participants & Responses */}
+              <div>
+                <p className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-1.5">
+                  Participantes y respuestas
+                </p>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                  {selectedMeeting.participants && selectedMeeting.participants.length > 0 ? (
+                    selectedMeeting.participants.map((p) => {
+                      const respInfo = getResponseBadge(p.response);
+                      return (
+                        <div
+                          key={p.user_id}
+                          className="flex items-center justify-between bg-[#1A1C28] px-3 py-1.5 rounded-lg border border-white/6"
+                        >
+                          <span className="font-medium text-[#F9FAFB]">
+                            {p.name || p.email || p.user_id}
+                          </span>
+                          <span
+                            className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${respInfo.style}`}
+                          >
+                            {respInfo.label}
+                          </span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-[#6B7280]">No hay participantes registrados.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Participant Response Action (HU_DN_03_41) */}
+              {isUserParticipant(selectedMeeting) && selectedMeeting.status === 'scheduled' && (
+                <div className="bg-blue-500/8 border border-blue-500/20 p-3 rounded-lg flex items-center justify-between">
+                  <span className="text-xs text-blue-300 font-medium">
+                    ¿Asistirás a esta reunión?
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleRespond(selectedMeeting.id, 'aceptada')}
+                      disabled={respondingMeetingId === selectedMeeting.id}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-xs"
+                    >
+                      Aceptar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRespond(selectedMeeting.id, 'rechazada')}
+                      disabled={respondingMeetingId === selectedMeeting.id}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 text-xs"
+                    >
+                      Rechazar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Summary and Minutes Section */}
+              {selectedMeeting.summary && (
+                <div className="bg-[#1A1C28] p-3 rounded-lg border border-white/6 space-y-1">
+                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wide">
+                    Resumen de acuerdos
+                  </p>
+                  <p className="text-xs text-[#F9FAFB] whitespace-pre-wrap">
+                    {selectedMeeting.summary}
+                  </p>
+                </div>
+              )}
+
+              {selectedMeeting.minutes_url && (
+                <a
+                  href={selectedMeeting.minutes_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+                >
+                  <LinkIcon size={13} />
+                  Ver acta de reunión
+                </a>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-white/8 gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <a
+                  href={buildGoogleCalendarUrl(
+                    selectedMeeting.title,
+                    selectedMeeting.date,
+                    selectedMeeting.start_time,
+                    selectedMeeting.duration,
+                    selectedMeeting.project_name,
+                    selectedMeeting.link,
+                    selectedMeeting.description,
+                  )}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+                >
+                  <CalendarPlus size={13} />
+                  Enviar a Google Calendar
+                </a>
+
+                {isUserCreatorOrAdmin(selectedMeeting) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openSummaryModal(selectedMeeting)}
+                    className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 text-xs"
+                  >
+                    <FileText size={13} className="mr-1" />
+                    Registrar resumen y acta
+                  </Button>
+                )}
+              </div>
+
+              {isUserCreatorOrAdmin(selectedMeeting) && selectedMeeting.status === 'scheduled' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCancelModalMeeting(selectedMeeting)}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs"
+                >
+                  <Trash2 size={13} className="mr-1" />
+                  Cancelar reunión
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal (HU_DN_03_41) */}
+      {cancelModalMeeting && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cancel-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-sm bg-[#12131C] border border-white/10 rounded-xl shadow-2xl p-5 space-y-4">
+            <h4 id="cancel-modal-title" className="text-sm font-semibold text-[#F9FAFB]">
+              Cancelar "{cancelModalMeeting.title}"
+            </h4>
+            <p className="text-xs text-[#9CA3AF]">
+              ¿Estás seguro de cancelar esta reunión? Solo el creador o un administrador puede
+              realizar esta acción.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/8">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCancelModalMeeting(null)}
+                disabled={cancelling}
+              >
+                No cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleConfirmCancel}
+                disabled={cancelling}
+                className="bg-red-600 hover:bg-red-500 text-white"
+              >
+                {cancelling ? 'Cancelando…' : 'Confirmar cancelación'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary and Minutes Registration Modal (HU_DN_03_41) */}
+      {summaryModalMeeting && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="summary-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md bg-[#12131C] border border-white/10 rounded-xl shadow-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-white/8 pb-3">
+              <h4 id="summary-modal-title" className="text-sm font-semibold text-[#F9FAFB]">
+                Registrar resumen y acta
+              </h4>
+              <button
+                type="button"
+                onClick={() => setSummaryModalMeeting(null)}
+                className="text-[#6B7280] hover:text-[#F9FAFB] p-1 rounded"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {summaryError && (
+              <div
+                role="alert"
+                className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg flex items-center gap-2"
+              >
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{summaryError}</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label
+                  htmlFor="meeting-summary-text"
+                  className="block text-xs font-medium text-[#9CA3AF] mb-1"
+                >
+                  Resumen de la reunión (máx. 2000 caracteres)
+                </label>
+                <textarea
+                  id="meeting-summary-text"
+                  value={summaryText}
+                  onChange={(e) => setSummaryText(e.target.value)}
+                  maxLength={2000}
+                  rows={5}
+                  placeholder="Acuerdos principales, notas de seguimiento, decisiones clave…"
+                  className="w-full bg-[#1E1F2B] border border-white/10 rounded-md p-3 text-xs text-[#F9FAFB] resize-none focus:outline-none focus:border-blue-500"
+                />
+                <p className="text-[10px] text-[#6B7280] text-right mt-0.5">
+                  {summaryText.length}/2000
+                </p>
+              </div>
+
+              <div>
+                <TextField
+                  id="minutes-url"
+                  label="Enlace del acta (opcional)"
+                  placeholder="https://docs.google.com/document/d/..."
+                  value={minutesUrlText}
+                  onChange={(e) => setMinutesUrlText(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/8">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSummaryModalMeeting(null)}
+                disabled={savingSummary}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveSummary}
+                disabled={savingSummary}
+              >
+                {savingSummary ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

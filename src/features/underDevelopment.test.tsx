@@ -15,8 +15,8 @@ import type { Role } from '@/features/auth/types';
 
 const EXPECTED_NAV: Record<Role, string[]> = {
   admin: [],
-  manager: ['Mis tareas', 'Reuniones', 'Calendario', 'Manual de usuario'],
-  developer: ['Mis tareas', 'Reuniones', 'Calendario', 'Manual de usuario'],
+  manager: ['Mis tareas', 'Calendario', 'Manual de usuario'],
+  developer: ['Mis tareas', 'Calendario', 'Manual de usuario'],
 };
 
 async function authenticated(role: Role) {

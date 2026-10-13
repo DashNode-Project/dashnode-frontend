@@ -8,6 +8,9 @@ import {
   hourlyGridToSlots,
   areWeeklySlotsEqual,
   validateMeetingCriteria,
+  minutesToTime,
+  isValidUrl,
+  buildGoogleCalendarUrl,
 } from './utils';
 import { AVAILABILITY_MESSAGES } from './messages';
 import type { TimeSlot, WeeklySlots } from './types';
@@ -143,5 +146,41 @@ describe('HU_DN_03_35 - Meeting Criteria Validation', () => {
     expect(res.daysError).toBeUndefined();
     expect(res.participantsError).toBeUndefined();
     expect(res.durationError).toBeUndefined();
+  });
+
+  it('converts minutes to formatted time string', () => {
+    expect(minutesToTime(540)).toBe('09:00');
+    expect(minutesToTime(870)).toBe('14:30');
+  });
+
+  it('merges slots up to midnight 24:00', () => {
+    const grid = Array<boolean>(24).fill(false);
+    grid[22] = true;
+    grid[23] = true;
+    const slots = hourlyGridToSlots(grid);
+    expect(slots).toEqual([{ start: '22:00', end: '24:00' }]);
+  });
+
+  it('validates URLs correctly', () => {
+    expect(isValidUrl('https://meet.google.com/abc')).toBe(true);
+    expect(isValidUrl('http://localhost:3000')).toBe(true);
+    expect(isValidUrl('ftp://example.com')).toBe(false);
+    expect(isValidUrl('not-a-url')).toBe(false);
+    expect(isValidUrl('')).toBe(false);
+  });
+
+  it('builds Google Calendar URL correctly with all parameters', () => {
+    const url = buildGoogleCalendarUrl(
+      'Planning',
+      '2026-10-20',
+      '10:00',
+      60,
+      'Proyecto Alpha',
+      'https://meet.google.com/abc',
+      'Notas',
+    );
+    expect(url).toContain('calendar.google.com');
+    expect(url).toContain('Planning');
+    expect(url).toContain('20261020T100000/20261020T110000');
   });
 });

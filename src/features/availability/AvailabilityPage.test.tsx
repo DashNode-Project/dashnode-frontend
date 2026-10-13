@@ -1,10 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router';
 import { ToastProvider } from '@/lib/toast/ToastProvider';
 import AvailabilityPage from './AvailabilityPage';
 import * as availabilityApi from './api';
 import { AVAILABILITY_MESSAGES } from './messages';
+import { ApiError } from '@/lib/api/errors';
 
 vi.mock('./api');
 
@@ -25,9 +27,11 @@ vi.mock('@/features/auth/AuthContext', () => ({
 
 function renderPage() {
   return render(
-    <ToastProvider>
-      <AvailabilityPage />
-    </ToastProvider>,
+    <MemoryRouter>
+      <ToastProvider>
+        <AvailabilityPage />
+      </ToastProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -106,6 +110,7 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
       id: 'm-1',
       project_id: null,
       title: 'Planning',
+      type: 'General',
       description: null,
       date: '2026-10-12',
       start_time: '10:00',
@@ -118,6 +123,8 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
       created_at: '2026-10-12T00:00:00Z',
       updated_at: '2026-10-12T00:00:00Z',
     });
+
+    vi.mocked(availabilityApi.getManagedProjects).mockResolvedValue([]);
   });
 
   // HU_DN_02_32
@@ -269,7 +276,7 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
       );
     });
 
-    expect(await screen.findByText(AVAILABILITY_MESSAGES.meetingCreated)).toBeInTheDocument();
+    expect(await screen.findByText(AVAILABILITY_MESSAGES.meetingScheduled)).toBeInTheDocument();
   });
 
   it('HU_DN_03_36: displays feedback when no slots match criteria', async () => {
@@ -284,5 +291,102 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
     await user.click(screen.getByRole('button', { name: /Buscar horarios/i }));
 
     expect(await screen.findByText(AVAILABILITY_MESSAGES.noAvailableSlots)).toBeInTheDocument();
+  });
+
+  it('HU_DN_03_38: handles booking modal validation, managed project autofill and conflict error', async () => {
+    vi.mocked(availabilityApi.getManagedProjects).mockResolvedValueOnce([
+      {
+        id: 'proj-1',
+        name: 'Proyecto Mobile',
+        meeting_link: 'https://meet.google.com/mobile-room',
+        member_ids: ['user-1', 'user-2'],
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /Agendar reunión/i }));
+    await user.click(screen.getByRole('button', { name: /Buscar horarios/i }));
+
+    const slotBtn = await screen.findByRole('button', { name: /10:00 – 11:00/i });
+    await user.click(slotBtn);
+
+    // Click confirm without title -> validation error
+    const confirmBtn = screen.getByRole('button', { name: /Confirmar reunión/i });
+    await user.click(confirmBtn);
+    expect(screen.getAllByText(AVAILABILITY_MESSAGES.meetingTitleRequired).length).toBeGreaterThan(
+      0,
+    );
+
+    // Select project -> autofills link
+    const projSelect = await screen.findByLabelText(/Proyecto asociado \*/i);
+    await user.selectOptions(projSelect, 'proj-1');
+    const linkInp = screen.getByLabelText(/Ubicación o enlace/i);
+    expect(linkInp).toHaveValue('https://meet.google.com/mobile-room');
+
+    // Type invalid link
+    await user.clear(linkInp);
+    await user.type(linkInp, 'nota-url');
+    await user.click(confirmBtn);
+    expect(screen.getByText(AVAILABILITY_MESSAGES.invalidMeetingLink)).toBeInTheDocument();
+
+    // Fix link and title
+    await user.clear(linkInp);
+    await user.type(linkInp, 'https://meet.google.com/valid-link');
+    const titleInp = screen.getByLabelText(/Título de la reunión \*/i);
+    await user.type(titleInp, 'Sync Valido');
+
+    // Server returns conflict error 409
+    vi.mocked(availabilityApi.createMeeting).mockRejectedValueOnce(
+      new ApiError(409, {
+        code: 'PARTICIPANT_MEETING_CONFLICT',
+        message: 'Conflict',
+        fields: {},
+      }),
+    );
+
+    await user.click(confirmBtn);
+    expect(
+      await screen.findByText(AVAILABILITY_MESSAGES.participantMeetingConflict),
+    ).toBeInTheDocument();
+
+    // Close modal
+    await user.click(screen.getByRole('button', { name: /Cancelar/i }));
+    expect(screen.queryByLabelText(/Título de la reunión \*/i)).not.toBeInTheDocument();
+  });
+
+  it('HU_DN_03_38: rejects scheduling when participants are not members of selected project', async () => {
+    vi.mocked(availabilityApi.getManagedProjects).mockResolvedValueOnce([
+      {
+        id: 'proj-exclusive',
+        name: 'Proyecto Exclusivo',
+        meeting_link: 'https://meet.google.com/room',
+        manager_id: 'user-manager',
+        member_ids: ['user-1'],
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /Agendar reunión/i }));
+    await user.click(screen.getByRole('button', { name: /Buscar horarios/i }));
+
+    const slotBtn = await screen.findByRole('button', { name: /10:00 – 11:00/i });
+    await user.click(slotBtn);
+
+    const titleInp = screen.getByLabelText(/Título de la reunión \*/i);
+    await user.type(titleInp, 'Revisión técnica');
+
+    const projSelect = await screen.findByLabelText(/Proyecto asociado \*/i);
+    await user.selectOptions(projSelect, 'proj-exclusive');
+
+    const confirmBtn = screen.getByRole('button', { name: /Confirmar reunión/i });
+    await user.click(confirmBtn);
+
+    expect(
+      screen.getAllByText(AVAILABILITY_MESSAGES.participantsMustBeMembers).length,
+    ).toBeGreaterThan(0);
   });
 });

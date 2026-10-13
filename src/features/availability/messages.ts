@@ -19,6 +19,27 @@ export const AVAILABILITY_MESSAGES = {
   // HU_DN_03_36
   noAvailableSlots: 'No hay horarios disponibles para los criterios seleccionados.',
   meetingCreated: 'Reunión agendada correctamente.',
+
+  // HU_DN_03_37 & HU_DN_03_38
+  meetingTitleRequired: 'El título de la reunión es obligatorio.',
+  meetingTypeRequired: 'Seleccione el tipo de reunión.',
+  invalidMeetingLink: 'El enlace de la reunión no tiene un formato de URL válido.',
+  projectRequired: 'Debe seleccionar un proyecto.',
+  participantsMustBeMembers:
+    'Todos los participantes deben ser miembros del proyecto seleccionado.',
+  participantMeetingConflict: 'Uno o más participantes ya tienen una reunión en ese horario.',
+  meetingScheduled: 'Reunión programada correctamente.',
+
+  // HU_DN_03_39 & HU_DN_03_40
+  noMeetingsToShow: 'No hay reuniones para mostrar.',
+
+  // HU_DN_03_41
+  meetingDetailForbidden: 'Acceso denegado. No participa en esta reunión.',
+  meetingCancelled: 'Reunión cancelada correctamente.',
+  meetingResponseRegistered: 'Respuesta registrada correctamente.',
+  meetingSummaryRegistered: 'Resumen y acta registrados correctamente.',
+  summaryTooLong: 'El resumen no puede superar 2000 caracteres.',
+  invalidMinutesUrl: 'El enlace del acta no tiene un formato de URL válido.',
 } as const;
 
 export const DAY_NAMES: Record<string, string> = {
@@ -40,3 +61,5 @@ export const DAY_KEYS_LIST = [
   'saturday',
   'sunday',
 ] as const;
+
+export const MEETING_TYPES = ['Daily', 'Planning', 'Review', 'Retro', 'General'] as const;

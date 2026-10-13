@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, CheckSquare, Video } from 'lucide-react';
+import { BookOpen, CalendarDays, CheckSquare } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Role } from '@/features/auth/types';
 
@@ -16,7 +16,6 @@ export interface NavItem {
  */
 export const OUT_OF_SCOPE_NAV: readonly NavItem[] = [
   { id: 'my-tasks', label: 'Mis tareas', icon: CheckSquare, roles: ['manager', 'developer'] },
-  { id: 'meetings', label: 'Reuniones', icon: Video, roles: ['manager', 'developer'] },
   { id: 'calendar', label: 'Calendario', icon: CalendarDays, roles: ['manager', 'developer'] },
   { id: 'manual', label: 'Manual de usuario', icon: BookOpen, roles: ['manager', 'developer'] },
 ];

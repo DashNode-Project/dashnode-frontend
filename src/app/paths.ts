@@ -14,6 +14,7 @@ export const PATHS = {
   permissions: '/permisos-y-roles',
   projects: '/proyectos',
   availability: '/disponibilidad',
+  meetings: '/reuniones',
 } as const;
 
 export function projectTabPath(projectId: string, tab: string): string {

@@ -7,6 +7,11 @@ import {
   searchMeetingSlots,
   createMeeting,
   listMeetings,
+  getMeetingDetail,
+  cancelMeeting,
+  respondMeeting,
+  updateMeetingSummary,
+  getManagedProjects,
 } from './api';
 
 describe('availability api client', () => {
@@ -101,6 +106,8 @@ describe('availability api client', () => {
 
     const created = await createMeeting({
       title: 'Sync',
+      type: 'General',
+      project_id: 'p-1',
       date: '2026-10-12',
       start_time: '10:00',
       end_time: '11:00',
@@ -109,7 +116,66 @@ describe('availability api client', () => {
     });
     expect(created.id).toBe('m-1');
 
-    const list = await listMeetings('2026-10-01', '2026-10-31');
+    const list = await listMeetings('2026-10-01', '2026-10-31', 'proximas');
     expect(list).toHaveLength(1);
+  });
+
+  it('gets meeting detail', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('GET');
+      expect(call.url).toContain('/availability/meetings/m-123');
+      return ok({ id: 'm-123', title: 'Planning' });
+    });
+    const res = await getMeetingDetail('m-123');
+    expect(res.id).toBe('m-123');
+  });
+
+  it('cancels meeting', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('POST');
+      expect(call.url).toContain('/availability/meetings/m-123/cancel');
+      return ok({ id: 'm-123', status: 'cancelled' });
+    });
+    const res = await cancelMeeting('m-123');
+    expect(res.status).toBe('cancelled');
+  });
+
+  it('responds to meeting invitation', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('POST');
+      expect(call.url).toContain('/availability/meetings/m-123/respond');
+      expect(call.body).toEqual({ response: 'aceptada' });
+      return ok({ id: 'm-123', status: 'scheduled' });
+    });
+    const res = await respondMeeting('m-123', 'aceptada');
+    expect(res.id).toBe('m-123');
+  });
+
+  it('updates meeting summary and minutes', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('POST');
+      expect(call.url).toContain('/availability/meetings/m-123/summary');
+      expect(call.body).toEqual({
+        summary: 'Acuerdos clave',
+        minutes_url: 'https://docs.google.com/doc',
+      });
+      return ok({ id: 'm-123', summary: 'Acuerdos clave' });
+    });
+    const res = await updateMeetingSummary('m-123', {
+      summary: 'Acuerdos clave',
+      minutes_url: 'https://docs.google.com/doc',
+    });
+    expect(res.summary).toBe('Acuerdos clave');
+  });
+
+  it('gets managed projects', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('GET');
+      expect(call.url).toContain('/availability/projects');
+      return ok([{ id: 'p-1', name: 'Project 1', meeting_link: 'https://meet.google.com/abc' }]);
+    });
+    const res = await getManagedProjects();
+    expect(res).toHaveLength(1);
+    expect(res[0]?.meeting_link).toBe('https://meet.google.com/abc');
   });
 });

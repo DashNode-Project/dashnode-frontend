@@ -25,6 +25,7 @@ const ProjectWorkspaceLayout = lazy(() => import('@/features/projects/ProjectWor
 const ProjectSummaryTab = lazy(() => import('@/features/projects/ProjectDetailPage'));
 const ProjectModulePlaceholder = lazy(() => import('@/features/projects/ProjectModulePlaceholder'));
 const AvailabilityPage = lazy(() => import('@/features/availability/AvailabilityPage'));
+const MeetingsPage = lazy(() => import('@/features/meetings/MeetingsPage'));
 
 function PageLoading() {
   return (
@@ -59,6 +60,7 @@ export function AppRoutes() {
                     <Route path={PATHS.permissions} element={<PermissionsPage />} />
                     <Route path={PATHS.projects} element={<ProjectsPage />} />
                     <Route path={PATHS.availability} element={<AvailabilityPage />} />
+                    <Route path={PATHS.meetings} element={<MeetingsPage />} />
                     <Route
                       path={`${PATHS.projects}/:projectId`}
                       element={<ProjectWorkspaceLayout />}

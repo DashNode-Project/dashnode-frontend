@@ -181,3 +181,41 @@ export function validateMeetingCriteria(
 
   return result;
 }
+
+export function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function buildGoogleCalendarUrl(
+  title: string,
+  date: string,
+  startTime: string,
+  durationMinutes: number,
+  projectName?: string | null,
+  link?: string | null,
+  description?: string | null,
+): string {
+  const start = date.replace(/-/g, '') + 'T' + startTime.replace(':', '') + '00';
+  const startH = parseInt(startTime.split(':')[0] || '0', 10);
+  const startM = parseInt(startTime.split(':')[1] || '0', 10);
+  const totalMin = startH * 60 + startM + durationMinutes;
+  const endH = Math.floor(totalMin / 60) % 24;
+  const endMin = totalMin % 60;
+  const end =
+    date.replace(/-/g, '') +
+    'T' +
+    endH.toString().padStart(2, '0') +
+    endMin.toString().padStart(2, '0') +
+    '00';
+  const details = encodeURIComponent(
+    `Proyecto: ${projectName ?? ''}\nEnlace: ${link ?? ''}\n${description ?? ''}`,
+  );
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+    title,
+  )}&dates=${start}/${end}&details=${details}&location=${encodeURIComponent(link ?? '')}`;
+}
