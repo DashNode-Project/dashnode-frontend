@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, CheckSquare } from 'lucide-react';
+import { CheckSquare } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Role } from '@/features/auth/types';
 
@@ -9,13 +9,7 @@ export interface NavItem {
   roles: readonly Role[];
 }
 
-/**
- * Entries of the main navigation whose features are NOT part of EP-01. They are rendered so the
- * product structure is visible, but pressing them only logs "Funcionalidad en desarrollo, no
- * disponible". The role start screen ("Inicio") is the only functional entry.
- */
+/** Stubs for modules not yet in MVP (Mis tareas). Calendario y Manual ya tienen ruta. */
 export const OUT_OF_SCOPE_NAV: readonly NavItem[] = [
   { id: 'my-tasks', label: 'Mis tareas', icon: CheckSquare, roles: ['manager', 'developer'] },
-  { id: 'calendar', label: 'Calendario', icon: CalendarDays, roles: ['manager', 'developer'] },
-  { id: 'manual', label: 'Manual de usuario', icon: BookOpen, roles: ['manager', 'developer'] },
 ];

@@ -82,7 +82,7 @@ describe('HU_DN_01_03 - success by role (criteria 3 and 5)', () => {
     ['admin', 'Administrador', PATHS.homeAdmin],
     ['manager', 'Gerente', PATHS.homeManager],
     ['developer', 'Desarrollador', PATHS.homeDeveloper],
-  ])('sends the %s to their own start screen', async (role, label, path) => {
+  ])('sends the %s to their own start screen', async (role, _label, path) => {
     const session = makeSession(role);
     const calls = mockApi({ login: ok(session) });
     const user = userEvent.setup();
@@ -93,7 +93,7 @@ describe('HU_DN_01_03 - success by role (criteria 3 and 5)', () => {
     expect(
       await screen.findByRole('heading', { name: `Bienvenido, ${session.user.name}` }),
     ).toBeInTheDocument();
-    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Proyectos recientes' })).toBeInTheDocument();
     expect(currentPath()).toBe(path);
     const logins = callsTo(calls, 'login');
     expect(logins).toHaveLength(1);

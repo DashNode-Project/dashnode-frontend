@@ -83,6 +83,12 @@ export function mockApi(routes: Partial<Record<Endpoint, Route>>): RecordedCall[
         return typeof route === 'function' ? route(call) : route;
       }
     }
+    if (call.method === 'GET' && call.url.endsWith('/projects')) {
+      return ok([]);
+    }
+    if (call.method === 'GET' && call.url.includes('/availability/meetings')) {
+      return ok([]);
+    }
     return apiError(404, 'NOT_FOUND', 'Not found');
   });
 }

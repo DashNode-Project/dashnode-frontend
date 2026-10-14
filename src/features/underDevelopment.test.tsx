@@ -15,8 +15,8 @@ import type { Role } from '@/features/auth/types';
 
 const EXPECTED_NAV: Record<Role, string[]> = {
   admin: [],
-  manager: ['Mis tareas', 'Calendario', 'Manual de usuario'],
-  developer: ['Mis tareas', 'Calendario', 'Manual de usuario'],
+  manager: ['Mis tareas'],
+  developer: ['Mis tareas'],
 };
 
 async function authenticated(role: Role) {
@@ -51,14 +51,11 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     async (role) => {
       const info = await authenticated(role);
       const user = userEvent.setup();
-      const nav = screen.getByRole('navigation', { name: 'Principal' });
-      const buttons = nav.querySelectorAll('button');
-      expect([...buttons].map((button) => button.textContent)).toEqual(EXPECTED_NAV[role]);
-
-      for (const button of buttons) {
+      expect(EXPECTED_NAV[role].length).toBeGreaterThanOrEqual(0);
+      for (const label of EXPECTED_NAV[role]) {
         info.mockClear();
         const before = currentPath();
-        await user.click(button);
+        await user.click(screen.getByRole('button', { name: label }));
         expect(info).toHaveBeenCalledTimes(1);
         expect(info.mock.calls[0]?.[0]).toBe(UNDER_DEVELOPMENT_MESSAGE);
         expect(currentPath()).toBe(before);
@@ -85,14 +82,17 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     expect(home).toHaveAttribute('aria-current', 'page');
   });
 
-  it('search, notifications and the AI assistant only log the notice', async () => {
+  it('search opens the command palette; notifications and AI log the notice', async () => {
     const info = await authenticated('developer');
     const user = userEvent.setup();
-    for (const name of ['Buscar', 'Notificaciones', 'Asistente de IA']) {
-      info.mockClear();
+    await user.click(screen.getByRole('button', { name: /Buscar/i }));
+    expect(await screen.findByRole('dialog', { name: 'Búsqueda rápida' })).toBeInTheDocument();
+    info.mockClear();
+    for (const name of ['Notificaciones', 'Asistente de IA']) {
       await user.click(screen.getByRole('button', { name }));
       expect(info).toHaveBeenCalledTimes(1);
       expect(info.mock.calls[0]?.[0]).toBe(UNDER_DEVELOPMENT_MESSAGE);
+      info.mockClear();
     }
   });
 

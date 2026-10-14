@@ -16,6 +16,7 @@ import {
   Link as LinkIcon,
   X,
   AlertCircle,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
@@ -622,11 +623,21 @@ export default function MeetingsPage() {
 
                     <div className="flex items-center gap-3 flex-wrap text-xs">
                       {m.participants && m.participants.length > 0 && (
-                        <div className="flex items-center gap-1 text-[#9CA3AF]">
-                          <span>Participantes:</span>
-                          <span className="font-medium text-[#F9FAFB]">
-                            {m.participants.length}
-                          </span>
+                        <div className="flex items-center gap-1">
+                          {m.participants.slice(0, 8).map((p) => (
+                            <span
+                              key={p.user_id}
+                              title={p.name ?? p.user_id}
+                              className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/25 to-violet-600/25 text-[10px] font-semibold text-[#F9FAFB] ring-1 ring-white/10"
+                            >
+                              {(p.name ?? '?')
+                                .trim()
+                                .split(/\s+/)
+                                .slice(0, 2)
+                                .map((part) => part[0]?.toUpperCase() ?? '')
+                                .join('')}
+                            </span>
+                          ))}
                         </div>
                       )}
 
@@ -657,6 +668,14 @@ export default function MeetingsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      title="Ver / editar detalle"
+                      onClick={() => openDetail(m)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                    >
+                      <Pencil size={14} />
+                    </button>
                     {!isPast && m.link && (
                       <a
                         href={m.link}
@@ -691,7 +710,7 @@ export default function MeetingsPage() {
                       </button>
                     )}
 
-                    {isUserCreator(m) && m.status === 'scheduled' && !isMeetingRealizada(m) && (
+                    {isUserCreator(m) && m.status === 'scheduled' && (
                       <button
                         type="button"
                         title="Cancelar reunión"

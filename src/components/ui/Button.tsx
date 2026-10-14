@@ -5,11 +5,14 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'dan
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-blue-500 hover:bg-blue-400 text-white border-transparent',
-  secondary: 'bg-[#272A38] hover:bg-[#2E3245] text-[#F9FAFB] border-white/10',
-  ghost: 'bg-transparent hover:bg-white/6 text-[#9CA3AF] hover:text-[#F9FAFB] border-transparent',
-  outline: 'bg-transparent border-white/20 hover:border-white/35 text-[#F9FAFB] hover:bg-white/5',
-  danger: 'bg-red-600 hover:bg-red-500 text-white border-transparent',
+  primary:
+    'bg-blue-500 hover:bg-blue-400 active:bg-blue-600 text-white border-transparent shadow-sm',
+  secondary: 'bg-[#272A38] hover:bg-[#2E3245] active:bg-[#232635] text-[#F9FAFB] border-white/10',
+  ghost:
+    'bg-transparent hover:bg-white/6 active:bg-white/10 text-[#9CA3AF] hover:text-[#F9FAFB] border-transparent',
+  outline:
+    'bg-transparent border-white/20 hover:border-white/35 active:bg-white/8 text-[#F9FAFB] hover:bg-white/5',
+  danger: 'bg-red-600 hover:bg-red-500 active:bg-red-700 text-white border-transparent',
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -24,13 +27,14 @@ export function buttonClasses(
   size: ButtonSize = 'md',
   extra = '',
 ): string {
-  return `inline-flex items-center justify-center whitespace-nowrap border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${extra}`;
+  return `inline-flex items-center justify-center whitespace-nowrap border font-medium transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${variants[variant]} ${sizes[size]} ${extra}`;
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  iconLeft?: ReactNode;
   iconRight?: ReactNode;
 }
 
@@ -38,6 +42,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
+  iconLeft,
   iconRight,
   children,
   className = '',
@@ -54,6 +59,7 @@ export function Button({
       className={buttonClasses(variant, size, className)}
     >
       {loading && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
+      {!loading && iconLeft ? iconLeft : null}
       {children}
       {iconRight && !loading ? iconRight : null}
     </button>
