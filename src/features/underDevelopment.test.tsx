@@ -75,6 +75,16 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     expect(avail).toHaveAttribute('href', PATHS.availability);
   });
 
+  it('hides operational navigation for the administrator', async () => {
+    mockApi({ session: ok(makeSession('admin')) });
+    renderApp(PATHS.homeAdmin);
+    await screen.findByRole('heading', { name: /Bienvenido/ });
+    expect(screen.queryByRole('link', { name: 'Proyectos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Disponibilidad' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Reuniones' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Usuarios' })).toBeInTheDocument();
+  });
+
   it('keeps the role start screen as the only working navigation entry', async () => {
     await authenticated('manager');
     const home = screen.getByRole('link', { name: 'Inicio' });

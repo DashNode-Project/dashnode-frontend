@@ -27,15 +27,6 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const home = homePathFor(user.role);
     const base: CommandItem[] = [
       { id: 'home', label: 'Inicio', keywords: 'dashboard inicio', path: home },
-      { id: 'projects', label: 'Proyectos', keywords: 'proyectos', path: PATHS.projects },
-      { id: 'meetings', label: 'Reuniones', keywords: 'reuniones', path: PATHS.meetings },
-      {
-        id: 'availability',
-        label: 'Disponibilidad',
-        keywords: 'disponibilidad horario',
-        path: PATHS.availability,
-      },
-      { id: 'calendar', label: 'Calendario', keywords: 'calendario', path: PATHS.calendar },
       {
         id: 'manual',
         label: 'Manual de usuario',
@@ -44,8 +35,35 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       },
       { id: 'profile', label: 'Mi perfil', keywords: 'perfil cuenta', path: PATHS.profile },
     ];
-    if (user.role === 'admin' || user.role === 'manager') {
+    if (user.role === 'admin') {
       base.push({ id: 'users', label: 'Usuarios', keywords: 'usuarios equipo', path: PATHS.users });
+    } else {
+      base.splice(1, 0, {
+        id: 'projects',
+        label: 'Proyectos',
+        keywords: 'proyectos',
+        path: PATHS.projects,
+      });
+      base.splice(
+        2,
+        0,
+        { id: 'meetings', label: 'Reuniones', keywords: 'reuniones', path: PATHS.meetings },
+        {
+          id: 'availability',
+          label: 'Disponibilidad',
+          keywords: 'disponibilidad horario',
+          path: PATHS.availability,
+        },
+        { id: 'calendar', label: 'Calendario', keywords: 'calendario', path: PATHS.calendar },
+      );
+      if (user.role === 'manager') {
+        base.push({
+          id: 'users',
+          label: 'Usuarios',
+          keywords: 'usuarios equipo',
+          path: PATHS.users,
+        });
+      }
     }
     return base;
   }, [user]);

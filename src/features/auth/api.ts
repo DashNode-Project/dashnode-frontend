@@ -75,6 +75,14 @@ export function listAdminUsers(params: ListAdminUsersParams = {}): Promise<Admin
   return apiRequest<AdminUserSummary[]>(`/auth/admin/users${suffix}`);
 }
 
+export interface AdminDashboardSummary {
+  project_count: number;
+}
+
+export function fetchAdminDashboardSummary(): Promise<AdminDashboardSummary> {
+  return apiRequest<AdminDashboardSummary>('/auth/admin/dashboard-summary');
+}
+
 export interface CreateUserPayload {
   name: string;
   email: string;

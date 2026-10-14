@@ -13,6 +13,7 @@ export function initialsFor(name: string): string {
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
   activo: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
+  inactivo: 'bg-[#374151]/40 text-[#9CA3AF] border-white/10',
   paused: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
   pausado: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
   completed: 'bg-blue-500/15 text-blue-300 border-blue-500/25',

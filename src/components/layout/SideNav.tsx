@@ -47,7 +47,7 @@ export function SideNav() {
         {!sidebarCollapsed ? 'Inicio' : null}
       </NavLink>
 
-      {(user.role === 'admin' || user.role === 'manager' || user.role === 'developer') && (
+      {(user.role === 'manager' || user.role === 'developer') && (
         <NavLink
           to={PATHS.projects}
           title="Proyectos"
@@ -81,50 +81,54 @@ export function SideNav() {
         </NavLink>
       )}
 
-      <NavLink
-        to={PATHS.availability}
-        title="Disponibilidad"
-        className={({ isActive }) =>
-          `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
-            isActive
-              ? 'bg-blue-500/15 text-blue-300'
-              : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
-          }`
-        }
-      >
-        <Clock size={20} aria-hidden="true" />
-        {!sidebarCollapsed ? 'Disponibilidad' : null}
-      </NavLink>
+      {user.role !== 'admin' ? (
+        <>
+          <NavLink
+            to={PATHS.availability}
+            title="Disponibilidad"
+            className={({ isActive }) =>
+              `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+                isActive
+                  ? 'bg-blue-500/15 text-blue-300'
+                  : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+              }`
+            }
+          >
+            <Clock size={20} aria-hidden="true" />
+            {!sidebarCollapsed ? 'Disponibilidad' : null}
+          </NavLink>
 
-      <NavLink
-        to={PATHS.meetings}
-        title="Reuniones"
-        className={({ isActive }) =>
-          `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
-            isActive
-              ? 'bg-blue-500/15 text-blue-300'
-              : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
-          }`
-        }
-      >
-        <Video size={20} aria-hidden="true" />
-        {!sidebarCollapsed ? 'Reuniones' : null}
-      </NavLink>
+          <NavLink
+            to={PATHS.meetings}
+            title="Reuniones"
+            className={({ isActive }) =>
+              `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+                isActive
+                  ? 'bg-blue-500/15 text-blue-300'
+                  : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+              }`
+            }
+          >
+            <Video size={20} aria-hidden="true" />
+            {!sidebarCollapsed ? 'Reuniones' : null}
+          </NavLink>
 
-      <NavLink
-        to={PATHS.calendar}
-        title="Calendario"
-        className={({ isActive }) =>
-          `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
-            isActive
-              ? 'bg-blue-500/15 text-blue-300'
-              : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
-          }`
-        }
-      >
-        <CalendarDays size={20} aria-hidden="true" />
-        {!sidebarCollapsed ? 'Calendario' : null}
-      </NavLink>
+          <NavLink
+            to={PATHS.calendar}
+            title="Calendario"
+            className={({ isActive }) =>
+              `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+                isActive
+                  ? 'bg-blue-500/15 text-blue-300'
+                  : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+              }`
+            }
+          >
+            <CalendarDays size={20} aria-hidden="true" />
+            {!sidebarCollapsed ? 'Calendario' : null}
+          </NavLink>
+        </>
+      ) : null}
 
       <NavLink
         to={PATHS.userManual}

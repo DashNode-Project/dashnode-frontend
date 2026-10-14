@@ -93,7 +93,8 @@ describe('HU_DN_01_03 - success by role (criteria 3 and 5)', () => {
     expect(
       await screen.findByRole('heading', { name: `Bienvenido, ${session.user.name}` }),
     ).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'Proyectos recientes' })).toBeInTheDocument();
+    const panelTitle = role === 'admin' ? 'Usuarios recientes' : 'Proyectos recientes';
+    expect(await screen.findByRole('heading', { name: panelTitle })).toBeInTheDocument();
     expect(currentPath()).toBe(path);
     const logins = callsTo(calls, 'login');
     expect(logins).toHaveLength(1);

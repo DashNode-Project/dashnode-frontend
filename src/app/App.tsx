@@ -62,20 +62,22 @@ export function AppRoutes() {
                   <Route element={<AppShell />}>
                     <Route path={PATHS.profile} element={<ProfilePage />} />
                     <Route path={PATHS.permissions} element={<PermissionsPage />} />
-                    <Route path={PATHS.projects} element={<ProjectsPage />} />
-                    <Route path={PATHS.availability} element={<AvailabilityPage />} />
-                    <Route path={PATHS.meetings} element={<MeetingsPage />} />
-                    <Route path={PATHS.calendar} element={<CalendarPage />} />
                     <Route path={PATHS.userManual} element={<UserManualPage />} />
-                    <Route
-                      path={`${PATHS.projects}/:projectId`}
-                      element={<ProjectWorkspaceLayout />}
-                    >
-                      <Route index element={<ProjectSummaryTab />} />
-                      <Route path="resumen" element={<ProjectSummaryTab />} />
-                      <Route path="equipo" element={<ProjectTeamTab />} />
-                      <Route path="reuniones" element={<ProjectMeetingsTab />} />
-                      <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
+                    <Route element={<RequireRole allow={['manager', 'developer']} />}>
+                      <Route path={PATHS.projects} element={<ProjectsPage />} />
+                      <Route path={PATHS.availability} element={<AvailabilityPage />} />
+                      <Route path={PATHS.meetings} element={<MeetingsPage />} />
+                      <Route path={PATHS.calendar} element={<CalendarPage />} />
+                      <Route
+                        path={`${PATHS.projects}/:projectId`}
+                        element={<ProjectWorkspaceLayout />}
+                      >
+                        <Route index element={<ProjectSummaryTab />} />
+                        <Route path="resumen" element={<ProjectSummaryTab />} />
+                        <Route path="equipo" element={<ProjectTeamTab />} />
+                        <Route path="reuniones" element={<ProjectMeetingsTab />} />
+                        <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
+                      </Route>
                     </Route>
                     <Route element={<RequireRole allow="admin" />}>
                       <Route path={PATHS.homeAdmin} element={<HomePage />} />

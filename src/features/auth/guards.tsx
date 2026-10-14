@@ -52,10 +52,11 @@ export function GuestOnly() {
   return <Outlet />;
 }
 
-/** Only the given role sees the screen; anyone else is sent to their own home. */
-export function RequireRole({ allow }: { allow: Role }) {
+/** Only the given role(s) see nested routes; anyone else is sent to their own home. */
+export function RequireRole({ allow }: { allow: Role | Role[] }) {
   const { user } = useAuth();
+  const allowed = Array.isArray(allow) ? allow : [allow];
   if (!user) return <Navigate to={PATHS.login} replace />;
-  if (user.role !== allow) return <Navigate to={homePathFor(user.role)} replace />;
+  if (!allowed.includes(user.role)) return <Navigate to={homePathFor(user.role)} replace />;
   return <Outlet />;
 }
