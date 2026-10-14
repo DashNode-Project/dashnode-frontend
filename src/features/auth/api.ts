@@ -75,6 +75,14 @@ export function listAdminUsers(params: ListAdminUsersParams = {}): Promise<Admin
   return apiRequest<AdminUserSummary[]>(`/auth/admin/users${suffix}`);
 }
 
+export interface AdminDashboardSummary {
+  project_count: number;
+}
+
+export function fetchAdminDashboardSummary(): Promise<AdminDashboardSummary> {
+  return apiRequest<AdminDashboardSummary>('/auth/admin/dashboard-summary');
+}
+
 export interface CreateUserPayload {
   name: string;
   email: string;
@@ -94,11 +102,43 @@ export interface InviteDeveloperPayload {
   role?: string;
 }
 
-export function inviteDeveloper(payload: InviteDeveloperPayload): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>('/auth/manager/users/invite', {
+export interface InviteDeveloperResult {
+  message: string;
+  user_id: string;
+  initial_password: string;
+}
+
+export function inviteDeveloper(payload: InviteDeveloperPayload): Promise<InviteDeveloperResult> {
+  return apiRequest<InviteDeveloperResult>('/auth/manager/users/invite', {
     method: 'POST',
     body: payload,
   });
+}
+
+export interface ManagerDeveloperSummary {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  is_active: boolean;
+}
+
+export function listManagerDevelopers(): Promise<ManagerDeveloperSummary[]> {
+  return apiRequest<ManagerDeveloperSummary[]>('/auth/manager/developers');
+}
+
+export function deactivateDeveloperByManager(userId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/auth/manager/developers/${encodeURIComponent(userId)}/deactivate`,
+    { method: 'POST' },
+  );
+}
+
+export function reactivateDeveloperByManager(userId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/auth/manager/developers/${encodeURIComponent(userId)}/reactivate`,
+    { method: 'POST' },
+  );
 }
 
 export interface UpdateUserPayload {
@@ -138,12 +178,26 @@ export function fetchPendingAssignments(userId: string): Promise<{ pending_count
   return apiRequest<{ pending_count: number }>(`/auth/admin/users/${userId}/pending-assignments`);
 }
 
+export interface ProfileDetailsData {
+  last_name?: string | null;
+  nickname?: string | null;
+  description?: string | null;
+  experience?: string | null;
+  skills?: string[];
+  github?: string | null;
+  linkedin?: string | null;
+  availability_text?: string | null;
+}
+
 export interface ProfileData {
   id: string;
   email: string;
   name: string;
   role: string;
+  is_active?: boolean;
+  created_at?: string;
   avatar_url: string | null;
+  details?: ProfileDetailsData;
 }
 
 export interface ProfileResponse {
@@ -158,9 +212,24 @@ export function fetchProfile(): Promise<ProfileResponse> {
 export function updateProfile(payload: {
   name: string;
   avatar?: File | null;
+  details?: ProfileDetailsData;
 }): Promise<ProfileResponse> {
   const formData = new FormData();
   formData.set('name', payload.name);
+  if (payload.details) {
+    formData.set('details', JSON.stringify(payload.details));
+  }
   if (payload.avatar) formData.set('avatar', payload.avatar);
   return apiFormRequest<ProfileResponse>('/auth/profile', { method: 'PATCH', formData });
+}
+
+export function changePassword(payload: {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}): Promise<ProfileResponse> {
+  return apiRequest<ProfileResponse>('/auth/profile/change-password', {
+    method: 'POST',
+    body: payload,
+  });
 }

@@ -150,3 +150,53 @@ Frontend: `/disponibilidad` (pestañas «Mi disponibilidad», «Equipo», «Agen
 | Frontend `npm run check` | Verde (238 tests pasados, cobertura ~90 %, tsc/lint/prettier/secrets limpio) |
 | Backend `pytest` | Verde (277 tests pasados, cobertura 89 %, ruff/mypy/import-linter limpio) |
 
+---
+
+## EP-05 — Agendamiento y Reuniones (HU_DN_03_37 … HU_DN_03_41)
+
+**Ramas:** `feature/ep-05-meetings-age` (backend + frontend).  
+**Rutas SPA:** `/disponibilidad` (agendamiento interactivo) y `/reuniones` (gestión integral y calendario) en `SideNav`.
+
+### Contrato de integración API (EP-05)
+
+| Método | Ruta | Roles | Descripción / Mensaje de éxito |
+|---|---|---|---|
+| POST | `/api/v1/availability/meetings` | Admin, Gerente | Programa reunión con campos `title`, `type`, `project_id`, `date`, `start_time`, `end_time`, `duration`, `link`, `participant_ids`. Valida membresía de proyecto, solapamiento concurrente y emite notificaciones atómicas. Éxito: «Reunión programada correctamente.». |
+| GET | `/api/v1/availability/meetings` | Autenticado | Lista reuniones con alcance por rol (Admin: todas; Gerente: propias y de sus proyectos; Desarrollador: participante). Soporta `filter_type=proximas|pasadas` y filtros de fecha. Éxito: lista de reuniones o «No hay reuniones para mostrar.». |
+| GET | `/api/v1/availability/meetings/{id}` | Autenticado (Involucrado) | Detalle completo de reunión con creador, participantes y estado de respuesta (`pendiente`, `aceptada`, `rechazada`), acuerdos y acta. Desarrollador ajeno: 403 «Acceso denegado. No participa en esta reunión.». |
+| POST | `/api/v1/availability/meetings/{id}/cancel` | Creador, Admin | Cancela reunión programada. Actualiza estado a `cancelled` y notifica participantes. Éxito: «Reunión cancelada correctamente.». |
+| POST | `/api/v1/availability/meetings/{id}/respond` | Participante | Registra respuesta (`aceptada` o `rechazada`) del usuario convocado. Éxito: «Respuesta registrada correctamente.». |
+| POST | `/api/v1/availability/meetings/{id}/summary` | Creador, Admin | Registra o actualiza resumen de acuerdos (≤ 2000 caracteres) y URL de acta. Éxito: «Resumen y acta registrados correctamente.». |
+| GET | `/api/v1/availability/projects` | Admin, Gerente | Lista proyectos gestionados con enlace de videoconferencia predeterminado para prellenado automático. |
+
+### Resultados de Calidad y Verificación
+
+| Capa | Control | Resultado | Estado |
+|---|---|---|---|
+| Backend | `pytest` | 290 tests pasados (100 % pass rate; 13 en suite EP-05) | APROBADO |
+| Backend | `ruff check .` & `ruff format --check` | 0 advertencias, 0 errores, 100% formateado | APROBADO |
+| Backend | `mypy app/` | 0 errores en 122 archivos fuente | APROBADO |
+| Backend | `lint-imports` | 3 contratos de arquitectura limpios | APROBADO |
+| Backend | `scan_secrets.py` | 0 secretos detectados | APROBADO |
+| Frontend | `tsc --noEmit` (`npm run typecheck`) | 0 errores de tipos | APROBADO |
+| Frontend | `eslint .` (`npm run lint`) | 0 errores, 0 advertencias | APROBADO |
+| Frontend | `prettier --check .` | 100 % código formateado | APROBADO |
+| Frontend | `vitest run` | 269 tests pasados (35 suites; 20 en MeetingsPage) | APROBADO |
+| Frontend | `scan-secrets.mjs` | 0 secretos en 142 archivos | APROBADO |
+| Frontend | `vite build` (`npm run build`) | Bundle de producción generado limpiamente | APROBADO |
+
+### Matriz de Trazabilidad HU_DN_03_42 … HU_DN_03_46
+
+| Historia de Usuario | Componente / Endpoint | Criterios y Restricciones Verificados | Tests Asignados |
+|---|---|---|---|
+| **HU_DN_03_42** (Google Calendar) | `MeetingsPage.tsx`, `utils.ts` / `GET /meetings/{id}` | Parámetros completos (`dates`, `text`, `details`, `add`), detección de popup blocker con mensaje `googleCalendarOpenFailed`, fallback «Copiar datos de la reunión» (`formatMeetingCopyData`), toast `Datos de la reunión copiados.`, control de error `clipboardCopyFailed`. | `MeetingsPage.test.tsx` (HU_DN_03_42) / `test_hu_42_meeting_detail_and_google_calendar_data` |
+| **HU_DN_03_44** (Responder Convocatoria) | `MeetingsPage.tsx`, `api.ts` / `POST /meetings/{id}/respond` | Respuestas `'aceptada'` y `'rechazada'`. Oculto ante reuniones pasadas o canceladas. Errores literales `meetingCancelledCannotRespond` y `meetingAlreadyPastCannotRespond`. | `MeetingsPage.test.tsx` (HU_DN_03_44) / `test_hu_44_respond_meeting_lifecycle_and_constraints` |
+| **HU_DN_03_45** (Cancelar Reunión) | `MeetingsPage.tsx`, `api.ts` / `POST /meetings/{id}/cancel` | RN-AGE-05: Solo el creador puede cancelar. Modal con mensaje literal `'¿Está seguro de que desea cancelar esta reunión? Se notificará a los participantes.'` y botones `'Confirmar'` y `'Cancelar'`. Notificaciones a participantes. | `MeetingsPage.test.tsx` (HU_DN_03_45) / `test_hu_45_cancel_meeting_and_notifications_and_rn_age_05` |
+| **HU_DN_03_46** (Resumen y Acta) | `MeetingsPage.tsx`, `api.ts` / `POST /meetings/{id}/summary` | Solo reuniones realizadas (`isMeetingRealizada`). Validaciones cliente/servidor: resumen obligatorio (`summaryRequired`), longitud ≤ 2000 (`summaryTooLong`), formato URL (`invalidMinutesUrl`). Éxito `meetingSummarySaved`. Creador y Admin autorizados. | `MeetingsPage.test.tsx` (HU_DN_03_46) / `test_hu_46_meeting_summary_validations_and_lifecycle` |
+
+- **Acceptance Score Final:** 100 %
+- **Directorio `demo/`:** Preservado íntegramente sin modificaciones.
+- **Git Commit / Push:** Omitidos estrictamente conforme a las instrucciones del usuario.
+
+
+

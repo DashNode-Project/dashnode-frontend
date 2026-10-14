@@ -26,12 +26,15 @@ const useAuthMock = vi.fn(() => ({
 
 vi.mock('@/features/auth/api', () => ({
   listAdminUsers: vi.fn(),
+  listManagerDevelopers: vi.fn(),
   createUserByAdmin: vi.fn(),
   inviteDeveloper: vi.fn(),
   updateUserByAdmin: vi.fn(),
   adminRequestPasswordReset: vi.fn(),
   deactivateUserByAdmin: vi.fn(),
   reactivateUserByAdmin: vi.fn(),
+  deactivateDeveloperByManager: vi.fn(),
+  reactivateDeveloperByManager: vi.fn(),
   fetchPendingAssignments: vi.fn(),
 }));
 
@@ -42,6 +45,7 @@ vi.mock('@/features/auth/AuthContext', () => ({
 describe('UsersPage', () => {
   beforeEach(() => {
     vi.mocked(authApi.listAdminUsers).mockResolvedValue([]);
+    vi.mocked(authApi.listManagerDevelopers).mockResolvedValue([]);
     vi.mocked(authApi.createUserByAdmin).mockResolvedValue({
       message: USER_MESSAGES.userCreated,
     });
@@ -126,6 +130,40 @@ describe('UsersPage', () => {
     expect(await screen.findByText(USER_MESSAGES.userCreated)).toBeInTheDocument();
   });
 
+  it('filters admin list when a role tab is selected', async () => {
+    vi.mocked(authApi.listAdminUsers).mockResolvedValue([
+      {
+        id: '1',
+        name: 'Bob',
+        email: 'bob@empresa.com',
+        role: 'developer',
+        is_active: true,
+      },
+      {
+        id: '2',
+        name: 'Lead',
+        email: 'lead@empresa.com',
+        role: 'manager',
+        is_active: true,
+      },
+    ]);
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'admin' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await screen.findByText('Bob');
+    await user.click(screen.getByRole('tab', { name: /Gerentes/i }));
+    expect(screen.getByText('Lead')).toBeInTheDocument();
+    expect(screen.queryByText('Bob')).not.toBeInTheDocument();
+  });
+
   it('renders user rows when list returns data', async () => {
     vi.mocked(authApi.listAdminUsers).mockResolvedValue([
       {
@@ -189,9 +227,10 @@ describe('UsersPage', () => {
       </MemoryRouter>,
     );
     await screen.findByText(USER_MESSAGES.emptyList);
-    await user.type(screen.getByLabelText('Búsqueda por nombre'), 'zzz');
-    await user.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-    expect(await screen.findByText(USER_MESSAGES.filterEmpty)).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText(/Buscar por nombre/i), 'zzz');
+    await waitFor(() => {
+      expect(screen.getByText(USER_MESSAGES.filterEmpty)).toBeInTheDocument();
+    });
   });
 
   it('shows invite developer for manager', async () => {
@@ -211,7 +250,11 @@ describe('UsersPage', () => {
   });
 
   it('submits manager invite', async () => {
-    vi.mocked(authApi.inviteDeveloper).mockResolvedValue({ message: USER_MESSAGES.inviteSent });
+    vi.mocked(authApi.inviteDeveloper).mockResolvedValue({
+      message: USER_MESSAGES.inviteSent,
+      user_id: 'dev-new',
+      initial_password: 'dev_cambiar_contrasena',
+    });
     useAuthMock.mockReturnValue({
       user: { ...sessionUser, role: 'manager' },
       expiresAt: '2026-01-01T08:00:00Z',
@@ -227,7 +270,8 @@ describe('UsersPage', () => {
     await user.type(screen.getByLabelText('Nombre completo'), 'Dev');
     await user.type(screen.getByLabelText('Correo electrónico'), 'dev@empresa.com');
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
-    expect(await screen.findByText(USER_MESSAGES.inviteSent)).toBeInTheDocument();
+    expect(await screen.findByText(/Contraseña inicial:/i)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(USER_MESSAGES.inviteSent))).toBeInTheDocument();
   });
 
   it('submits edit user form', async () => {
@@ -261,7 +305,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Editar' }));
+    await user.click(await screen.findByRole('button', { name: 'Editar usuario' }));
     const nameInput = screen.getByLabelText('Nombre completo');
     await user.clear(nameInput);
     await user.type(nameInput, 'Robert');
@@ -291,7 +335,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Desactivar usuario' }));
     expect(await screen.findByText(USER_MESSAGES.pendingTasksNotice(3))).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText(USER_MESSAGES.userDeactivated)).toBeInTheDocument();
@@ -318,7 +362,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Reactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Reactivar usuario' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText(USER_MESSAGES.userReactivated)).toBeInTheDocument();
   });
@@ -351,7 +395,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Desactivar usuario' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText(USER_MESSAGES.selfDeactivateBlocked)).toBeInTheDocument();
   });
@@ -380,7 +424,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Desactivar usuario' }));
     expect(await screen.findByText(USER_MESSAGES.pendingLoadFailure)).toBeInTheDocument();
   });
 
@@ -406,7 +450,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Desactivar usuario' }));
     expect(await screen.findByText(USER_MESSAGES.pendingLoadFailure)).toBeInTheDocument();
   });
 
@@ -438,7 +482,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Desactivar usuario' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText(USER_MESSAGES.managerDeactivateBlocked)).toBeInTheDocument();
   });
@@ -465,7 +509,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Desactivar usuario' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText(MESSAGES.technicalFailure)).toBeInTheDocument();
   });
@@ -498,11 +542,150 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Reactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Reactivar usuario' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(
       await screen.findByText('Solo se pueden reactivar usuarios desactivados.'),
     ).toBeInTheDocument();
+  });
+
+  it('filters manager developers with live search', async () => {
+    vi.mocked(authApi.listManagerDevelopers).mockResolvedValue([
+      {
+        id: 'd1',
+        name: 'Alice Dev',
+        email: 'alice@empresa.com',
+        status: 'active',
+        is_active: true,
+      },
+      {
+        id: 'd2',
+        name: 'Zorro Dev',
+        email: 'z@empresa.com',
+        status: 'active',
+        is_active: true,
+      },
+    ]);
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'manager' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await screen.findByText('Alice Dev');
+    await user.type(screen.getByPlaceholderText(/Buscar desarrollador/i), 'Alice');
+    await waitFor(() => {
+      expect(screen.getByText('Alice Dev')).toBeInTheDocument();
+      expect(screen.queryByText('Zorro Dev')).not.toBeInTheDocument();
+    });
+  });
+
+  it('lists manager developers with invitation status badges', async () => {
+    vi.mocked(authApi.listManagerDevelopers).mockResolvedValue([
+      {
+        id: 'd1',
+        name: 'Dev One',
+        email: 'dev@empresa.com',
+        status: 'pending',
+        is_active: false,
+      },
+      {
+        id: 'd2',
+        name: 'Dev Two',
+        email: 'dev2@empresa.com',
+        status: 'active',
+        is_active: true,
+      },
+    ]);
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'manager' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Dev One')).toBeInTheDocument();
+    expect(screen.getByText('Pendiente')).toBeInTheDocument();
+    expect(screen.getByText('Completado')).toBeInTheDocument();
+  });
+
+  it('shows load failure when manager cannot load developers', async () => {
+    vi.mocked(authApi.listManagerDevelopers).mockRejectedValue(new NetworkError());
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'manager' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText(MESSAGES.loadFailure)).toBeInTheDocument();
+  });
+
+  it('manager reactivates an inactive developer', async () => {
+    vi.mocked(authApi.listManagerDevelopers).mockResolvedValue([
+      {
+        id: 'd3',
+        name: 'Dev Off',
+        email: 'off@empresa.com',
+        status: 'inactive',
+        is_active: false,
+      },
+    ]);
+    vi.mocked(authApi.reactivateDeveloperByManager).mockResolvedValue({
+      message: USER_MESSAGES.userReactivated,
+    });
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'manager' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Reactivar desarrollador' }));
+    await waitFor(() => expect(authApi.reactivateDeveloperByManager).toHaveBeenCalledWith('d3'));
+  });
+
+  it('manager deactivates an active developer from the team table', async () => {
+    vi.mocked(authApi.listManagerDevelopers).mockResolvedValue([
+      {
+        id: 'd2',
+        name: 'Dev Two',
+        email: 'dev2@empresa.com',
+        status: 'active',
+        is_active: true,
+      },
+    ]);
+    vi.mocked(authApi.deactivateDeveloperByManager).mockResolvedValue({
+      message: USER_MESSAGES.userDeactivated,
+    });
+    useAuthMock.mockReturnValue({
+      user: { ...sessionUser, role: 'manager' },
+      expiresAt: '2026-01-01T08:00:00Z',
+      loading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <UsersPage />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Desactivar desarrollador' }));
+    await waitFor(() => expect(authApi.deactivateDeveloperByManager).toHaveBeenCalledWith('d2'));
   });
 
   it('shows technical failure on reactivate error', async () => {
@@ -527,7 +710,7 @@ describe('UsersPage', () => {
         <UsersPage />
       </MemoryRouter>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Reactivar' }));
+    await user.click(await screen.findByRole('button', { name: 'Reactivar usuario' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText(MESSAGES.technicalFailure)).toBeInTheDocument();
   });

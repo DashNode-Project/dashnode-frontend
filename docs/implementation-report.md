@@ -99,3 +99,94 @@ Validación local:
 - Seguridad: `node scripts/scan-secrets.mjs` limpio (0 secretos).
 - Compilación: `npm run build` genera bundle de producción optimizado sin errores.
 
+---
+
+## EP-05 — Agendamiento y Reuniones (HU_DN_03_37 … HU_DN_03_41)
+
+### Análisis del Orquestador (Modo Lote / Épica)
+- **Fecha:** 2026-10-13
+- **Clasificación del lote:** FULL_STACK
+- **Complejidad:** MODERATE / COMPLEX (Score: 82/100)
+- **Políticas cargadas:** `policies.xml`, `adaptive-policies.xml`, `project-modes.xml`, `engineering-standards.xml` (seguridad, mensajes_literales, contrato_de_error, quality_gates, estrategia_de_pruebas, accesibilidad).
+- **Project Mode:** EXTEND_EXISTING en ambos repositorios.
+- **Ramas:** `feature/ep-05-meetings-age` (tanto backend como frontend).
+- **Prohibición de push:** No publicar ramas hasta verificación integral completa.
+
+#### Grafo de dependencias y flujo:
+1. `HU_DN_03_37`: Selección de horario disponible resultante de búsqueda (HU_DN_03_36) y apertura modal de confirmación en solo lectura (fecha, hora, duración, participantes).
+2. `HU_DN_03_38`: Programación de reunión desde ventana de confirmación (título ≤ 100 caracteres obligatorio, tipo obligatorio entre Daily/Planning/Review/Retro/General, proyecto asociado obligatorio con validación de membresía de todos los participantes y prellenado de enlace sugerido, enlace opcional con formato URL válido, rechazo de solapamiento concurrente para cualquier participante, persistencia, notificación a participantes y redirección a reuniones).
+3. `HU_DN_03_39`: Listado de reuniones (Próximas y Pasadas) con alcance por rol (Admin: todas; Gerente: propias y de sus proyectos; Desarrollador: solo participante), orden cronológico (próximas asc; pasadas sep), datos completos y estados.
+4. `HU_DN_03_40`: Vista calendario interactiva con conmutador Lista/Calendario con el mismo conjunto de reuniones, título y tipo distinguibles.
+5. `HU_DN_03_41`: Detalle de reunión desde lista o calendario, participantes y sus respuestas (pendiente, aceptada, rechazada), resumen y acta, acciones según rol ('Enviar a Google Calendar', 'Aceptar / Rechazar', 'Cancelar reunión', 'Registrar resumen y acta'), control de acceso por rol (Desarrollador denegado si no participa).
+
+#### Contrato Compartido:
+- **API Endpoints:**
+  - `POST /api/v1/availability/meetings`: Creación de reunión con campos `title`, `type`, `project_id`, `date`, `start_time`, `end_time`, `duration`, `link`, `participant_ids`.
+  - `GET /api/v1/availability/meetings`: Listado de reuniones filtradas por alcance de rol y parámetros opcionales.
+  - `GET /api/v1/availability/meetings/{id}`: Detalle completo de reunión con creador, participantes y respuestas.
+  - `POST /api/v1/availability/meetings/{id}/cancel`: Cancelación de reunión por creador.
+  - `POST /api/v1/availability/meetings/{id}/respond`: Registro de respuesta de participante ('aceptada' | 'rechazada').
+  - `POST /api/v1/availability/meetings/{id}/summary`: Registro de resumen (≤ 2000 chars) y URL de acta.
+- **Mensajes Literales Verbatim:**
+  - Título vacío: `'El título de la reunión es obligatorio.'`
+  - Tipo vacío: `'Seleccione el tipo de reunión.'`
+  - Enlace inválido: `'El enlace de la reunión no tiene un formato de URL válido.'`
+  - Proyecto vacío: `'Debe seleccionar un proyecto.'`
+  - Miembros no pertenecientes al proyecto: `'Todos los participantes deben ser miembros del proyecto seleccionado.'`
+  - Solapamiento concurrente: `'Uno o más participantes ya tienen una reunión en ese horario.'`
+  - Éxito al programar: `'Reunión programada correctamente.'`
+  - Éxito sin datos: `'No hay reuniones para mostrar.'`
+  - Fallo técnico genérico: `'No fue posible completar la operación. Intente nuevamente.'`
+  - Fallo de carga: `'No fue posible cargar la información. Intente nuevamente.'`
+  - Acceso denegado: `'Acceso denegado. No tiene permisos para realizar esta acción.'`
+
+---
+
+## Implementación de HU_DN_03_42, HU_DN_03_44, HU_DN_03_45 y HU_DN_03_46
+
+### 1. HU_DN_03_42 — Enviar a Google Calendar y Manejo de Portapapeles
+- **Componente:** `MeetingsPage.tsx`, `utils.ts` (`buildGoogleCalendarUrl`, `formatMeetingCopyData`), `messages.ts`.
+- **Comportamiento:**
+  - Generación de enlace de Google Calendar con título, horario UTC, duración, enlace, descripción y correos de participantes (`&add=...`).
+  - Detección de bloqueo de ventanas emergentes (`window.open` retornando null o error).
+  - Alerta contextual con botón `'Copiar datos de la reunión'` ante fallo de apertura.
+  - Mensaje de copia exitosa: `'Datos de la reunión copiados.'`.
+  - Mensaje ante fallo de apertura: `'No fue posible abrir Google Calendar. Puede copiar los datos de la reunión.'`.
+  - Mensaje ante fallo de portapapeles: `'No fue posible copiar los datos. Cópielos manualmente.'`.
+
+### 2. HU_DN_03_44 — Responder Convocatoria de Reunión
+- **Componente:** `MeetingsPage.tsx`, `api.ts` (`respondMeeting`), `messages.ts`.
+- **Comportamiento:**
+  - Botones `'Aceptar'` y `'Rechazar'` visibles exclusivamente para participantes convocados en reuniones programadas que aún no han ocurrido.
+  - Oculto si la reunión está cancelada o ya transcurrió en el tiempo.
+  - Mensaje de éxito: `'Su respuesta ha sido registrada.'`.
+  - Manejo de error si fue cancelada: `'La reunión fue cancelada; no es posible responder.'`.
+  - Manejo de error si ya ocurrió: `'No es posible responder una reunión ya realizada.'`.
+
+### 3. HU_DN_03_45 — Cancelar Reunión Programada y RN-AGE-05
+- **Componente:** `MeetingsPage.tsx`, `api.ts` (`cancelMeeting`), `messages.ts`.
+- **Comportamiento:**
+  - Botón de cancelación condicionado a `isUserCreator(m)` (solo quien creó la reunión puede cancelarla).
+  - Modal de confirmación con texto literal verbatim: `'¿Está seguro de que desea cancelar esta reunión? Se notificará a los participantes.'`.
+  - Botones del modal: `'Confirmar'` y `'Cancelar'`.
+  - Mensaje de éxito tras cancelar: `'Reunión cancelada correctamente.'`.
+  - Error 403 `ONLY_CREATOR_CAN_CANCEL`: `'Solo el creador de la reunión puede cancelarla.'`.
+
+### 4. HU_DN_03_46 — Registrar Resumen y Acta de Reunión
+- **Componente:** `MeetingsPage.tsx`, `api.ts` (`updateMeetingSummary`), `messages.ts`.
+- **Comportamiento:**
+  - Botón `'Registrar resumen y acta'` solo visible para reuniones realizadas (`isMeetingRealizada(m)`) y para el creador o Administrador.
+  - Validación de resumen obligatorio: `'El resumen es obligatorio.'`.
+  - Validación de longitud máxima: textarea limitado a 2000 caracteres con contador `X/2000` y validación `'El resumen no puede superar 2000 caracteres.'`.
+  - Validación de formato URL: `'La URL del acta no tiene un formato válido.'`.
+  - Si el backend rechaza porque no está realizada: `'Solo se puede registrar resumen y acta en reuniones realizadas.'`.
+  - Mensaje de éxito: `'Resumen y acta guardados correctamente.'`.
+
+#### Calidad Frontend:
+- `npm run typecheck`: 0 errores.
+- `npm run lint`: 0 errores, 0 advertencias.
+- `npm run format:check`: 100% de archivos formateados con Prettier.
+- `vitest run`: 269 tests pasados (35 suites).
+
+
+

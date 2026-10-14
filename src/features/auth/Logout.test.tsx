@@ -71,8 +71,6 @@ describe('HU_DN_01_04 - the option (criterion 1)', () => {
     await user.tab();
     expect(screen.getByRole('link', { name: 'Mi perfil' })).toHaveFocus();
     await user.tab();
-    expect(screen.getByRole('link', { name: 'Permisos y roles' })).toHaveFocus();
-    await user.tab();
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toHaveFocus();
   });
 });

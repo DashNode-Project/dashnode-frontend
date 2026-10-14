@@ -1,4 +1,4 @@
-import { FolderOpen, Plus } from 'lucide-react';
+import { ArrowRight, FolderOpen, LayoutGrid, List, Plus } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -11,6 +11,9 @@ import { Link, useNavigate } from 'react-router';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
+import { Avatar, SearchInput, StatusBadge } from '@/components/ui/demo-ui';
+import { IconActionButton } from '@/components/ui/IconActionButton';
+import { useDebouncedValue } from '@/lib/hooks/useDebouncedValue';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
@@ -18,6 +21,19 @@ import { createProject, listActiveManagers, listProjects, type ProjectSummary } 
 import { PROJECT_MESSAGES, PROJECT_PRIORITY_LABELS, PROJECT_STATUS_LABELS } from './messages';
 import { parseTechStack, validateProjectForm, type ProjectFormValues } from './validation';
 import { projectDetailPath } from '@/app/paths';
+
+const STATUS_ACCENT: Record<string, string> = {
+  activo: '#10B981',
+  active: '#10B981',
+  planificacion: '#8B5CF6',
+  planning: '#8B5CF6',
+  completado: '#3B82F6',
+  completed: '#3B82F6',
+  archivado: '#6B7280',
+  archived: '#6B7280',
+  pausa: '#F59E0B',
+  'on-hold': '#F59E0B',
+};
 
 const EMPTY_FORM: ProjectFormValues = {
   name: '',
@@ -32,7 +48,7 @@ export default function ProjectsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const canCreate = user?.role === 'admin' || user?.role === 'manager';
+  const canCreate = user?.role === 'manager';
 
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +60,9 @@ export default function ProjectsPage() {
   const [managers, setManagers] = useState<{ id: string; name: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,9 +122,19 @@ export default function ProjectsPage() {
   };
 
   const filtered = useMemo(() => {
-    if (statusFilter === 'all') return projects;
-    return projects.filter((p) => p.status === statusFilter);
-  }, [projects, statusFilter]);
+    const q = debouncedSearch.trim().toLowerCase();
+    return projects.filter((p) => {
+      const matchStatus = statusFilter === 'all' || p.status === statusFilter;
+      const matchSearch =
+        !q || p.name.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q);
+      return matchStatus && matchSearch;
+    });
+  }, [projects, statusFilter, debouncedSearch]);
+
+  const activeCount = useMemo(
+    () => projects.filter((p) => p.status === 'activo').length,
+    [projects],
+  );
 
   const handleCreate = async () => {
     const errors = validateProjectForm(form);
@@ -153,7 +182,7 @@ export default function ProjectsPage() {
         <div>
           <h1 className="text-2xl font-semibold text-[#F9FAFB]">Proyectos</h1>
           <p className="mt-1 text-sm text-[#9CA3AF]">
-            Organice el trabajo del equipo en espacios con responsable definido.
+            {activeCount} activos de {projects.length} en total
           </p>
         </div>
         {canCreate ? (
@@ -164,7 +193,15 @@ export default function ProjectsPage() {
         ) : null}
       </div>
 
-      <div className="mb-4">
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="min-w-[200px] flex-1 max-w-md">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Buscar proyecto…"
+            className="h-9 w-full"
+          />
+        </div>
         <label htmlFor="status-filter" className="sr-only">
           Filtrar por estado
         </label>
@@ -172,6 +209,7 @@ export default function ProjectsPage() {
           id="status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
+          title="Filtrar proyectos por estado"
           className="h-9 rounded-md border border-white/10 bg-[#1E1F2B] px-3 text-sm text-[#9CA3AF] focus:border-blue-500 focus:outline-none"
         >
           <option value="all">Todos los estados</option>
@@ -181,6 +219,36 @@ export default function ProjectsPage() {
             </option>
           ))}
         </select>
+        <div className="ml-auto flex items-center gap-1 rounded-lg border border-white/10 bg-[#1E1F2B] p-1">
+          <button
+            type="button"
+            title="Vista en tarjetas"
+            aria-label="Vista en tarjetas"
+            aria-pressed={viewMode === 'grid'}
+            onClick={() => setViewMode('grid')}
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-blue-500/15 text-blue-400'
+                : 'text-[#6B7280] hover:text-[#F9FAFB]'
+            }`}
+          >
+            <LayoutGrid size={14} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            title="Vista en tabla"
+            aria-label="Vista en tabla"
+            aria-pressed={viewMode === 'list'}
+            onClick={() => setViewMode('list')}
+            className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+              viewMode === 'list'
+                ? 'bg-blue-500/15 text-blue-400'
+                : 'text-[#6B7280] hover:text-[#F9FAFB]'
+            }`}
+          >
+            <List size={14} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -197,36 +265,130 @@ export default function ProjectsPage() {
             </Button>
           ) : null}
         </div>
-      ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {filtered.map((project) => (
-            <li key={project.id}>
-              <Link
-                to={projectDetailPath(project.id)}
-                className="block rounded-xl border border-white/6 bg-[#12131C] p-5 transition-colors hover:border-white/12"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <h2 className="font-semibold text-[#F9FAFB]">{project.name}</h2>
-                  <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs text-blue-300">
-                    {PROJECT_STATUS_LABELS[project.status] ?? project.status}
-                  </span>
+      ) : viewMode === 'grid' ? (
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((project) => {
+            const accent = STATUS_ACCENT[project.status] ?? '#3B82F6';
+            return (
+              <li key={project.id}>
+                <div className="group relative overflow-hidden rounded-xl border border-white/6 bg-[#12131C] transition-all duration-200 hover:-translate-y-1 hover:border-white/15 hover:shadow-lg hover:shadow-black/20">
+                  <div className="h-0.5 w-full" style={{ background: accent }} />
+                  <div className="p-5">
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="flex h-8 w-8 items-center justify-center rounded-lg"
+                          style={{ background: `${accent}22` }}
+                        >
+                          <FolderOpen size={15} style={{ color: accent }} aria-hidden="true" />
+                        </div>
+                        <StatusBadge status={project.status} />
+                      </div>
+                      <IconActionButton
+                        icon={ArrowRight}
+                        label={`Abrir proyecto ${project.name}`}
+                        tone="blue"
+                        className="opacity-80 group-hover:opacity-100"
+                        onClick={() => navigate(projectDetailPath(project.id))}
+                      />
+                    </div>
+                    <Link
+                      to={projectDetailPath(project.id)}
+                      className="block text-left"
+                      title={`Ver detalle de ${project.name}`}
+                    >
+                      <h2 className="mb-1 font-semibold text-[#F9FAFB] transition-colors group-hover:text-blue-400">
+                        {project.name}
+                      </h2>
+                      <p className="mb-4 line-clamp-2 text-xs text-[#9CA3AF]">
+                        {project.description || '—'}
+                      </p>
+                    </Link>
+                    <p className="text-xs text-[#6B7280]">
+                      Prioridad: {PROJECT_PRIORITY_LABELS[project.priority] ?? project.priority}
+                    </p>
+                    {project.tech_stack.length > 0 ? (
+                      <p className="mt-2 line-clamp-1 text-xs text-[#9CA3AF]">
+                        Stack: {project.tech_stack.join(', ')}
+                      </p>
+                    ) : null}
+                    <div className="mt-3 flex items-center gap-2 border-t border-white/6 pt-3">
+                      <Avatar name={project.manager_name || 'Gerente'} size={22} />
+                      <span className="text-xs text-[#9CA3AF]">{project.manager_name || '—'}</span>
+                    </div>
+                  </div>
                 </div>
-                <p className="line-clamp-2 text-xs text-[#9CA3AF]">{project.description || '—'}</p>
-                <p className="mt-2 text-xs text-[#6B7280]">
-                  Gerente: {project.manager_name || '—'}
-                </p>
-                <p className="mt-1 text-xs text-[#6B7280]">
-                  Prioridad: {PROJECT_PRIORITY_LABELS[project.priority] ?? project.priority}
-                </p>
-                {project.tech_stack.length > 0 ? (
-                  <p className="mt-2 line-clamp-1 text-xs text-[#9CA3AF]">
-                    Stack: {project.tech_stack.join(', ')}
-                  </p>
-                ) : null}
-              </Link>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-white/6 bg-[#12131C]">
+          <table className="min-w-full text-left text-sm">
+            <thead className="border-b border-white/6 text-xs uppercase tracking-wide text-[#6B7280]">
+              <tr>
+                <th className="px-4 py-3 font-medium">Proyecto</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">Estado</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">Gerente</th>
+                <th className="hidden px-4 py-3 font-medium lg:table-cell">Prioridad</th>
+                <th className="px-4 py-3 text-right font-medium">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filtered.map((project) => {
+                const accent = STATUS_ACCENT[project.status] ?? '#3B82F6';
+                return (
+                  <tr key={project.id} className="transition-colors hover:bg-white/[0.02]">
+                    <td className="px-4 py-3">
+                      <Link
+                        to={projectDetailPath(project.id)}
+                        className="group flex items-center gap-3"
+                        title={`Abrir ${project.name}`}
+                      >
+                        <div
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                          style={{ background: `${accent}22` }}
+                        >
+                          <FolderOpen size={14} style={{ color: accent }} aria-hidden="true" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#F9FAFB] group-hover:text-blue-400">
+                            {project.name}
+                          </p>
+                          <p className="max-w-[240px] truncate text-xs text-[#6B7280]">
+                            {project.description}
+                          </p>
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <StatusBadge status={project.status} />
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Avatar name={project.manager_name || '—'} size={24} />
+                        <span className="text-[#9CA3AF]">{project.manager_name || '—'}</span>
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-3 text-[#9CA3AF] lg:table-cell">
+                      {PROJECT_PRIORITY_LABELS[project.priority] ?? project.priority}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end">
+                        <IconActionButton
+                          icon={ArrowRight}
+                          label={`Abrir proyecto ${project.name}`}
+                          tone="blue"
+                          onClick={() => navigate(projectDetailPath(project.id))}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {createOpen ? (

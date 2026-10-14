@@ -1,83 +1,175 @@
-import { Clock, FolderOpen, Home, User, Users } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarDays,
+  Clock,
+  FolderOpen,
+  Home,
+  Menu,
+  Users,
+  Video,
+  X,
+} from 'lucide-react';
 import { NavLink } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
 import { homePathFor } from '@/features/auth/roles';
 import { notifyUnderDevelopment } from '@/lib/underDevelopment';
 import { OUT_OF_SCOPE_NAV } from './navigation';
+import { useShellLayout } from './ShellLayoutContext';
 
 const base =
-  'flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors';
+  'flex h-10 shrink-0 items-center gap-2.5 rounded-md px-3 text-sm font-medium transition-colors active:scale-[0.98]';
 
-/** Main navigation: the role start screen plus the (not yet available) product areas. */
 export function SideNav() {
   const { user } = useAuth();
+  const { sidebarCollapsed, toggleSidebar } = useShellLayout();
   if (!user) return null;
   const items = OUT_OF_SCOPE_NAV.filter((item) => item.roles.includes(user.role));
+  const width = sidebarCollapsed ? 'md:w-[4.25rem]' : 'md:w-60';
 
   return (
     <nav
       aria-label="Principal"
-      className="flex gap-1 overflow-x-auto border-b border-white/10 px-3 py-2 md:w-56 md:shrink-0 md:flex-col md:overflow-visible md:border-b-0 md:border-r md:px-2 md:py-4"
+      className={`sticky top-14 z-30 flex h-[calc(100vh-3.5rem)] shrink-0 flex-col gap-1 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#0A0B0E] px-2 py-3 ${width}`}
     >
+      <button
+        type="button"
+        onClick={toggleSidebar}
+        aria-label={sidebarCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
+        title={sidebarCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
+        className={`${base} mb-2 text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB] ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
+      >
+        {sidebarCollapsed ? (
+          <Menu size={20} aria-hidden="true" />
+        ) : (
+          <X size={20} aria-hidden="true" />
+        )}
+        {!sidebarCollapsed ? <span className="sr-only">Menú</span> : null}
+      </button>
+
       <NavLink
         to={homePathFor(user.role)}
+        title="Inicio"
         className={({ isActive }) =>
-          `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+          `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+            isActive
+              ? 'bg-blue-500/15 text-blue-300'
+              : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+          }`
         }
       >
-        <Home size={16} aria-hidden="true" />
-        Inicio
+        <Home size={20} aria-hidden="true" />
+        {!sidebarCollapsed ? 'Inicio' : null}
       </NavLink>
-      {user.role === 'admin' || user.role === 'manager' || user.role === 'developer' ? (
+
+      {(user.role === 'manager' || user.role === 'developer') && (
         <NavLink
           to={PATHS.projects}
+          title="Proyectos"
           className={({ isActive }) =>
-            `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+            `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+              isActive
+                ? 'bg-blue-500/15 text-blue-300'
+                : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+            }`
           }
         >
-          <FolderOpen size={16} aria-hidden="true" />
-          Proyectos
+          <FolderOpen size={20} aria-hidden="true" />
+          {!sidebarCollapsed ? 'Proyectos' : null}
         </NavLink>
-      ) : null}
-      {user.role === 'admin' || user.role === 'manager' ? (
+      )}
+
+      {(user.role === 'admin' || user.role === 'manager') && (
         <NavLink
           to={PATHS.users}
+          title="Usuarios"
           className={({ isActive }) =>
-            `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+            `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+              isActive
+                ? 'bg-blue-500/15 text-blue-300'
+                : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+            }`
           }
         >
-          <Users size={16} aria-hidden="true" />
-          Usuarios
+          <Users size={20} aria-hidden="true" />
+          {!sidebarCollapsed ? 'Usuarios' : null}
         </NavLink>
+      )}
+
+      {user.role !== 'admin' ? (
+        <>
+          <NavLink
+            to={PATHS.availability}
+            title="Disponibilidad"
+            className={({ isActive }) =>
+              `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+                isActive
+                  ? 'bg-blue-500/15 text-blue-300'
+                  : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+              }`
+            }
+          >
+            <Clock size={20} aria-hidden="true" />
+            {!sidebarCollapsed ? 'Disponibilidad' : null}
+          </NavLink>
+
+          <NavLink
+            to={PATHS.meetings}
+            title="Reuniones"
+            className={({ isActive }) =>
+              `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+                isActive
+                  ? 'bg-blue-500/15 text-blue-300'
+                  : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+              }`
+            }
+          >
+            <Video size={20} aria-hidden="true" />
+            {!sidebarCollapsed ? 'Reuniones' : null}
+          </NavLink>
+
+          <NavLink
+            to={PATHS.calendar}
+            title="Calendario"
+            className={({ isActive }) =>
+              `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+                isActive
+                  ? 'bg-blue-500/15 text-blue-300'
+                  : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+              }`
+            }
+          >
+            <CalendarDays size={20} aria-hidden="true" />
+            {!sidebarCollapsed ? 'Calendario' : null}
+          </NavLink>
+        </>
       ) : null}
+
       <NavLink
-        to={PATHS.profile}
+        to={PATHS.userManual}
+        title="Manual de usuario"
         className={({ isActive }) =>
-          `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
+          `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+            isActive
+              ? 'bg-blue-500/15 text-blue-300'
+              : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+          }`
         }
       >
-        <User size={16} aria-hidden="true" />
-        Perfil
+        <BookOpen size={20} aria-hidden="true" />
+        {!sidebarCollapsed ? 'Manual' : null}
       </NavLink>
-      <NavLink
-        to={PATHS.availability}
-        className={({ isActive }) =>
-          `${base} ${isActive ? 'bg-blue-500/15 text-blue-300' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'}`
-        }
-      >
-        <Clock size={16} aria-hidden="true" />
-        Disponibilidad
-      </NavLink>
+
       {items.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           type="button"
+          title={label}
           onClick={() => notifyUnderDevelopment(`nav:${id}`)}
-          className={`${base} text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]`}
+          className={`${base} ${sidebarCollapsed ? 'justify-center' : ''} text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]`}
         >
-          <Icon size={16} aria-hidden="true" />
-          {label}
+          <Icon size={20} aria-hidden="true" />
+          {!sidebarCollapsed ? label : null}
         </button>
       ))}
     </nav>

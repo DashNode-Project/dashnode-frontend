@@ -59,6 +59,14 @@ export function getDateForWeekday(weekStartDate: string, dayKey: DayKey): string
   return `${year}-${month}-${dayOfMonth}`;
 }
 
+export function isSlotDatetimeInPast(date: string, startTime: string, now = new Date()): boolean {
+  const today = now.toISOString().slice(0, 10);
+  const time = now.toTimeString().slice(0, 5);
+  if (date < today) return true;
+  if (date === today) return startTime < time;
+  return false;
+}
+
 export function timeToMinutes(t: string): number {
   const parts = t.split(':').map(Number);
   const h = parts[0] ?? 0;
@@ -180,4 +188,77 @@ export function validateMeetingCriteria(
   }
 
   return result;
+}
+
+export function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function buildGoogleCalendarUrl(
+  title: string,
+  date: string,
+  startTime: string,
+  durationMinutes: number,
+  projectName?: string | null,
+  link?: string | null,
+  description?: string | null,
+  participantEmails?: string[],
+): string {
+  const start = date.replace(/-/g, '') + 'T' + startTime.replace(':', '') + '00';
+  const startH = parseInt(startTime.split(':')[0] || '0', 10);
+  const startM = parseInt(startTime.split(':')[1] || '0', 10);
+  const totalMin = startH * 60 + startM + durationMinutes;
+  const endH = Math.floor(totalMin / 60) % 24;
+  const endMin = totalMin % 60;
+  const end =
+    date.replace(/-/g, '') +
+    'T' +
+    endH.toString().padStart(2, '0') +
+    endMin.toString().padStart(2, '0') +
+    '00';
+  const emailList = participantEmails?.filter(Boolean) ?? [];
+  const attendeesText = emailList.length > 0 ? `\nParticipantes: ${emailList.join(', ')}` : '';
+  const details = encodeURIComponent(
+    `Proyecto: ${projectName ?? ''}\nEnlace: ${link ?? ''}\n${description ?? ''}${attendeesText}`,
+  );
+  let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+    title,
+  )}&dates=${start}/${end}&details=${details}&location=${encodeURIComponent(link ?? '')}`;
+  if (emailList.length > 0) {
+    url += `&add=${encodeURIComponent(emailList.join(','))}`;
+  }
+  return url;
+}
+
+export function formatMeetingCopyData(meeting: {
+  title: string;
+  date: string;
+  start_time: string;
+  end_time?: string;
+  duration: number;
+  link?: string | null;
+  project_name?: string | null;
+  participants?: { email?: string | null; name?: string | null }[];
+}): string {
+  const emails =
+    meeting.participants
+      ?.map((p) => p.email || p.name)
+      .filter(Boolean)
+      .join(', ') || '';
+  return [
+    `Título: ${meeting.title}`,
+    `Proyecto: ${meeting.project_name || 'No especificado'}`,
+    `Fecha: ${meeting.date}`,
+    `Horario: ${meeting.start_time}${meeting.end_time ? ` – ${meeting.end_time}` : ''}`,
+    `Duración: ${meeting.duration} minutos`,
+    meeting.link ? `Enlace: ${meeting.link}` : '',
+    emails ? `Participantes: ${emails}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }

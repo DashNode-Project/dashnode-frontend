@@ -227,4 +227,16 @@ describe('HU_DN_02_22 — ProjectsPage', () => {
     expect(await screen.findByText(PROJECT_MESSAGES.nameRequired)).toBeInTheDocument();
     expect(screen.getByText(PROJECT_MESSAGES.managerRequired)).toBeInTheDocument();
   });
+
+  it('switches to table view and filters projects by search', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText('Alpha');
+    await user.click(screen.getByRole('button', { name: 'Vista en tabla' }));
+    expect(screen.getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText(/Buscar proyecto/i), 'zzz');
+    await waitFor(() => {
+      expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+    });
+  });
 });

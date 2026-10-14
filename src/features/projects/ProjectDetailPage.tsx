@@ -138,7 +138,11 @@ export default function ProjectDetailPage() {
     setMemberOpen(true);
     try {
       const rows = await listActiveUsers();
-      setMemberCandidates(rows.map((u) => ({ id: u.id, name: u.name })));
+      const existingIds = new Set([project?.manager_id, ...members.map((m) => m.user_id)]);
+      const availableCandidates = rows
+        .filter((u) => !existingIds.has(u.id))
+        .map((u) => ({ id: u.id, name: u.name }));
+      setMemberCandidates(availableCandidates);
     } catch {
       showToast(MESSAGES.loadFailure, 'error');
     }

@@ -25,6 +25,11 @@ const ProjectWorkspaceLayout = lazy(() => import('@/features/projects/ProjectWor
 const ProjectSummaryTab = lazy(() => import('@/features/projects/ProjectDetailPage'));
 const ProjectModulePlaceholder = lazy(() => import('@/features/projects/ProjectModulePlaceholder'));
 const AvailabilityPage = lazy(() => import('@/features/availability/AvailabilityPage'));
+const MeetingsPage = lazy(() => import('@/features/meetings/MeetingsPage'));
+const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
+const UserManualPage = lazy(() => import('@/features/manual/UserManualPage'));
+const ProjectMeetingsTab = lazy(() => import('@/features/projects/ProjectMeetingsTab'));
+const ProjectTeamTab = lazy(() => import('@/features/projects/ProjectTeamTab'));
 
 function PageLoading() {
   return (
@@ -57,23 +62,31 @@ export function AppRoutes() {
                   <Route element={<AppShell />}>
                     <Route path={PATHS.profile} element={<ProfilePage />} />
                     <Route path={PATHS.permissions} element={<PermissionsPage />} />
-                    <Route path={PATHS.projects} element={<ProjectsPage />} />
-                    <Route path={PATHS.availability} element={<AvailabilityPage />} />
-                    <Route
-                      path={`${PATHS.projects}/:projectId`}
-                      element={<ProjectWorkspaceLayout />}
-                    >
-                      <Route index element={<ProjectSummaryTab />} />
-                      <Route path="resumen" element={<ProjectSummaryTab />} />
-                      <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
+                    <Route path={PATHS.userManual} element={<UserManualPage />} />
+                    <Route element={<RequireRole allow={['manager', 'developer']} />}>
+                      <Route path={PATHS.projects} element={<ProjectsPage />} />
+                      <Route path={PATHS.availability} element={<AvailabilityPage />} />
+                      <Route path={PATHS.meetings} element={<MeetingsPage />} />
+                      <Route path={PATHS.calendar} element={<CalendarPage />} />
+                      <Route
+                        path={`${PATHS.projects}/:projectId`}
+                        element={<ProjectWorkspaceLayout />}
+                      >
+                        <Route index element={<ProjectSummaryTab />} />
+                        <Route path="resumen" element={<ProjectSummaryTab />} />
+                        <Route path="equipo" element={<ProjectTeamTab />} />
+                        <Route path="reuniones" element={<ProjectMeetingsTab />} />
+                        <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
+                      </Route>
                     </Route>
                     <Route element={<RequireRole allow="admin" />}>
                       <Route path={PATHS.homeAdmin} element={<HomePage />} />
+                    </Route>
+                    <Route element={<RequireRole allow={['admin', 'manager']} />}>
                       <Route path={PATHS.users} element={<UsersPage />} />
                     </Route>
                     <Route element={<RequireRole allow="manager" />}>
                       <Route path={PATHS.homeManager} element={<HomePage />} />
-                      <Route path={PATHS.users} element={<UsersPage />} />
                     </Route>
                     <Route element={<RequireRole allow="developer" />}>
                       <Route path={PATHS.homeDeveloper} element={<HomePage />} />
