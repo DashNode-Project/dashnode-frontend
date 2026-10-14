@@ -81,11 +81,12 @@ export function AppRoutes() {
                     </Route>
                     <Route element={<RequireRole allow="admin" />}>
                       <Route path={PATHS.homeAdmin} element={<HomePage />} />
+                    </Route>
+                    <Route element={<RequireRole allow={['admin', 'manager']} />}>
                       <Route path={PATHS.users} element={<UsersPage />} />
                     </Route>
                     <Route element={<RequireRole allow="manager" />}>
                       <Route path={PATHS.homeManager} element={<HomePage />} />
-                      <Route path={PATHS.users} element={<UsersPage />} />
                     </Route>
                     <Route element={<RequireRole allow="developer" />}>
                       <Route path={PATHS.homeDeveloper} element={<HomePage />} />

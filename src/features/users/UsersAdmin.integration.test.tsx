@@ -32,7 +32,7 @@ describe('Users admin integration', () => {
     await screen.findByRole('heading', { name: 'Usuarios' });
     expect(await screen.findByText('Ana Gerente')).toBeInTheDocument();
     expect(screen.getByText('Activo')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await user.click(screen.getByRole('button', { name: 'Editar usuario' }));
     expect(screen.getByRole('heading', { name: 'Editar usuario' })).toBeInTheDocument();
   });
 });

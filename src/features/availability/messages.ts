@@ -29,6 +29,8 @@ export const AVAILABILITY_MESSAGES = {
     'Todos los participantes deben ser miembros del proyecto seleccionado.',
   participantMeetingConflict: 'Uno o más participantes ya tienen una reunión en ese horario.',
   meetingScheduled: 'Reunión programada correctamente.',
+  meetingSlotAlreadyPast: 'No puede agendar una reunión en un horario que ya finalizó hoy.',
+  meetingDateInPast: 'No puede agendar una reunión en una fecha u hora pasada.',
 
   // HU_DN_03_39 & HU_DN_03_40
   noMeetingsToShow: 'No hay reuniones para mostrar.',
@@ -36,6 +38,10 @@ export const AVAILABILITY_MESSAGES = {
   // HU_DN_03_41, HU_DN_03_42, HU_DN_03_44, HU_DN_03_45, HU_DN_03_46
   meetingDetailForbidden: 'Acceso denegado. No participa en esta reunión.',
   meetingCancelled: 'Reunión cancelada correctamente.',
+  meetingDeleted: 'Reunión eliminada correctamente.',
+  meetingRestored: 'Reunión restaurada correctamente.',
+  deleteMeetingConfirm:
+    '¿Eliminar esta reunión de forma permanente? El horario quedará disponible para otros usos.',
   meetingResponseRegistered: 'Su respuesta ha sido registrada.',
   meetingCancelledCannotRespond: 'La reunión fue cancelada; no es posible responder.',
   meetingAlreadyPastCannotRespond: 'No es posible responder una reunión ya realizada.',

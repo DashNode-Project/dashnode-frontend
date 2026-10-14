@@ -123,7 +123,7 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     // By default 'Próximas' tab is active
     expect(await screen.findByText('Daily Standup Alpha')).toBeInTheDocument();
     expect(screen.getByText('Daily')).toBeInTheDocument();
-    expect(screen.getByText('Programada')).toBeInTheDocument();
+    expect(screen.getByText('Pendiente')).toBeInTheDocument();
     expect(screen.getByText('Proyecto Alpha')).toBeInTheDocument();
     expect(screen.queryByText('Sprint Planning Pasado')).not.toBeInTheDocument();
 
@@ -203,13 +203,11 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
       expect(availabilityApi.getMeetingDetail).toHaveBeenCalledWith('m-1');
     });
 
-    // Detail modal displays participants and their response badges
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Developer One')).toBeInTheDocument();
-    expect(screen.getByText('Pendiente')).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Developer One')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Pendiente').length).toBeGreaterThanOrEqual(1);
 
-    // Developer sees response action buttons (Aceptar / Rechazar)
-    const acceptBtn = screen.getByRole('button', { name: 'Aceptar' });
+    const acceptBtn = within(dialog).getByRole('button', { name: 'Aceptar' });
     await user.click(acceptBtn);
 
     await waitFor(() => {
@@ -370,7 +368,7 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     expect(await screen.findByText('Daily Standup Alpha')).toBeInTheDocument();
 
     // Copy link
-    const copyBtn = screen.getByTitle('Copiar enlace');
+    const copyBtn = screen.getByTitle('Copiar enlace de la reunión');
     fireEvent.click(copyBtn);
     expect(await screen.findByText('Enlace copiado.')).toBeInTheDocument();
 
@@ -512,12 +510,14 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     const meetingBtn = await screen.findByRole('button', { name: 'Daily Standup Alpha' });
     await user.click(meetingBtn);
 
-    const acceptBtn = screen.getByRole('button', { name: 'Aceptar' });
-    await user.click(acceptBtn);
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Aceptar' }));
 
-    expect(
-      await screen.findByText(AVAILABILITY_MESSAGES.meetingCancelledCannotRespond),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        AVAILABILITY_MESSAGES.meetingCancelledCannotRespond,
+      );
+    });
   });
 
   // HU_DN_03_45 Tests
@@ -587,5 +587,91 @@ describe('MeetingsPage - Acceptance Criteria Tests (EP-05)', () => {
     await user.click(saveBtn);
 
     expect(await screen.findByText(AVAILABILITY_MESSAGES.meetingNotCompleted)).toBeInTheDocument();
+  });
+
+  it('creator can edit an upcoming meeting via edit modal', async () => {
+    vi.mocked(availabilityApi.getMeetingDetail).mockResolvedValueOnce(mockMeetings[0]!);
+    vi.mocked(availabilityApi.updateMeeting).mockResolvedValueOnce({
+      ...mockMeetings[0]!,
+      title: 'Standup actualizado',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByTitle('Editar reunión'));
+    expect(await screen.findByRole('heading', { name: 'Editar reunión' })).toBeInTheDocument();
+
+    const titleInput = screen.getByLabelText('Título de la reunión');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Standup actualizado');
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    await waitFor(() => {
+      expect(availabilityApi.updateMeeting).toHaveBeenCalledWith(
+        'm-1',
+        expect.objectContaining({ title: 'Standup actualizado' }),
+      );
+    });
+  });
+
+  it('creator can permanently delete a scheduled meeting', async () => {
+    vi.mocked(availabilityApi.deleteMeeting).mockResolvedValueOnce({
+      message: AVAILABILITY_MESSAGES.meetingDeleted,
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByTitle('Eliminar reunión y liberar horario'));
+    expect(await screen.findByRole('heading', { name: 'Eliminar reunión' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Eliminar' }));
+
+    await waitFor(() => {
+      expect(availabilityApi.deleteMeeting).toHaveBeenCalledWith('m-1');
+    });
+    expect(await screen.findByText(AVAILABILITY_MESSAGES.meetingDeleted)).toBeInTheDocument();
+  });
+
+  it('creator restores a cancelled meeting that is still in the future', async () => {
+    const cancelledFuture = {
+      ...mockMeetings[0]!,
+      status: 'cancelled' as const,
+      title: 'Standup cancelado',
+    };
+    vi.mocked(availabilityApi.listMeetings).mockResolvedValueOnce([cancelledFuture]);
+    vi.mocked(availabilityApi.restoreMeeting).mockResolvedValueOnce(mockMeetings[0]!);
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /Pasadas/i }));
+    expect(await screen.findByText('Standup cancelado')).toBeInTheDocument();
+    await user.click(await screen.findByTitle('Recuperar reunión cancelada'));
+
+    await waitFor(() => {
+      expect(availabilityApi.restoreMeeting).toHaveBeenCalledWith('m-1');
+    });
+    expect(await screen.findByText(AVAILABILITY_MESSAGES.meetingRestored)).toBeInTheDocument();
+  });
+
+  it('shows toast when restore meeting is rejected', async () => {
+    const cancelledFuture = {
+      ...mockMeetings[0]!,
+      status: 'cancelled' as const,
+      title: 'Standup cancelado',
+    };
+    vi.mocked(availabilityApi.listMeetings).mockResolvedValueOnce([cancelledFuture]);
+    vi.mocked(availabilityApi.restoreMeeting).mockRejectedValueOnce(
+      new ApiError(400, {
+        code: 'MEETING_CANNOT_RESTORE',
+        message: 'No se puede recuperar esta reunión.',
+        fields: {},
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: /Pasadas/i }));
+    await user.click(await screen.findByTitle('Recuperar reunión cancelada'));
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('No se puede recuperar esta reunión.');
+    });
   });
 });

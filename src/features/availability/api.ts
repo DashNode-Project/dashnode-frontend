@@ -95,6 +95,37 @@ export async function updateMeetingSummary(
   });
 }
 
+export interface UpdateMeetingPayload {
+  title?: string;
+  link?: string | null;
+  participant_ids?: string[];
+}
+
+export async function updateMeeting(
+  meetingId: string,
+  payload: UpdateMeetingPayload,
+): Promise<MeetingDTO> {
+  return apiRequest<MeetingDTO>(`/availability/meetings/${encodeURIComponent(meetingId)}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export async function deleteMeeting(meetingId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/availability/meetings/${encodeURIComponent(meetingId)}`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+export async function restoreMeeting(meetingId: string): Promise<MeetingDTO> {
+  return apiRequest<MeetingDTO>(`/availability/meetings/${encodeURIComponent(meetingId)}/restore`, {
+    method: 'POST',
+  });
+}
+
 export async function getManagedProjects(): Promise<ProjectManagedDTO[]> {
   return apiRequest<ProjectManagedDTO[]>('/availability/projects');
 }

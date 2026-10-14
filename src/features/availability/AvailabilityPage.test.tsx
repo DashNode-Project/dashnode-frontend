@@ -35,6 +35,9 @@ function renderPage() {
   );
 }
 
+/** Monday of a future week so slot booking is not blocked as “already past”. */
+const TEST_WEEK_MONDAY = '2027-06-07';
+
 describe('Availability & Meetings - Acceptance Criteria Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,7 +46,7 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
     vi.mocked(availabilityApi.getMyAvailability).mockResolvedValue({
       id: 'a1',
       user_id: 'user-1',
-      week_start_date: '2026-10-12',
+      week_start_date: TEST_WEEK_MONDAY,
       is_inherited: false,
       slots: {
         monday: [{ start: '09:00', end: '11:00' }],
@@ -61,7 +64,7 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
     });
 
     vi.mocked(availabilityApi.getTeamAvailability).mockResolvedValue({
-      week_start_date: '2026-10-12',
+      week_start_date: TEST_WEEK_MONDAY,
       users: [
         {
           user_id: 'user-1',
@@ -100,7 +103,7 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
       results: [
         {
           day: 'monday',
-          date: '2026-10-12',
+          date: TEST_WEEK_MONDAY,
           slots: [{ start: '10:00', end: '11:00' }],
         },
       ],
@@ -112,7 +115,7 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
       title: 'Planning',
       type: 'General',
       description: null,
-      date: '2026-10-12',
+      date: TEST_WEEK_MONDAY,
       start_time: '10:00',
       end_time: '11:00',
       duration: 60,
@@ -120,8 +123,8 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
       status: 'scheduled',
       creator_id: 'user-1',
       participant_ids: ['user-1', 'user-2'],
-      created_at: '2026-10-12T00:00:00Z',
-      updated_at: '2026-10-12T00:00:00Z',
+      created_at: '2027-06-07T00:00:00Z',
+      updated_at: '2027-06-07T00:00:00Z',
     });
 
     vi.mocked(availabilityApi.getManagedProjects).mockResolvedValue([]);
@@ -166,7 +169,7 @@ describe('Availability & Meetings - Acceptance Criteria Tests', () => {
     vi.mocked(availabilityApi.getMyAvailability).mockResolvedValueOnce({
       id: null,
       user_id: 'user-1',
-      week_start_date: '2026-10-19',
+      week_start_date: '2027-06-14',
       is_inherited: true,
       slots: {
         monday: [{ start: '09:00', end: '11:00' }],

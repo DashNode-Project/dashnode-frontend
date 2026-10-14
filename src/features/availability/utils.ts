@@ -59,6 +59,14 @@ export function getDateForWeekday(weekStartDate: string, dayKey: DayKey): string
   return `${year}-${month}-${dayOfMonth}`;
 }
 
+export function isSlotDatetimeInPast(date: string, startTime: string, now = new Date()): boolean {
+  const today = now.toISOString().slice(0, 10);
+  const time = now.toTimeString().slice(0, 5);
+  if (date < today) return true;
+  if (date === today) return startTime < time;
+  return false;
+}
+
 export function timeToMinutes(t: string): number {
   const parts = t.split(':').map(Number);
   const h = parts[0] ?? 0;

@@ -1,4 +1,14 @@
-import { BookOpen, CalendarDays, Clock, FolderOpen, Home, Menu, Users, Video } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarDays,
+  Clock,
+  FolderOpen,
+  Home,
+  Menu,
+  Users,
+  Video,
+  X,
+} from 'lucide-react';
 import { NavLink } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -25,10 +35,15 @@ export function SideNav() {
       <button
         type="button"
         onClick={toggleSidebar}
-        aria-label={sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'}
+        aria-label={sidebarCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
+        title={sidebarCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
         className={`${base} mb-2 text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB] ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
       >
-        <Menu size={20} aria-hidden="true" />
+        {sidebarCollapsed ? (
+          <Menu size={20} aria-hidden="true" />
+        ) : (
+          <X size={20} aria-hidden="true" />
+        )}
         {!sidebarCollapsed ? <span className="sr-only">Menú</span> : null}
       </button>
 

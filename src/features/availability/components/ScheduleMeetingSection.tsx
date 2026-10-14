@@ -15,7 +15,13 @@ import type {
   ProjectManagedDTO,
 } from '../types';
 import { DAY_KEYS_LIST, DAY_NAMES, AVAILABILITY_MESSAGES, MEETING_TYPES } from '../messages';
-import { getMondayOfWeek, validateMeetingCriteria, timeToMinutes, isValidUrl } from '../utils';
+import {
+  getMondayOfWeek,
+  validateMeetingCriteria,
+  timeToMinutes,
+  isValidUrl,
+  isSlotDatetimeInPast,
+} from '../utils';
 import { getTeamAvailability, searchMeetingSlots, createMeeting, getManagedProjects } from '../api';
 
 export function ScheduleMeetingSection() {
@@ -226,6 +232,11 @@ export function ScheduleMeetingSection() {
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setModalError(Object.values(errors)[0] ?? null);
+      return;
+    }
+
+    if (isSlotDatetimeInPast(bookingSlot.date, bookingSlot.slot.start)) {
+      setModalError(AVAILABILITY_MESSAGES.meetingSlotAlreadyPast);
       return;
     }
 

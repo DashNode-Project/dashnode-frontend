@@ -1,4 +1,4 @@
-import { Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -13,7 +13,6 @@ import {
   updateUserByAdmin,
   type AdminUserSummary,
 } from '@/features/auth/api';
-import { ROLE_LABELS } from '@/features/auth/roles';
 import { validateEmail, validateName } from '@/features/auth/validation';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -21,17 +20,10 @@ import { TextField } from '@/components/ui/TextField';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { USER_MESSAGES } from './messages';
+import { AdminUsersPanel } from './AdminUsersPanel';
+import { ManagerDevelopersPanel } from './ManagerDevelopersPanel';
 
 type StaffRole = 'manager' | 'developer';
-
-function statusLabel(active: boolean): string {
-  return active ? 'Activo' : 'Desactivado';
-}
-
-function roleLabel(role: string): string {
-  if (role in ROLE_LABELS) return ROLE_LABELS[role as keyof typeof ROLE_LABELS];
-  return role;
-}
 
 interface UserFormState {
   name: string;
@@ -50,8 +42,6 @@ export default function UsersPage() {
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [loading, setLoading] = useState(isAdmin);
   const [banner, setBanner] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
-  const [nameFilter, setNameFilter] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editUser, setEditUser] = useState<AdminUserSummary | null>(null);
@@ -64,16 +54,13 @@ export default function UsersPage() {
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [pendingError, setPendingError] = useState<string | null>(null);
   const [pendingLoading, setPendingLoading] = useState(false);
+  const [teamRefresh, setTeamRefresh] = useState(0);
 
   const loadUsers = useCallback(async () => {
     if (!isAdmin) return;
     setLoading(true);
     try {
-      const data = await listAdminUsers({
-        name: nameFilter || undefined,
-        role: roleFilter || undefined,
-      });
-      setUsers(data);
+      setUsers(await listAdminUsers());
     } catch (error) {
       if (error instanceof ApiError && error.code === 'ACCESS_DENIED') {
         setBanner({ kind: 'error', message: MESSAGES.accessDenied });
@@ -83,7 +70,7 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, nameFilter, roleFilter]);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -154,9 +141,13 @@ export default function UsersPage() {
     setBanner(null);
     try {
       const result = await inviteDeveloper({ name: form.name, email: form.email });
-      setBanner({ kind: 'success', message: result.message });
+      setBanner({
+        kind: 'success',
+        message: `${result.message} Contraseña inicial: ${result.initial_password}`,
+      });
       setInviteOpen(false);
       setForm(EMPTY_FORM);
+      setTeamRefresh((n) => n + 1);
     } catch (error) {
       mapSubmitError(error);
     } finally {
@@ -307,9 +298,6 @@ export default function UsersPage() {
     );
   }
 
-  const emptyMessage =
-    nameFilter || roleFilter ? USER_MESSAGES.filterEmpty : USER_MESSAGES.emptyList;
-
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -352,111 +340,18 @@ export default function UsersPage() {
       ) : null}
 
       {isAdmin ? (
-        <>
-          <div className="mb-4 flex flex-wrap gap-3">
-            <div className="relative min-w-[200px] flex-1">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                placeholder="Búsqueda por nombre"
-                value={nameFilter}
-                onChange={(e) => setNameFilter(e.target.value)}
-                className="h-10 w-full rounded-lg border border-white/10 bg-[#12131C] pl-9 pr-3 text-sm outline-none focus:border-blue-500/50"
-                aria-label="Búsqueda por nombre"
-              />
-            </div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-10 rounded-lg border border-white/10 bg-[#12131C] px-3 text-sm outline-none focus:border-blue-500/50"
-              aria-label="Filtrar por rol"
-            >
-              <option value="">Todos</option>
-              <option value="admin">Administrador</option>
-              <option value="manager">Gerente</option>
-              <option value="developer">Desarrollador</option>
-            </select>
-            <Button type="button" variant="outline" onClick={() => void loadUsers()}>
-              Aplicar filtros
-            </Button>
-          </div>
-
-          {loading ? (
-            <p className="text-sm text-[#9CA3AF]">Cargando usuarios…</p>
-          ) : users.length === 0 ? (
-            <p className="rounded-xl border border-white/10 bg-[#12131C] px-4 py-8 text-center text-sm text-[#9CA3AF]">
-              {emptyMessage}
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-white/10">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-[#12131C] text-[#9CA3AF]">
-                  <tr>
-                    <th className="px-4 py-2 font-medium">Nombre</th>
-                    <th className="px-4 py-2 font-medium">Correo electrónico</th>
-                    <th className="px-4 py-2 font-medium">Rol</th>
-                    <th className="px-4 py-2 font-medium">Estado</th>
-                    <th className="px-4 py-2 font-medium">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-t border-white/10">
-                      <td className="px-4 py-2">{u.name}</td>
-                      <td className="px-4 py-2">{u.email}</td>
-                      <td className="px-4 py-2">{roleLabel(u.role)}</td>
-                      <td className="px-4 py-2">{statusLabel(u.is_active)}</td>
-                      <td className="px-4 py-2">
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEdit(u)}
-                          >
-                            Editar
-                          </Button>
-                          {u.is_active ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => void openDeactivate(u)}
-                            >
-                              Desactivar
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setReactivateTarget(u)}
-                            >
-                              Reactivar
-                            </Button>
-                          )}
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setResetTarget(u)}
-                          >
-                            Restablecer contraseña
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+        <AdminUsersPanel
+          users={users}
+          loading={loading}
+          onEdit={openEdit}
+          onDeactivate={(u) => void openDeactivate(u)}
+          onReactivate={setReactivateTarget}
+          onResetPassword={setResetTarget}
+          onDelete={(u) => void openDeactivate(u)}
+        />
       ) : null}
+
+      {isManager ? <ManagerDevelopersPanel refreshKey={teamRefresh} /> : null}
 
       {createOpen ? (
         <FormDialog

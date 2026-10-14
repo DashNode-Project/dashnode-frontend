@@ -17,8 +17,12 @@ import {
   X,
   AlertCircle,
   Pencil,
+  Ban,
+  RotateCcw,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useToast } from '@/lib/toast/ToastProvider';
@@ -37,7 +41,15 @@ import {
   cancelMeeting,
   respondMeeting,
   updateMeetingSummary,
+  updateMeeting,
+  deleteMeeting,
+  restoreMeeting,
 } from '@/features/availability/api';
+import {
+  isMeetingPast,
+  isMeetingUpcoming,
+  meetingStatusLabel,
+} from '@/features/meetings/meetingTime';
 
 const MONTH_NAMES = [
   'Enero',
@@ -85,7 +97,7 @@ function getStatusBadge(status: string) {
       };
     default:
       return {
-        label: 'Programada',
+        label: 'Pendiente',
         style: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
       };
   }
@@ -144,6 +156,17 @@ export default function MeetingsPage() {
 
   const [respondingMeetingId, setRespondingMeetingId] = useState<string | null>(null);
 
+  const [editMeeting, setEditMeeting] = useState<MeetingDTO | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editLink, setEditLink] = useState('');
+  const [editParticipantIds, setEditParticipantIds] = useState<string[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [deleteModalMeeting, setDeleteModalMeeting] = useState<MeetingDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
   const loadMeetings = useCallback(async () => {
     setLoading(true);
     try {
@@ -191,21 +214,21 @@ export default function MeetingsPage() {
 
   const upcomingMeetings = useMemo(() => {
     return meetings
-      .filter((m) => m.status !== 'cancelled' && m.date >= todayStr)
+      .filter((m) => isMeetingUpcoming(m))
       .sort((a, b) => {
         const d = a.date.localeCompare(b.date);
         return d !== 0 ? d : a.start_time.localeCompare(b.start_time);
       });
-  }, [meetings, todayStr]);
+  }, [meetings]);
 
   const pastMeetings = useMemo(() => {
     return meetings
-      .filter((m) => m.status === 'completed' || m.status === 'cancelled' || m.date < todayStr)
+      .filter((m) => m.status === 'cancelled' || isMeetingPast(m))
       .sort((a, b) => {
         const d = b.date.localeCompare(a.date);
         return d !== 0 ? d : b.start_time.localeCompare(a.start_time);
       });
-  }, [meetings, todayStr]);
+  }, [meetings]);
 
   const currentTabMeetings = useMemo(() => {
     const base = activeTab === 'proximas' ? upcomingMeetings : pastMeetings;
@@ -323,6 +346,102 @@ export default function MeetingsPage() {
       }
     } finally {
       setRespondingMeetingId(null);
+    }
+  };
+
+  const openEditMeeting = async (m: MeetingDTO) => {
+    setEditError(null);
+    try {
+      const detail = await getMeetingDetail(m.id);
+      setEditMeeting(detail);
+      setEditTitle(detail.title);
+      setEditLink(detail.link ?? '');
+      const ids = detail.participants?.map((p) => p.user_id) ?? detail.participant_ids ?? [];
+      setEditParticipantIds(ids);
+    } catch {
+      showToast(AVAILABILITY_MESSAGES.technicalLoadFailure, 'error');
+    }
+  };
+
+  const toggleEditParticipant = (userId: string) => {
+    setEditParticipantIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editMeeting || savingEdit) return;
+    const title = editTitle.trim();
+    if (!title) {
+      setEditError(AVAILABILITY_MESSAGES.meetingTitleRequired);
+      return;
+    }
+    if (editLink.trim() && !isValidUrl(editLink.trim())) {
+      setEditError(AVAILABILITY_MESSAGES.invalidMeetingLink);
+      return;
+    }
+    if (editParticipantIds.length === 0) {
+      setEditError('Seleccione al menos un participante.');
+      return;
+    }
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      const updated = await updateMeeting(editMeeting.id, {
+        title,
+        link: editLink.trim() || null,
+        participant_ids: editParticipantIds,
+      });
+      showToast('Reunión actualizada.', 'success');
+      setEditMeeting(null);
+      if (selectedMeeting?.id === updated.id) setSelectedMeeting(updated);
+      loadMeetings();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setEditError(err.message || AVAILABILITY_MESSAGES.technicalFailure);
+      } else {
+        setEditError(AVAILABILITY_MESSAGES.technicalFailure);
+      }
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModalMeeting || deleting) return;
+    setDeleting(true);
+    try {
+      const result = await deleteMeeting(deleteModalMeeting.id);
+      showToast(result.message || AVAILABILITY_MESSAGES.meetingDeleted, 'success');
+      setDeleteModalMeeting(null);
+      if (selectedMeeting?.id === deleteModalMeeting.id) setSelectedMeeting(null);
+      loadMeetings();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        showToast(err.message, 'error');
+      } else {
+        showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleRestore = async (m: MeetingDTO) => {
+    setRestoringId(m.id);
+    try {
+      const updated = await restoreMeeting(m.id);
+      showToast(AVAILABILITY_MESSAGES.meetingRestored, 'success');
+      if (selectedMeeting?.id === m.id) setSelectedMeeting(updated);
+      loadMeetings();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        showToast(err.message, 'error');
+      } else {
+        showToast(AVAILABILITY_MESSAGES.technicalFailure, 'error');
+      }
+    } finally {
+      setRestoringId(null);
     }
   };
 
@@ -554,22 +673,37 @@ export default function MeetingsPage() {
         ) : (
           <div className="space-y-3">
             {currentTabMeetings.map((m) => {
-              const statusInfo = getStatusBadge(m.status);
-              const isPast =
-                m.status === 'completed' || m.status === 'cancelled' || m.date < todayStr;
+              const effectiveStatus = meetingStatusLabel(m);
+              const statusInfo = getStatusBadge(effectiveStatus);
+              const isPastTab = activeTab === 'pasadas';
+              const ended =
+                m.status !== 'cancelled' && (m.status === 'completed' || isMeetingPast(m));
               const isCreator = isUserCreatorOrAdmin(m);
+              const canEdit = isUserCreator(m) && m.status === 'scheduled' && isMeetingUpcoming(m);
+              const canRestore =
+                isUserCreator(m) &&
+                m.status === 'cancelled' &&
+                isMeetingUpcoming({
+                  date: m.date,
+                  start_time: m.start_time,
+                  status: 'scheduled',
+                });
 
               return (
                 <div
                   key={m.id}
-                  className="bg-[#12131C] border border-white/6 hover:border-white/12 rounded-xl p-4 transition-colors flex items-start gap-4"
+                  className={`rounded-xl p-4 flex items-start gap-4 transition-all duration-200 ${
+                    isPastTab
+                      ? 'border border-white/5 bg-[#0E0F14]/80 opacity-90'
+                      : 'border border-blue-500/15 bg-[#12131C] shadow-sm hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-md hover:shadow-blue-500/5'
+                  }`}
                 >
                   {/* Status Indicator Icon */}
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                      m.status === 'completed'
+                      effectiveStatus === 'completed'
                         ? 'bg-emerald-500/15 text-emerald-400'
-                        : m.status === 'cancelled'
+                        : effectiveStatus === 'cancelled'
                           ? 'bg-red-500/15 text-red-400'
                           : 'bg-blue-500/15 text-blue-400'
                     }`}
@@ -641,9 +775,10 @@ export default function MeetingsPage() {
                         </div>
                       )}
 
-                      {isPast && isCreator && (
+                      {ended && isCreator && (
                         <button
                           type="button"
+                          title="Registrar o editar resumen y acta"
                           onClick={() => openSummaryModal(m)}
                           className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors"
                         >
@@ -668,58 +803,73 @@ export default function MeetingsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      title="Ver / editar detalle"
-                      onClick={() => openDetail(m)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    {!isPast && m.link && (
+                    <IconActionButton
+                      icon={Eye}
+                      label="Ver detalle de la reunión"
+                      tone="blue"
+                      onClick={() => void openDetail(m)}
+                    />
+                    {canEdit ? (
+                      <IconActionButton
+                        icon={Pencil}
+                        label="Editar reunión"
+                        tone="violet"
+                        onClick={() => void openEditMeeting(m)}
+                      />
+                    ) : null}
+                    {!isPastTab && m.link ? (
                       <a
                         href={m.link}
                         target="_blank"
                         rel="noreferrer"
                         title="Unirse a la videollamada"
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                        aria-label="Unirse a la videollamada"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-blue-400 transition-colors hover:bg-blue-500/15 hover:text-blue-300"
                       >
-                        <ExternalLink size={14} />
+                        <ExternalLink size={16} aria-hidden="true" />
                       </a>
-                    )}
-
-                    {!isPast && (
-                      <button
-                        type="button"
+                    ) : null}
+                    {!isPastTab ? (
+                      <IconActionButton
+                        icon={CalendarPlus}
+                        label="Enviar a Google Calendar"
+                        tone="emerald"
                         onClick={() => handleOpenGoogleCalendar(m)}
-                        title="Enviar a Google Calendar"
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                      >
-                        <CalendarPlus size={14} />
-                      </button>
-                    )}
-
-                    {m.link && (
-                      <button
-                        type="button"
-                        title="Copiar enlace"
+                      />
+                    ) : null}
+                    {m.link ? (
+                      <IconActionButton
+                        icon={Copy}
+                        label="Copiar enlace de la reunión"
+                        tone="neutral"
                         onClick={() => handleCopyLink(m.link)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-[#F9FAFB] hover:bg-white/8 transition-colors"
-                      >
-                        <Copy size={14} />
-                      </button>
-                    )}
-
-                    {isUserCreator(m) && m.status === 'scheduled' && (
-                      <button
-                        type="button"
-                        title="Cancelar reunión"
+                      />
+                    ) : null}
+                    {canRestore ? (
+                      <IconActionButton
+                        icon={RotateCcw}
+                        label="Recuperar reunión cancelada"
+                        tone="emerald"
+                        disabled={restoringId === m.id}
+                        onClick={() => void handleRestore(m)}
+                      />
+                    ) : null}
+                    {isUserCreator(m) && m.status === 'scheduled' && isMeetingUpcoming(m) ? (
+                      <IconActionButton
+                        icon={Ban}
+                        label="Cancelar reunión"
+                        tone="amber"
                         onClick={() => setCancelModalMeeting(m)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                      />
+                    ) : null}
+                    {isUserCreator(m) && m.status === 'scheduled' ? (
+                      <IconActionButton
+                        icon={Trash2}
+                        label="Eliminar reunión y liberar horario"
+                        tone="red"
+                        onClick={() => setDeleteModalMeeting(m)}
+                      />
+                    ) : null}
                   </div>
                 </div>
               );
@@ -1074,6 +1224,138 @@ export default function MeetingsPage() {
           </div>
         </div>
       )}
+
+      {editMeeting ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-meeting-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md bg-[#12131C] border border-white/10 rounded-xl shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/8 pb-3">
+              <h4 id="edit-meeting-title" className="text-sm font-semibold text-[#F9FAFB]">
+                Editar reunión
+              </h4>
+              <button
+                type="button"
+                onClick={() => setEditMeeting(null)}
+                aria-label="Cerrar"
+                className="text-[#6B7280] hover:text-[#F9FAFB] p-1 rounded"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {editError ? (
+              <div
+                role="alert"
+                className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg"
+              >
+                {editError}
+              </div>
+            ) : null}
+            <TextField
+              label="Título de la reunión"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              maxLength={100}
+            />
+            <TextField
+              label="Ubicación o enlace"
+              value={editLink}
+              onChange={(e) => setEditLink(e.target.value)}
+              placeholder="https://meet.google.com/…"
+            />
+            <fieldset className="space-y-2">
+              <legend className="text-xs font-medium text-[#9CA3AF]">Participantes</legend>
+              {(editMeeting.participants ?? []).map((p) => (
+                <label
+                  key={p.user_id}
+                  className="flex items-center gap-2 rounded-lg border border-white/8 bg-[#1A1C28] px-3 py-2 text-xs text-[#F9FAFB]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={editParticipantIds.includes(p.user_id)}
+                    onChange={() => toggleEditParticipant(p.user_id)}
+                    title={`Incluir a ${p.name ?? p.email ?? p.user_id}`}
+                  />
+                  {p.name || p.email || p.user_id}
+                </label>
+              ))}
+            </fieldset>
+            {isMeetingPast(editMeeting) &&
+            editMeeting.status !== 'cancelled' &&
+            isUserCreatorOrAdmin(editMeeting) ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-purple-400"
+                onClick={() => {
+                  setEditMeeting(null);
+                  openSummaryModal(editMeeting);
+                }}
+              >
+                <FileText size={13} className="mr-1" />
+                Editar resumen y acta
+              </Button>
+            ) : null}
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/8">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditMeeting(null)}
+                disabled={savingEdit}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => void handleSaveEdit()}
+                disabled={savingEdit}
+              >
+                {savingEdit ? 'Guardando…' : 'Guardar cambios'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteModalMeeting ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-meeting-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-sm bg-[#12131C] border border-white/10 rounded-xl shadow-2xl p-5 space-y-4">
+            <h4 id="delete-meeting-title" className="text-sm font-semibold text-[#F9FAFB]">
+              Eliminar reunión
+            </h4>
+            <p className="text-xs text-[#9CA3AF]">{AVAILABILITY_MESSAGES.deleteMeetingConfirm}</p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/8">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeleteModalMeeting(null)}
+                disabled={deleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => void handleConfirmDelete()}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-500 text-white"
+              >
+                {deleting ? 'Eliminando…' : 'Eliminar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Cancel Confirmation Modal (HU_DN_03_45) */}
       {cancelModalMeeting && (

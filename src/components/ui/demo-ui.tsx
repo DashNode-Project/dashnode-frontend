@@ -10,16 +10,37 @@ export function initialsFor(name: string): string {
   return (first + last).toUpperCase() || '?';
 }
 
-const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-  activo: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-  inactivo: 'bg-[#374151]/40 text-[#9CA3AF] border-white/10',
-  paused: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
-  pausado: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
-  completed: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
-  completado: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
-  archived: 'bg-[#374151]/40 text-[#9CA3AF] border-white/10',
-  archivado: 'bg-[#374151]/40 text-[#9CA3AF] border-white/10',
+type BadgeTone = 'neutral' | 'blue' | 'violet' | 'amber' | 'green' | 'red' | 'teal' | 'yellow';
+
+const badgeTones: Record<BadgeTone, string> = {
+  neutral: 'bg-white/5 text-[#9CA3AF] border-white/10',
+  blue: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
+  violet: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
+  amber: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
+  green: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
+  red: 'bg-red-500/15 text-red-300 border-red-500/25',
+  teal: 'bg-teal-500/15 text-teal-300 border-teal-500/25',
+  yellow: 'bg-yellow-500/15 text-yellow-200 border-yellow-500/25',
+};
+
+const statusMeta: Record<string, { label: string; tone: BadgeTone }> = {
+  active: { label: 'Activo', tone: 'green' },
+  activo: { label: 'Activo', tone: 'green' },
+  inactive: { label: 'Inactivo', tone: 'yellow' },
+  inactivo: { label: 'Inactivo', tone: 'yellow' },
+  disabled: { label: 'Desactivado', tone: 'red' },
+  desactivado: { label: 'Desactivado', tone: 'red' },
+  pending: { label: 'Pendiente', tone: 'amber' },
+  pendiente: { label: 'Pendiente', tone: 'amber' },
+  completed: { label: 'Completado', tone: 'green' },
+  completado: { label: 'Completado', tone: 'green' },
+  scheduled: { label: 'Programada', tone: 'blue' },
+  programada: { label: 'Programada', tone: 'blue' },
+  cancelled: { label: 'Cancelada', tone: 'red' },
+  cancelada: { label: 'Cancelada', tone: 'red' },
+  planning: { label: 'Planificación', tone: 'violet' },
+  planificacion: { label: 'Planificación', tone: 'violet' },
+  activo_proyecto: { label: 'Activo', tone: 'green' },
 };
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -44,38 +65,30 @@ export function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   );
 }
 
-export function Badge({
-  children,
-  tone = 'neutral',
-}: {
-  children: ReactNode;
-  tone?: 'neutral' | 'blue' | 'violet' | 'amber';
-}) {
-  const tones = {
-    neutral: 'bg-white/5 text-[#9CA3AF] border-white/10',
-    blue: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
-    violet: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
-    amber: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
-  };
+export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: BadgeTone }) {
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${tones[tone]}`}
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${badgeTones[tone]}`}
     >
       {children}
     </span>
   );
 }
 
+export function RoleBadge({ role }: { role: string }) {
+  const map: Record<string, { label: string; tone: BadgeTone }> = {
+    admin: { label: 'Administrador', tone: 'violet' },
+    manager: { label: 'Gerente', tone: 'blue' },
+    developer: { label: 'Desarrollador', tone: 'teal' },
+  };
+  const r = map[role] ?? { label: role, tone: 'neutral' as BadgeTone };
+  return <Badge tone={r.tone}>{r.label}</Badge>;
+}
+
 export function StatusBadge({ status }: { status: string }) {
   const key = status.toLowerCase();
-  const cls = statusColors[key] ?? 'bg-white/5 text-[#9CA3AF] border-white/10';
-  return (
-    <span
-      className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${cls}`}
-    >
-      {status}
-    </span>
-  );
+  const meta = statusMeta[key] ?? { label: status, tone: 'neutral' as BadgeTone };
+  return <Badge tone={meta.tone}>{meta.label}</Badge>;
 }
 
 export function StatCard({
