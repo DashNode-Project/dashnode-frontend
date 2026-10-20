@@ -30,6 +30,7 @@ const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
 const UserManualPage = lazy(() => import('@/features/manual/UserManualPage'));
 const ProjectMeetingsTab = lazy(() => import('@/features/projects/ProjectMeetingsTab'));
 const ProjectTeamTab = lazy(() => import('@/features/projects/ProjectTeamTab'));
+const ProjectBacklogTab = lazy(() => import('@/features/backlog/ProjectBacklogTab'));
 
 function PageLoading() {
   return (
@@ -76,6 +77,7 @@ export function AppRoutes() {
                         <Route path="resumen" element={<ProjectSummaryTab />} />
                         <Route path="equipo" element={<ProjectTeamTab />} />
                         <Route path="reuniones" element={<ProjectMeetingsTab />} />
+                        <Route path="backlog" element={<ProjectBacklogTab />} />
                         <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
                       </Route>
                     </Route>

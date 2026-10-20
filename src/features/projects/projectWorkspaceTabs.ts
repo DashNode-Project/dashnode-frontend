@@ -36,7 +36,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'backlog',
     label: 'Backlog',
     roles: ['admin', 'manager', 'developer'],
-    implemented: false,
+    implemented: true,
   },
   {
     segment: 'sprints',
