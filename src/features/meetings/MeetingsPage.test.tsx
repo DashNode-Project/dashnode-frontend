@@ -27,6 +27,12 @@ vi.mock('@/features/auth/AuthContext', () => ({
   }),
 }));
 
+function dateOffsetIso(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 const mockMeetings: MeetingDTO[] = [
   {
     id: 'm-1',
@@ -35,9 +41,9 @@ const mockMeetings: MeetingDTO[] = [
     title: 'Daily Standup Alpha',
     type: 'Daily',
     description: 'Sync diario',
-    date: '2026-10-20',
+    date: dateOffsetIso(7),
     start_time: '09:00',
-    end_time: '09:30',
+    end_time: '23:59',
     duration: 30,
     link: 'https://meet.google.com/alpha-room',
     status: 'scheduled',
@@ -70,7 +76,7 @@ const mockMeetings: MeetingDTO[] = [
     title: 'Sprint Planning Pasado',
     type: 'Planning',
     description: 'Planificación de sprint',
-    date: '2026-01-10',
+    date: dateOffsetIso(-45),
     start_time: '14:00',
     end_time: '15:00',
     duration: 60,

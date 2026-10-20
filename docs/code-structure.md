@@ -81,3 +81,10 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `MeetingsPage.test.tsx`: Pruebas de integración y criterios de aceptación para reuniones (HU_DN_03_39 … 41).
   - `api.test.ts`: Pruebas unitarias de todos los endpoints del cliente API.
 
+## EP-06 — Backlog TAR (HU_DN_04_47 … HU_DN_04_55)
+
+- Ruta: `/proyectos/:projectId/backlog` → `ProjectBacklogTab.tsx` (pestaña implementada).
+- `src/features/backlog/`: `api.ts`, `messages.ts` (literales), `validation.ts`, `types.ts`, `ProjectBacklogTab.tsx`.
+- UI alineada a demo Figma: árbol de épicas, modales Crear/Editar épica, Agregar HU, detalle de HU con Fibonacci, sub-lista de tareas, confirmación de borrado.
+- Pruebas: `validation.test.ts`; placeholder backlog sustituido por ruta dedicada en `App.tsx`.
+
