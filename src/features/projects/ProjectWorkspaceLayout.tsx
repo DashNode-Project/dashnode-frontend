@@ -5,7 +5,8 @@ import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
 import { PATHS, projectTabPath } from '@/app/paths';
-import { getProject, type ProjectSummary } from './api';
+import { Avatar } from '@/components/ui/demo-ui';
+import { getProject, listProjectMembers, type ProjectSummary } from './api';
 import { ProjectWorkspaceProvider } from './ProjectWorkspaceContext';
 import { visibleProjectTabs } from './projectWorkspaceTabs';
 
@@ -14,6 +15,7 @@ export default function ProjectWorkspaceLayout() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [project, setProject] = useState<ProjectSummary | null>(null);
+  const [teamNames, setTeamNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -39,8 +41,16 @@ export default function ProjectWorkspaceLayout() {
     (async () => {
       setLoading(true);
       try {
-        const data = await getProject(projectId);
-        if (!cancelled) setProject(data);
+        const [data, members] = await Promise.all([
+          getProject(projectId),
+          listProjectMembers(projectId),
+        ]);
+        if (!cancelled) {
+          setProject(data);
+          setTeamNames(
+            members.filter((m) => m.role !== 'admin').map((m) => m.name),
+          );
+        }
       } catch (error) {
         if (cancelled) return;
         showToast(
@@ -82,10 +92,17 @@ export default function ProjectWorkspaceLayout() {
         </Link>
         <div className="mb-4">
           <h1 className="text-2xl font-semibold text-[#F9FAFB]">{project.name}</h1>
-          {project.manager_name ? (
-            <p className="mt-1 text-sm text-[#9CA3AF]">
-              Gerente responsable: {project.manager_name}
-            </p>
+          {teamNames.length ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-[#6B7280]">Equipo:</span>
+              <div className="flex -space-x-1">
+                {teamNames.map((name) => (
+                  <Avatar key={name} name={name} size={28} />
+                ))}
+              </div>
+            </div>
+          ) : project.manager_name ? (
+            <p className="mt-1 text-sm text-[#9CA3AF]">Gerente: {project.manager_name}</p>
           ) : null}
         </div>
         <nav
