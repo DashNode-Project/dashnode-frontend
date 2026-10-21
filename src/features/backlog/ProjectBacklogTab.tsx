@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ChevronRight,
-  Eye,
-  ExternalLink,
-  Layers,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { BookOpen, ChevronRight, Layers, MoreHorizontal, Pencil, Plus, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { IconActionButton } from '@/components/ui/IconActionButton';
 import { TextField } from '@/components/ui/TextField';
@@ -22,14 +14,11 @@ import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
 import {
-  assignStoryPoints,
   createEpic,
   createStoryTask,
   createUserStory,
-  deleteStoryTask,
   getProjectBacklog,
   updateEpic,
-  updateStoryTask,
   updateUserStory,
 } from './api';
 import {
@@ -37,21 +26,16 @@ import {
   EPIC_COLOR_OPTIONS,
   ESTIMATION_MODE_OPTIONS,
   FILTER_PRIORITY_OPTIONS,
-  FIBONACCI_OPTIONS,
   MOSCOW_OPTIONS,
   TASK_TYPE_OPTIONS,
 } from './messages';
 import {
   assigneeIdsForStory,
-  flattenStories,
   storyPointsLabel,
   tasksForStory,
   visibleProjectMembers,
 } from './backlogHelpers';
 import { MoscowBadge } from './MoscowBadge';
-import { TaskWorkModal } from './TaskWorkModal';
-import { UserStoryContent } from './UserStoryContent';
-import { UserStoryPreviewModal } from './UserStoryPreviewModal';
 import type { BacklogTreeDTO, EstimationMode, MoscowPriority, StoryTaskDTO, UserStoryDTO } from './types';
 import {
   validateEpicForm,
@@ -63,6 +47,7 @@ const fieldClass =
   'w-full rounded-md border border-white/10 bg-[#1E1F2B] p-3 text-sm text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-blue-500 focus:outline-none';
 
 export default function ProjectBacklogTab() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { project, canManage } = useProjectWorkspace();
   const { showToast } = useToast();
@@ -73,9 +58,7 @@ export default function ProjectBacklogTab() {
   const [filterPriority, setFilterPriority] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
   const [expandedEpic, setExpandedEpic] = useState<string | null>(null);
-  const [selectedStory, setSelectedStory] = useState<UserStoryDTO | null>(null);
-  const [previewStory, setPreviewStory] = useState<UserStoryDTO | null>(null);
-  const [taskWorkTarget, setTaskWorkTarget] = useState<StoryTaskDTO | null>(null);
+  const [createTaskStoryId, setCreateTaskStoryId] = useState<string | null>(null);
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
   const isMember = members.some((m) => m.user_id === user?.id);
   const canWorkTasks = canManage || isMember;
@@ -108,11 +91,9 @@ export default function ProjectBacklogTab() {
     Partial<Record<'title' | 'userRole' | 'reason', string>>
   >({});
 
-  const [taskModal, setTaskModal] = useState<'create' | 'edit' | null>(null);
-  const [taskTarget, setTaskTarget] = useState<StoryTaskDTO | null>(null);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({ name: '', taskType: 'frontend', notes: '' });
   const [taskNameError, setTaskNameError] = useState('');
-  const [deleteTaskTarget, setDeleteTaskTarget] = useState<StoryTaskDTO | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const assignableMembers = useMemo(() => visibleProjectMembers(members), [members]);
@@ -120,8 +101,6 @@ export default function ProjectBacklogTab() {
     () => new Map(assignableMembers.map((m) => [m.user_id, m.name])),
     [assignableMembers],
   );
-  const allStories = useMemo(() => flattenStories(tree), [tree]);
-
   const notifyError = useCallback(
     (error: unknown) => {
       showToast(
@@ -148,11 +127,6 @@ export default function ProjectBacklogTab() {
       setTree(backlog);
       setMembers(visibleProjectMembers(memberRows));
       setExpandedEpic((prev) => prev ?? backlog.epics[0]?.epic.id ?? null);
-      setSelectedStory((prev) => {
-        if (!prev) return prev;
-        const fresh = flattenStories(backlog).find((s) => s.id === prev.id);
-        return fresh ?? prev;
-      });
     } catch (error) {
       notifyError(error);
     } finally {
@@ -164,12 +138,6 @@ export default function ProjectBacklogTab() {
     const timer = window.setTimeout(() => setFilterQuery(filterText.trim()), 300);
     return () => window.clearTimeout(timer);
   }, [filterText]);
-
-  useEffect(() => {
-    if (!taskWorkTarget || !selectedStory || !tree) return;
-    const fresh = tasksForStory(tree, selectedStory.id).find((t) => t.id === taskWorkTarget.id);
-    if (fresh) setTaskWorkTarget(fresh);
-  }, [tree, selectedStory, taskWorkTarget?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -285,7 +253,6 @@ export default function ProjectBacklogTab() {
         });
         showToast(res.message, 'success');
         setEditStory(null);
-        if (selectedStory?.id === res.id) setSelectedStory(res);
       }
       await reloadBacklog();
     } catch (error) {
@@ -303,59 +270,27 @@ export default function ProjectBacklogTab() {
     }
   }
 
-  async function handleStoryPoints(storyId: string, raw: string) {
-    const storyPoints = raw === '' ? null : Number(raw);
-    setSubmitting(true);
-    try {
-      const res = await assignStoryPoints(storyId, storyPoints);
-      showToast(res.message, 'success');
-      if (selectedStory?.id === storyId) setSelectedStory(res);
-      await reloadBacklog();
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setSubmitting(false);
-    }
+  function openCreateTaskModal(storyId: string) {
+    setCreateTaskStoryId(storyId);
+    setTaskForm({ name: '', taskType: 'frontend', notes: '' });
+    setTaskNameError('');
+    setTaskModalOpen(true);
   }
 
   async function handleSaveTask() {
     const err = validateTaskName(taskForm.name);
     setTaskNameError(err.name ?? '');
-    if (err.name || !selectedStory) return;
+    if (err.name || !createTaskStoryId) return;
     setSubmitting(true);
     try {
-      if (taskModal === 'create') {
-        const res = await createStoryTask(selectedStory.id, {
-          name: taskForm.name.trim(),
-          task_type: taskForm.taskType as StoryTaskDTO['task_type'],
-          notes: taskForm.notes,
-        });
-        showToast(res.message, 'success');
-      } else if (taskModal === 'edit' && taskTarget) {
-        const res = await updateStoryTask(taskTarget.id, {
-          name: taskForm.name.trim(),
-          task_type: taskForm.taskType as StoryTaskDTO['task_type'],
-          notes: taskForm.notes,
-        });
-        showToast(res.message, 'success');
-      }
-      setTaskModal(null);
-      setTaskTarget(null);
-      await reloadBacklog();
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function confirmDeleteTask() {
-    if (!deleteTaskTarget) return;
-    setSubmitting(true);
-    try {
-      const res = await deleteStoryTask(deleteTaskTarget.id);
+      const res = await createStoryTask(createTaskStoryId, {
+        name: taskForm.name.trim(),
+        task_type: taskForm.taskType as StoryTaskDTO['task_type'],
+        notes: taskForm.notes,
+      });
       showToast(res.message, 'success');
-      setDeleteTaskTarget(null);
+      setTaskModalOpen(false);
+      setCreateTaskStoryId(null);
       await reloadBacklog();
     } catch (error) {
       notifyError(error);
@@ -391,7 +326,25 @@ export default function ProjectBacklogTab() {
   const epics = tree?.epics ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-500/20 bg-gradient-to-r from-violet-600/10 via-[#12131C] to-blue-600/10 px-5 py-4 shadow-lg shadow-violet-950/20">
+        <div className="flex items-center gap-2">
+          <Sparkles className="text-violet-300" size={20} aria-hidden />
+          <div>
+            <p className="text-sm font-semibold text-[#F9FAFB]">Backlog del proyecto</p>
+            <p className="text-xs text-[#9CA3AF]">Gestiona historias, tareas y estimaciones</p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={() => navigate(`${projectStoryReaderPath(project.id)}?layout=all`)}
+        >
+          <BookOpen size={15} className="mr-1.5" aria-hidden />
+          Ver detalle de todas las HU
+        </Button>
+      </div>
       <div className="grid gap-3 md:grid-cols-3">
         <label className="text-xs text-[#9CA3AF]">
           Texto
@@ -456,7 +409,7 @@ export default function ProjectBacklogTab() {
           return (
             <div
               key={epic.id}
-              className="overflow-hidden rounded-xl border border-white/6 bg-[#12131C]"
+              className="overflow-hidden rounded-2xl border border-white/8 bg-[#12131C] shadow-md shadow-black/30 transition hover:border-violet-500/20"
             >
               <div className="flex items-center gap-2 px-4 py-3">
                 <button
@@ -507,6 +460,9 @@ export default function ProjectBacklogTab() {
                             Puntos
                           </th>
                           <th className="hidden px-4 py-2 text-left text-xs font-medium text-[#6B7280] lg:table-cell">
+                            Tareas
+                          </th>
+                          <th className="hidden px-4 py-2 text-left text-xs font-medium text-[#6B7280] xl:table-cell">
                             Asignados
                           </th>
                           <th className="px-4 py-2 text-right text-xs font-medium text-[#6B7280]">
@@ -522,15 +478,10 @@ export default function ProjectBacklogTab() {
                           return (
                           <tr
                             key={s.id}
-                            className={`border-b border-white/4 last:border-0 hover:bg-white/2 ${
-                              selectedStory?.id === s.id ? 'bg-white/4' : ''
-                            }`}
+                            className="border-b border-white/4 last:border-0 transition-colors hover:bg-gradient-to-r hover:from-violet-500/5 hover:to-transparent"
                           >
-                            <td
-                              className="cursor-pointer px-4 py-3"
-                              onClick={() => setSelectedStory(s)}
-                            >
-                              <p className="text-sm text-[#F9FAFB]">{s.title}</p>
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-medium text-[#F9FAFB]">{s.title}</p>
                               <p className="max-w-md truncate text-xs text-[#6B7280]">{s.reason}</p>
                             </td>
                             <td className="hidden px-4 py-3 sm:table-cell">
@@ -546,6 +497,24 @@ export default function ProjectBacklogTab() {
                               )}
                             </td>
                             <td className="hidden px-4 py-3 lg:table-cell">
+                              {storyTasks.length ? (
+                                <ol className="max-w-[200px] list-decimal space-y-0.5 pl-4 text-xs text-[#9CA3AF]">
+                                  {storyTasks.slice(0, 4).map((t) => (
+                                    <li key={t.id} className="truncate">
+                                      {t.name}
+                                    </li>
+                                  ))}
+                                  {storyTasks.length > 4 ? (
+                                    <li className="list-none pl-0 text-[#6B7280]">
+                                      +{storyTasks.length - 4} más
+                                    </li>
+                                  ) : null}
+                                </ol>
+                              ) : (
+                                <span className="text-xs text-[#6B7280]">Sin tareas</span>
+                              )}
+                            </td>
+                            <td className="hidden px-4 py-3 xl:table-cell">
                               <div className="flex -space-x-1">
                                 {assignees.length ? (
                                   assignees.map((id) => (
@@ -562,6 +531,14 @@ export default function ProjectBacklogTab() {
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex justify-end gap-1">
+                                {canWorkTasks ? (
+                                  <IconActionButton
+                                    icon={Plus}
+                                    label="Agregar tarea"
+                                    tone="emerald"
+                                    onClick={() => openCreateTaskModal(s.id)}
+                                  />
+                                ) : null}
                                 {canManage ? (
                                   <IconActionButton
                                     icon={Pencil}
@@ -571,17 +548,11 @@ export default function ProjectBacklogTab() {
                                   />
                                 ) : null}
                                 <IconActionButton
-                                  icon={Eye}
-                                  label="Previsualizar historia"
+                                  icon={BookOpen}
+                                  label="Ver detalle de la historia"
                                   tone="blue"
-                                  onClick={() => setPreviewStory(s)}
-                                />
-                                <IconActionButton
-                                  icon={ExternalLink}
-                                  label="Abrir historia en pestaña"
-                                  tone="neutral"
                                   onClick={() =>
-                                    window.open(projectStoryReaderPath(project.id, s.id), '_blank')
+                                    navigate(projectStoryReaderPath(project.id, s.id))
                                   }
                                 />
                               </div>
@@ -622,165 +593,6 @@ export default function ProjectBacklogTab() {
           );
         })
       )}
-
-      {selectedStory && (
-        <div className="rounded-xl border border-white/6 bg-[#12131C] p-5 transition-opacity duration-200">
-          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-            {canManage ? (
-              <IconActionButton
-                icon={Pencil}
-                label="Editar historia"
-                tone="neutral"
-                onClick={() => openStoryEditor(selectedStory)}
-              />
-            ) : null}
-            <IconActionButton
-              icon={Eye}
-              label="Previsualizar"
-              tone="blue"
-              onClick={() => setPreviewStory(selectedStory)}
-            />
-            <IconActionButton
-              icon={ExternalLink}
-              label="Abrir en pestaña"
-              tone="neutral"
-              onClick={() =>
-                window.open(projectStoryReaderPath(project.id, selectedStory.id), '_blank')
-              }
-            />
-          </div>
-
-          <UserStoryContent story={selectedStory} tree={tree} memberMap={memberMap} compact />
-
-          {canManage && selectedStory.estimation_mode === 'story' ? (
-            <div className="mt-4 max-w-xs">
-              <label
-                htmlFor="backlog-story-points"
-                className="mb-1 block text-sm font-medium text-[#F9FAFB]"
-              >
-                Puntos de historia
-              </label>
-              <select
-                id="backlog-story-points"
-                className={fieldClass}
-                value={selectedStory.story_points?.toString() ?? ''}
-                disabled={submitting}
-                onChange={(e) => void handleStoryPoints(selectedStory.id, e.target.value)}
-              >
-                {FIBONACCI_OPTIONS.map((o) => (
-                  <option key={o.label} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-
-          <div className="mt-6 mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-[#F9FAFB]">Tareas</h4>
-            {canWorkTasks ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setTaskForm({ name: '', taskType: 'frontend', notes: '' });
-                  setTaskNameError('');
-                  setTaskModal('create');
-                }}
-              >
-                <Plus size={14} className="mr-1" aria-hidden />
-                Agregar tarea
-              </Button>
-            ) : null}
-          </div>
-          <ul className="space-y-2">
-            {tasksForStory(tree, selectedStory.id).map((task) => (
-              <li
-                key={task.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-white/6 bg-[#1E1F2B] px-3 py-2 text-sm"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-[#F9FAFB]">{task.name}</p>
-                  <p className="text-xs text-[#6B7280]">
-                    {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ??
-                      task.task_type}
-                    {task.assignee_id && memberMap.get(task.assignee_id)
-                      ? ` · ${memberMap.get(task.assignee_id)}`
-                      : ''}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-1">
-                  <IconActionButton
-                    icon={Eye}
-                    label="Ver detalle de tarea"
-                    tone="blue"
-                    onClick={() => setTaskWorkTarget(task)}
-                  />
-                  {canWorkTasks ? (
-                    <>
-                      <IconActionButton
-                        icon={Pencil}
-                        label="Editar tarea"
-                        tone="neutral"
-                        onClick={() => {
-                          setTaskTarget(task);
-                          setTaskForm({
-                            name: task.name,
-                            taskType: task.task_type,
-                            notes: task.notes,
-                          });
-                          setTaskModal('edit');
-                        }}
-                      />
-                      <IconActionButton
-                        icon={Trash2}
-                        label="Eliminar tarea"
-                        tone="red"
-                        onClick={() => setDeleteTaskTarget(task)}
-                      />
-                    </>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {previewStory ? (
-        <UserStoryPreviewModal
-          projectId={project.id}
-          story={previewStory}
-          stories={allStories}
-          tree={tree}
-          memberMap={memberMap}
-          canManage={canManage}
-          onClose={() => setPreviewStory(null)}
-          onNavigate={setPreviewStory}
-          onEdit={() => {
-            openStoryEditor(previewStory);
-            setPreviewStory(null);
-          }}
-        />
-      ) : null}
-
-      {taskWorkTarget && selectedStory ? (
-        <TaskWorkModal
-          projectId={project.id}
-          story={selectedStory}
-          task={taskWorkTarget}
-          members={assignableMembers}
-          memberMap={memberMap}
-          canWork={canWorkTasks}
-          submitting={submitting}
-          setSubmitting={setSubmitting}
-          onClose={() => setTaskWorkTarget(null)}
-          onSaved={reloadBacklog}
-          onPreviewStory={() => setPreviewStory(selectedStory)}
-          notifyError={notifyError}
-          showToast={showToast}
-        />
-      ) : null}
 
       {createEpicOpen && (
         <ProjectModal
@@ -1025,26 +837,26 @@ export default function ProjectBacklogTab() {
         </ProjectModal>
       )}
 
-      {taskModal && (
+      {taskModalOpen && (
         <ProjectModal
-          title={taskModal === 'create' ? 'Agregar tarea' : 'Editar tarea'}
+          title="Nueva tarea"
           onClose={() => {
-            setTaskModal(null);
-            setTaskTarget(null);
+            setTaskModalOpen(false);
+            setCreateTaskStoryId(null);
           }}
           footer={
             <>
               <Button
                 variant="secondary"
                 onClick={() => {
-                  setTaskModal(null);
-                  setTaskTarget(null);
+                  setTaskModalOpen(false);
+                  setCreateTaskStoryId(null);
                 }}
               >
                 Cancelar
               </Button>
               <Button disabled={submitting} onClick={() => void handleSaveTask()}>
-                Guardar tarea
+                Crear tarea
               </Button>
             </>
           }
@@ -1089,28 +901,6 @@ export default function ProjectBacklogTab() {
         </ProjectModal>
       )}
 
-      {deleteTaskTarget && (
-        <ProjectModal
-          title="Eliminar tarea"
-          onClose={() => setDeleteTaskTarget(null)}
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setDeleteTaskTarget(null)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="danger"
-                disabled={submitting}
-                onClick={() => void confirmDeleteTask()}
-              >
-                Confirmar
-              </Button>
-            </>
-          }
-        >
-          <p className="text-sm text-[#9CA3AF]">{BACKLOG_MESSAGES.taskDeleteConfirm}</p>
-        </ProjectModal>
-      )}
     </div>
   );
 }

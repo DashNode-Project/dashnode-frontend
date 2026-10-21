@@ -9,11 +9,13 @@ export function UserStoryContent({
   tree,
   memberMap,
   compact = false,
+  hideTasks = false,
 }: {
   story: UserStoryDTO;
   tree: BacklogTreeDTO | null;
   memberMap: Map<string, string>;
   compact?: boolean;
+  hideTasks?: boolean;
 }) {
   const tasks = tasksForStory(tree, story.id);
   const points = storyPointsLabel(story, tasks);
@@ -60,7 +62,7 @@ export function UserStoryContent({
         </div>
       </dl>
 
-      {tasks.length > 0 ? (
+      {!hideTasks && tasks.length > 0 ? (
         <section>
           <h3 className="mb-2 text-sm font-semibold text-[#F9FAFB]">Tareas ({tasks.length})</h3>
           <ul className="space-y-2">

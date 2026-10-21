@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useParams } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router';
 import { useAuth } from '@/features/auth/AuthContext';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
@@ -12,6 +12,7 @@ import { visibleProjectTabs } from './projectWorkspaceTabs';
 
 export default function ProjectWorkspaceLayout() {
   const { projectId = '' } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const { showToast } = useToast();
   const [project, setProject] = useState<ProjectSummary | null>(null);
@@ -113,14 +114,18 @@ export default function ProjectWorkspaceLayout() {
             <NavLink
               key={tab.segment}
               to={projectTabPath(projectId, tab.segment)}
-              className={({ isActive }) =>
-                [
+              className={({ isActive }) => {
+                const tabActive =
+                  tab.segment === 'backlog'
+                    ? location.pathname.includes(`${PATHS.projects}/${projectId}/backlog`)
+                    : isActive;
+                return [
                   'whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
+                  tabActive
                     ? 'border-b-2 border-blue-500 text-[#F9FAFB]'
                     : 'text-[#9CA3AF] hover:text-[#F9FAFB]',
-                ].join(' ')
-              }
+                ].join(' ');
+              }}
             >
               {tab.label}
             </NavLink>

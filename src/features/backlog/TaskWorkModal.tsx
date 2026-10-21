@@ -1,4 +1,3 @@
-import { Eye } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/demo-ui';
 import { TextField } from '@/components/ui/TextField';
@@ -29,7 +28,6 @@ export function TaskWorkModal({
   setSubmitting,
   onClose,
   onSaved,
-  onPreviewStory,
   notifyError,
   showToast,
 }: {
@@ -43,7 +41,6 @@ export function TaskWorkModal({
   setSubmitting: (v: boolean) => void;
   onClose: () => void;
   onSaved: () => Promise<void>;
-  onPreviewStory: () => void;
   notifyError: (error: unknown) => void;
   showToast: (message: string, tone: 'success' | 'error' | 'info') => void;
 }) {
@@ -101,10 +98,6 @@ export function TaskWorkModal({
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onPreviewStory}>
-            <Eye size={15} className="mr-1" aria-hidden />
-            Ver HU completa
-          </Button>
           <Button type="button" onClick={onClose}>
             Cerrar
           </Button>

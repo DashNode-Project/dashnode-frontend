@@ -62,11 +62,9 @@ export function UserStoryPreviewModal({
           <Link
             to={projectStoryReaderPath(projectId, story.id)}
             className="inline-flex items-center gap-1 text-sm text-blue-400 hover:underline"
-            target="_blank"
-            rel="noreferrer"
           >
             <ExternalLink size={14} aria-hidden />
-            Abrir en pestaña
+            Ver detalle completo
           </Link>
           {canManage ? (
             <Button type="button" variant="secondary" onClick={onEdit}>
