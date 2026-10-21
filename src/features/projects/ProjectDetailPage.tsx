@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { useParams } from 'react-router';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
@@ -8,11 +8,9 @@ import { useToast } from '@/lib/toast/ToastProvider';
 import { PATHS } from '@/app/paths';
 import {
   addProjectMember,
-  assignProjectManager,
   deleteProject,
   getProject,
   getProjectHealth,
-  listActiveManagers,
   listActiveUsers,
   listProjectMembers,
   removeProjectMember,
@@ -46,16 +44,13 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
-  const [managerOpen, setManagerOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [form, setForm] = useState<ProjectFormValues | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ProjectFormValues, string>>>(
     {},
   );
-  const [managers, setManagers] = useState<{ id: string; name: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [statusValue, setStatusValue] = useState<ProjectStatus>('planificacion');
-  const [managerPick, setManagerPick] = useState('');
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
   const [health, setHealth] = useState<ProjectHealth | null>(null);
   const [memberOpen, setMemberOpen] = useState(false);
@@ -69,27 +64,6 @@ export default function ProjectDetailPage() {
     user?.role === 'admin' || (user?.role === 'manager' && project?.manager_id === user.id);
   const isAdmin = user?.role === 'admin';
 
-  const load = useCallback(async () => {
-    if (!projectId) return;
-    setLoading(true);
-    try {
-      const data = await getProject(projectId);
-      setProject(data);
-      setStatusValue(data.status);
-      setManagerPick(data.manager_id);
-      setForm(toForm(data));
-    } catch (error) {
-      showToast(
-        error instanceof ApiError && !isTechnicalFailure(error)
-          ? error.message
-          : MESSAGES.technicalFailure,
-        'error',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, showToast]);
-
   useEffect(() => {
     if (!projectId) return;
     let cancelled = false;
@@ -100,7 +74,6 @@ export default function ProjectDetailPage() {
         if (cancelled) return;
         setProject(data);
         setStatusValue(data.status);
-        setManagerPick(data.manager_id);
         setForm(toForm(data));
         const [memberRows, healthRow] = await Promise.all([
           listProjectMembers(projectId),
@@ -140,7 +113,7 @@ export default function ProjectDetailPage() {
       const rows = await listActiveUsers();
       const existingIds = new Set([project?.manager_id, ...members.map((m) => m.user_id)]);
       const availableCandidates = rows
-        .filter((u) => !existingIds.has(u.id))
+        .filter((u) => u.role !== 'admin' && !existingIds.has(u.id))
         .map((u) => ({ id: u.id, name: u.name }));
       setMemberCandidates(availableCandidates);
     } catch {
@@ -196,15 +169,6 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const loadManagers = async () => {
-    try {
-      const rows = await listActiveManagers();
-      setManagers(rows.map((m) => ({ id: m.id, name: m.name })));
-    } catch {
-      showToast(MESSAGES.loadFailure, 'error');
-    }
-  };
-
   const handleSaveEdit = async () => {
     if (!form || !project) return;
     const errors = validateProjectForm({ ...form, managerId: project.manager_id });
@@ -254,29 +218,6 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleAssignManager = async () => {
-    if (!project || !managerPick) {
-      setFieldErrors({ managerId: PROJECT_MESSAGES.managerRequired });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await assignProjectManager(project.id, managerPick);
-      await load();
-      setManagerOpen(false);
-      showToast(res.message, 'success');
-    } catch (error) {
-      showToast(
-        error instanceof ApiError && !isTechnicalFailure(error)
-          ? error.message
-          : MESSAGES.technicalFailure,
-        'error',
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleDelete = async () => {
     if (!project) return;
     setSubmitting(true);
@@ -318,18 +259,6 @@ export default function ProjectDetailPage() {
           {canManage ? (
             <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
               Editar proyecto
-            </Button>
-          ) : null}
-          {canManage ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                void loadManagers();
-                setManagerOpen(true);
-              }}
-            >
-              Cambiar gerente responsable
             </Button>
           ) : null}
           {isAdmin ? (
@@ -478,45 +407,9 @@ export default function ProjectDetailPage() {
             form={form}
             setForm={setForm as Dispatch<SetStateAction<ProjectFormValues>>}
             fieldErrors={fieldErrors}
-            managers={managers}
+            managers={[]}
             showManager={false}
           />
-        </ProjectModal>
-      ) : null}
-
-      {managerOpen ? (
-        <ProjectModal
-          title="Cambiar gerente responsable"
-          onClose={() => setManagerOpen(false)}
-          footer={
-            <>
-              <Button type="button" variant="secondary" onClick={() => setManagerOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" loading={submitting} onClick={() => void handleAssignManager()}>
-                Guardar
-              </Button>
-            </>
-          }
-        >
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-[#F9FAFB]">Gerente responsable</span>
-            <select
-              value={managerPick}
-              onChange={(e) => setManagerPick(e.target.value)}
-              className="h-10 rounded-md border border-white/10 bg-[#1E1F2B] px-3 text-sm text-[#F9FAFB] focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">Seleccionar…</option>
-              {managers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.managerId ? (
-              <span className="text-xs text-red-400">{fieldErrors.managerId}</span>
-            ) : null}
-          </label>
         </ProjectModal>
       ) : null}
 

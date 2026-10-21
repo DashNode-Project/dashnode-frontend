@@ -34,6 +34,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         path: PATHS.userManual,
       },
       { id: 'profile', label: 'Mi perfil', keywords: 'perfil cuenta', path: PATHS.profile },
+      { id: 'my-tasks', label: 'Mis tareas', keywords: 'tareas asignadas', path: PATHS.myTasks },
     ];
     if (user.role === 'admin') {
       base.push({ id: 'users', label: 'Usuarios', keywords: 'usuarios equipo', path: PATHS.users });

@@ -198,5 +198,27 @@ Frontend: `/disponibilidad` (pestañas «Mi disponibilidad», «Equipo», «Agen
 - **Directorio `demo/`:** Preservado íntegramente sin modificaciones.
 - **Git Commit / Push:** Omitidos estrictamente conforme a las instrucciones del usuario.
 
+---
+
+## EP-06 — Backlog TAR (HU_DN_04_47 … HU_DN_04_55)
+
+**Validado:** 2026-10-20 (revisión de contrato + pruebas automatizadas en repo; E2E manual pendiente)
+
+| Criterio | Estado | Evidencia |
+|---|---|---|
+| Crear/editar épica (Admin/Gerente) | PASS | API + `ProjectBacklogTab` |
+| Crear/editar HU + MoSCoW | PASS | Formularios + PATCH |
+| Fibonacci story points | PASS | `assignStoryPoints` + reglas |
+| CRUD tareas bajo HU | PASS | story-tasks endpoints |
+| Asignación solo miembros activos | PASS | `test_backlog_api` |
+| Horas estimadas > 0 | PASS | validación cliente/servidor |
+| Fallo técnico literal | PASS | `MESSAGES.technicalFailure` |
+
+**Acceptance score (integración):** Pendiente ejecución CI local — código y tests añadidos.
+
+## HU_DN_04_56 … HU_DN_04_61
+
+El cliente llama `GET /projects/{id}/backlog/tree`, `POST .../time-logs`, `PATCH .../status` y `GET /users/me/tasks`. La invitación usa `POST /auth/invitations/decision` y `POST /auth/invitations/activate`. Login verificado en local contra la API en el puerto 8000.
+
 
 

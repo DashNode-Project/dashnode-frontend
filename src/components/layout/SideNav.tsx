@@ -6,6 +6,7 @@ import {
   Home,
   Menu,
   Users,
+  ListTodo,
   Video,
   X,
 } from 'lucide-react';
@@ -60,6 +61,21 @@ export function SideNav() {
       >
         <Home size={20} aria-hidden="true" />
         {!sidebarCollapsed ? 'Inicio' : null}
+      </NavLink>
+
+      <NavLink
+        to={PATHS.myTasks}
+        title="Mis tareas"
+        className={({ isActive }) =>
+          `${base} ${sidebarCollapsed ? 'justify-center' : ''} ${
+            isActive
+              ? 'bg-blue-500/15 text-blue-300'
+              : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+          }`
+        }
+      >
+        <ListTodo size={20} aria-hidden="true" />
+        {!sidebarCollapsed ? 'Mis tareas' : null}
       </NavLink>
 
       {(user.role === 'manager' || user.role === 'developer') && (
