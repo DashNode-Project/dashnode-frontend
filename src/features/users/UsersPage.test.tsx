@@ -253,7 +253,6 @@ describe('UsersPage', () => {
     vi.mocked(authApi.inviteDeveloper).mockResolvedValue({
       message: USER_MESSAGES.inviteSent,
       user_id: 'dev-new',
-      initial_password: 'dev_cambiar_contrasena',
     });
     useAuthMock.mockReturnValue({
       user: { ...sessionUser, role: 'manager' },
@@ -270,8 +269,8 @@ describe('UsersPage', () => {
     await user.type(screen.getByLabelText('Nombre completo'), 'Dev');
     await user.type(screen.getByLabelText('Correo electrónico'), 'dev@empresa.com');
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
-    expect(await screen.findByText(/Contraseña inicial:/i)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(USER_MESSAGES.inviteSent))).toBeInTheDocument();
+    expect(await screen.findByText(new RegExp(USER_MESSAGES.inviteSent))).toBeInTheDocument();
+    expect(screen.queryByText(/Contraseña inicial/i)).not.toBeInTheDocument();
   });
 
   it('submits edit user form', async () => {

@@ -141,10 +141,7 @@ export default function UsersPage() {
     setBanner(null);
     try {
       const result = await inviteDeveloper({ name: form.name, email: form.email });
-      setBanner({
-        kind: 'success',
-        message: `${result.message} Contraseña inicial: ${result.initial_password}`,
-      });
+      setBanner({ kind: 'success', message: result.message });
       setInviteOpen(false);
       setForm(EMPTY_FORM);
       setTeamRefresh((n) => n + 1);
