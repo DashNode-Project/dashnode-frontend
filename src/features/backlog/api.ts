@@ -93,6 +93,7 @@ export async function createUserStory(
     reason: string;
     acceptance_criteria?: string;
     moscow_priority?: MoscowPriority;
+    estimation_mode?: 'story' | 'task';
   },
 ): Promise<UserStoryDTO & { message: string }> {
   return apiRequest(`/epics/${epicId}/user-stories`, { method: 'POST', body: payload });
@@ -157,5 +158,15 @@ export async function updateStoryTaskHours(
   return apiRequest(`/story-tasks/${taskId}/estimated-hours`, {
     method: 'PATCH',
     body: { estimated_hours: estimatedHours },
+  });
+}
+
+export async function assignTaskStoryPoints(
+  taskId: string,
+  storyPoints: number | null,
+): Promise<StoryTaskDTO & { message: string }> {
+  return apiRequest(`/story-tasks/${taskId}/story-points`, {
+    method: 'PATCH',
+    body: { story_points: storyPoints },
   });
 }

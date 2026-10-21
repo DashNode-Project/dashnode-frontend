@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronRight, Layers, MoreHorizontal, Plus } from 'lucide-react';
+import {
+  ChevronRight,
+  Eye,
+  ExternalLink,
+  Layers,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { TextField } from '@/components/ui/TextField';
-import { Avatar, Badge } from '@/components/ui/demo-ui';
+import { Avatar } from '@/components/ui/demo-ui';
+import { projectStoryReaderPath } from '@/app/paths';
 import { listProjectMembers, type ProjectMemberRow } from '@/features/projects/api';
 import { ProjectModal } from '@/features/projects/ProjectModal';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -12,32 +23,38 @@ import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
 import {
   assignStoryPoints,
-  assignStoryTask,
   createEpic,
   createStoryTask,
   createUserStory,
   deleteStoryTask,
-  changeTaskStatus,
   getProjectBacklog,
-  logTaskHours,
   updateEpic,
   updateStoryTask,
-  updateStoryTaskHours,
   updateUserStory,
 } from './api';
 import {
   BACKLOG_MESSAGES,
   EPIC_COLOR_OPTIONS,
+  ESTIMATION_MODE_OPTIONS,
   FILTER_PRIORITY_OPTIONS,
-  TASK_STATUS_OPTIONS,
   FIBONACCI_OPTIONS,
   MOSCOW_OPTIONS,
   TASK_TYPE_OPTIONS,
 } from './messages';
-import type { BacklogTreeDTO, MoscowPriority, StoryTaskDTO, UserStoryDTO } from './types';
+import {
+  assigneeIdsForStory,
+  flattenStories,
+  storyPointsLabel,
+  tasksForStory,
+  visibleProjectMembers,
+} from './backlogHelpers';
+import { MoscowBadge } from './MoscowBadge';
+import { TaskWorkModal } from './TaskWorkModal';
+import { UserStoryContent } from './UserStoryContent';
+import { UserStoryPreviewModal } from './UserStoryPreviewModal';
+import type { BacklogTreeDTO, EstimationMode, MoscowPriority, StoryTaskDTO, UserStoryDTO } from './types';
 import {
   validateEpicForm,
-  validateEstimatedHours,
   validateStoryForm,
   validateTaskName,
 } from './validation';
@@ -55,9 +72,10 @@ export default function ProjectBacklogTab() {
   const [filterQuery, setFilterQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterAssignee, setFilterAssignee] = useState('');
-  const [logDraft, setLogDraft] = useState<Record<string, string>>({});
   const [expandedEpic, setExpandedEpic] = useState<string | null>(null);
   const [selectedStory, setSelectedStory] = useState<UserStoryDTO | null>(null);
+  const [previewStory, setPreviewStory] = useState<UserStoryDTO | null>(null);
+  const [taskWorkTarget, setTaskWorkTarget] = useState<StoryTaskDTO | null>(null);
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
   const isMember = members.some((m) => m.user_id === user?.id);
   const canWorkTasks = canManage || isMember;
@@ -76,6 +94,7 @@ export default function ProjectBacklogTab() {
     acceptanceCriteria: string;
     moscow: MoscowPriority;
     epicId: string;
+    estimationMode: EstimationMode;
   }>({
     title: '',
     userRole: '',
@@ -83,6 +102,7 @@ export default function ProjectBacklogTab() {
     acceptanceCriteria: '',
     moscow: 'must_have',
     epicId: '',
+    estimationMode: 'story',
   });
   const [storyErrors, setStoryErrors] = useState<
     Partial<Record<'title' | 'userRole' | 'reason', string>>
@@ -93,11 +113,14 @@ export default function ProjectBacklogTab() {
   const [taskForm, setTaskForm] = useState({ name: '', taskType: 'frontend', notes: '' });
   const [taskNameError, setTaskNameError] = useState('');
   const [deleteTaskTarget, setDeleteTaskTarget] = useState<StoryTaskDTO | null>(null);
-  const [hoursDraft, setHoursDraft] = useState<Record<string, string>>({});
-
   const [submitting, setSubmitting] = useState(false);
 
-  const memberMap = useMemo(() => new Map(members.map((m) => [m.user_id, m.name])), [members]);
+  const assignableMembers = useMemo(() => visibleProjectMembers(members), [members]);
+  const memberMap = useMemo(
+    () => new Map(assignableMembers.map((m) => [m.user_id, m.name])),
+    [assignableMembers],
+  );
+  const allStories = useMemo(() => flattenStories(tree), [tree]);
 
   const notifyError = useCallback(
     (error: unknown) => {
@@ -123,8 +146,13 @@ export default function ProjectBacklogTab() {
         listProjectMembers(project.id),
       ]);
       setTree(backlog);
-      setMembers(memberRows);
+      setMembers(visibleProjectMembers(memberRows));
       setExpandedEpic((prev) => prev ?? backlog.epics[0]?.epic.id ?? null);
+      setSelectedStory((prev) => {
+        if (!prev) return prev;
+        const fresh = flattenStories(backlog).find((s) => s.id === prev.id);
+        return fresh ?? prev;
+      });
     } catch (error) {
       notifyError(error);
     } finally {
@@ -136,6 +164,12 @@ export default function ProjectBacklogTab() {
     const timer = window.setTimeout(() => setFilterQuery(filterText.trim()), 300);
     return () => window.clearTimeout(timer);
   }, [filterText]);
+
+  useEffect(() => {
+    if (!taskWorkTarget || !selectedStory || !tree) return;
+    const fresh = tasksForStory(tree, selectedStory.id).find((t) => t.id === taskWorkTarget.id);
+    if (fresh) setTaskWorkTarget(fresh);
+  }, [tree, selectedStory, taskWorkTarget?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,7 +186,7 @@ export default function ProjectBacklogTab() {
         ]);
         if (cancelled) return;
         setTree(backlog);
-        setMembers(memberRows);
+        setMembers(visibleProjectMembers(memberRows));
         setExpandedEpic((prev) => prev ?? backlog.epics[0]?.epic.id ?? null);
       } catch (error) {
         if (!cancelled) notifyError(error);
@@ -164,8 +198,6 @@ export default function ProjectBacklogTab() {
       cancelled = true;
     };
   }, [project.id, notifyError, filterQuery, filterPriority, filterAssignee]);
-
-  const tasksForStory = (storyId: string): StoryTaskDTO[] => tree?.tasks_by_story[storyId] ?? [];
 
   async function handleCreateEpic() {
     const errors = validateEpicForm(epicForm.name);
@@ -238,6 +270,7 @@ export default function ProjectBacklogTab() {
           reason: storyForm.reason.trim(),
           acceptance_criteria: storyForm.acceptanceCriteria,
           moscow_priority: storyForm.moscow,
+          estimation_mode: storyForm.estimationMode,
         });
         showToast(res.message, 'success');
         setAddStoryEpicId(null);
@@ -331,44 +364,27 @@ export default function ProjectBacklogTab() {
     }
   }
 
-  async function handleAssign(taskId: string, assigneeId: string) {
-    setSubmitting(true);
-    try {
-      const res = await assignStoryTask(taskId, assigneeId || null);
-      showToast(res.message, 'success');
-      await reloadBacklog();
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function saveHours(taskId: string) {
-    const raw = hoursDraft[taskId] ?? '';
-    const validation = validateEstimatedHours(raw);
-    if (validation.hours) {
-      showToast(validation.hours, 'error');
-      return;
-    }
-    const value = raw.trim() === '' ? null : Number(raw);
-    setSubmitting(true);
-    try {
-      const res = await updateStoryTaskHours(taskId, value);
-      showToast(res.message, 'success');
-      await reloadBacklog();
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setSubmitting(false);
-    }
+  function openStoryEditor(story: UserStoryDTO) {
+    setEditStory(story);
+    setStoryForm({
+      title: story.title,
+      userRole: story.user_role,
+      reason: story.reason,
+      acceptanceCriteria: story.acceptance_criteria,
+      moscow: story.moscow_priority,
+      epicId: story.epic_id,
+      estimationMode: story.estimation_mode,
+    });
+    setStoryErrors({});
   }
 
   if (loading && !tree) {
     return (
-      <p className="text-sm text-[#9CA3AF]" role="status">
-        Cargando backlog…
-      </p>
+      <div className="space-y-3 animate-pulse" role="status" aria-label="Cargando backlog">
+        <div className="h-10 rounded-lg bg-white/5" />
+        <div className="h-32 rounded-xl bg-white/5" />
+        <div className="h-32 rounded-xl bg-white/5" />
+      </div>
     );
   }
 
@@ -409,7 +425,7 @@ export default function ProjectBacklogTab() {
           >
             <option value="">Todos</option>
             <option value="unassigned">Sin responsable</option>
-            {members.map((member) => (
+            {assignableMembers.map((member) => (
               <option key={member.user_id} value={member.user_id}>
                 {member.name}
               </option>
@@ -490,35 +506,89 @@ export default function ProjectBacklogTab() {
                           <th className="hidden px-4 py-2 text-left text-xs font-medium text-[#6B7280] md:table-cell">
                             Puntos
                           </th>
+                          <th className="hidden px-4 py-2 text-left text-xs font-medium text-[#6B7280] lg:table-cell">
+                            Asignados
+                          </th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-[#6B7280]">
+                            Acciones
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {stories.map((s) => (
+                        {stories.map((s) => {
+                          const storyTasks = tasksForStory(tree, s.id);
+                          const points = storyPointsLabel(s, storyTasks);
+                          const assignees = assigneeIdsForStory(storyTasks);
+                          return (
                           <tr
                             key={s.id}
-                            className={`cursor-pointer border-b border-white/4 last:border-0 hover:bg-white/2 ${
+                            className={`border-b border-white/4 last:border-0 hover:bg-white/2 ${
                               selectedStory?.id === s.id ? 'bg-white/4' : ''
                             }`}
-                            onClick={() => setSelectedStory(s)}
                           >
-                            <td className="px-4 py-3">
+                            <td
+                              className="cursor-pointer px-4 py-3"
+                              onClick={() => setSelectedStory(s)}
+                            >
                               <p className="text-sm text-[#F9FAFB]">{s.title}</p>
                               <p className="max-w-md truncate text-xs text-[#6B7280]">{s.reason}</p>
                             </td>
                             <td className="hidden px-4 py-3 sm:table-cell">
-                              <Badge>{s.moscow_priority.replace('_', ' ')}</Badge>
+                              <MoscowBadge priority={s.moscow_priority} />
                             </td>
                             <td className="hidden px-4 py-3 md:table-cell">
-                              {s.story_points !== null ? (
+                              {points.value !== null ? (
                                 <span className="rounded bg-violet-500/20 px-2 py-0.5 font-mono text-xs text-violet-300">
-                                  {s.story_points} pt
+                                  {points.value} pt
                                 </span>
                               ) : (
                                 <span className="text-xs text-[#6B7280]">—</span>
                               )}
                             </td>
+                            <td className="hidden px-4 py-3 lg:table-cell">
+                              <div className="flex -space-x-1">
+                                {assignees.length ? (
+                                  assignees.map((id) => (
+                                    <Avatar
+                                      key={id}
+                                      name={memberMap.get(id) ?? '?'}
+                                      size={22}
+                                    />
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-[#6B7280]">—</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex justify-end gap-1">
+                                {canManage ? (
+                                  <IconActionButton
+                                    icon={Pencil}
+                                    label="Editar historia"
+                                    tone="neutral"
+                                    onClick={() => openStoryEditor(s)}
+                                  />
+                                ) : null}
+                                <IconActionButton
+                                  icon={Eye}
+                                  label="Previsualizar historia"
+                                  tone="blue"
+                                  onClick={() => setPreviewStory(s)}
+                                />
+                                <IconActionButton
+                                  icon={ExternalLink}
+                                  label="Abrir historia en pestaña"
+                                  tone="neutral"
+                                  onClick={() =>
+                                    window.open(projectStoryReaderPath(project.id, s.id), '_blank')
+                                  }
+                                />
+                              </div>
+                            </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
@@ -535,6 +605,7 @@ export default function ProjectBacklogTab() {
                             acceptanceCriteria: '',
                             moscow: 'must_have',
                             epicId: epic.id,
+                            estimationMode: 'story',
                           });
                           setStoryErrors({});
                           setAddStoryEpicId(epic.id);
@@ -553,43 +624,41 @@ export default function ProjectBacklogTab() {
       )}
 
       {selectedStory && (
-        <div className="rounded-xl border border-white/6 bg-[#12131C] p-5">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h3 className="text-lg font-semibold text-[#F9FAFB]">{selectedStory.title}</h3>
-              <p className="text-sm text-[#9CA3AF]">
-                {selectedStory.user_role} — {selectedStory.reason}
-              </p>
-            </div>
-            {canManage && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setEditStory(selectedStory);
-                  setStoryForm({
-                    title: selectedStory.title,
-                    userRole: selectedStory.user_role,
-                    reason: selectedStory.reason,
-                    acceptanceCriteria: selectedStory.acceptance_criteria,
-                    moscow: selectedStory.moscow_priority,
-                    epicId: selectedStory.epic_id,
-                  });
-                  setStoryErrors({});
-                }}
-              >
-                Editar
-              </Button>
-            )}
+        <div className="rounded-xl border border-white/6 bg-[#12131C] p-5 transition-opacity duration-200">
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+            {canManage ? (
+              <IconActionButton
+                icon={Pencil}
+                label="Editar historia"
+                tone="neutral"
+                onClick={() => openStoryEditor(selectedStory)}
+              />
+            ) : null}
+            <IconActionButton
+              icon={Eye}
+              label="Previsualizar"
+              tone="blue"
+              onClick={() => setPreviewStory(selectedStory)}
+            />
+            <IconActionButton
+              icon={ExternalLink}
+              label="Abrir en pestaña"
+              tone="neutral"
+              onClick={() =>
+                window.open(projectStoryReaderPath(project.id, selectedStory.id), '_blank')
+              }
+            />
           </div>
 
-          {canManage && (
-            <div className="mb-4 max-w-xs">
+          <UserStoryContent story={selectedStory} tree={tree} memberMap={memberMap} compact />
+
+          {canManage && selectedStory.estimation_mode === 'story' ? (
+            <div className="mt-4 max-w-xs">
               <label
                 htmlFor="backlog-story-points"
                 className="mb-1 block text-sm font-medium text-[#F9FAFB]"
               >
-                Puntos de Historia
+                Puntos de historia
               </label>
               <select
                 id="backlog-story-points"
@@ -605,11 +674,11 @@ export default function ProjectBacklogTab() {
                 ))}
               </select>
             </div>
-          )}
+          ) : null}
 
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mt-6 mb-3 flex items-center justify-between">
             <h4 className="text-sm font-semibold text-[#F9FAFB]">Tareas</h4>
-            {canWorkTasks && (
+            {canWorkTasks ? (
               <Button
                 size="sm"
                 variant="secondary"
@@ -619,29 +688,40 @@ export default function ProjectBacklogTab() {
                   setTaskModal('create');
                 }}
               >
+                <Plus size={14} className="mr-1" aria-hidden />
                 Agregar tarea
               </Button>
-            )}
+            ) : null}
           </div>
-          <ul className="space-y-3">
-            {tasksForStory(selectedStory.id).map((task) => (
+          <ul className="space-y-2">
+            {tasksForStory(tree, selectedStory.id).map((task) => (
               <li
                 key={task.id}
-                className="rounded-lg border border-white/6 bg-[#1E1F2B] p-3 text-sm"
+                className="flex items-center justify-between gap-2 rounded-lg border border-white/6 bg-[#1E1F2B] px-3 py-2 text-sm"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-[#F9FAFB]">{task.name}</p>
-                    <p className="text-xs text-[#6B7280]">
-                      {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ??
-                        task.task_type}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {canWorkTasks && (
-                      <button
-                        type="button"
-                        className="text-xs text-blue-400 hover:underline"
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-[#F9FAFB]">{task.name}</p>
+                  <p className="text-xs text-[#6B7280]">
+                    {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ??
+                      task.task_type}
+                    {task.assignee_id && memberMap.get(task.assignee_id)
+                      ? ` · ${memberMap.get(task.assignee_id)}`
+                      : ''}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <IconActionButton
+                    icon={Eye}
+                    label="Ver detalle de tarea"
+                    tone="blue"
+                    onClick={() => setTaskWorkTarget(task)}
+                  />
+                  {canWorkTasks ? (
+                    <>
+                      <IconActionButton
+                        icon={Pencil}
+                        label="Editar tarea"
+                        tone="neutral"
                         onClick={() => {
                           setTaskTarget(task);
                           setTaskForm({
@@ -651,170 +731,56 @@ export default function ProjectBacklogTab() {
                           });
                           setTaskModal('edit');
                         }}
-                      >
-                        Editar
-                      </button>
-                    )}
-                    {canWorkTasks && (
-                      <button
-                        type="button"
-                        className="text-xs text-red-400 hover:underline"
-                        onClick={() => setDeleteTaskTarget(task)}
-                      >
-                        Eliminar
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor={`task-assignee-${task.id}`}
-                      className="mb-1 block text-xs text-[#9CA3AF]"
-                    >
-                      Responsable
-                    </label>
-                    <select
-                      id={`task-assignee-${task.id}`}
-                      className={fieldClass}
-                      value={task.assignee_id ?? ''}
-                      disabled={submitting}
-                      onChange={(e) => void handleAssign(task.id, e.target.value)}
-                    >
-                      <option value="">Sin asignar</option>
-                      {members.map((m) => (
-                        <option key={m.user_id} value={m.user_id}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
-                    {task.assignee_id && memberMap.get(task.assignee_id) && (
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <Avatar name={memberMap.get(task.assignee_id)!} size={20} />
-                        <span className="text-xs text-[#9CA3AF]">
-                          {memberMap.get(task.assignee_id)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor={`task-hours-${task.id}`}
-                      className="mb-1 block text-xs text-[#9CA3AF]"
-                    >
-                      Horas estimadas
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        id={`task-hours-${task.id}`}
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        className={fieldClass}
-                        value={hoursDraft[task.id] ?? task.estimated_hours ?? ''}
-                        onChange={(e) =>
-                          setHoursDraft((prev) => ({ ...prev, [task.id]: e.target.value }))
-                        }
                       />
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={submitting}
-                        onClick={() => void saveHours(task.id)}
-                      >
-                        Guardar
-                      </Button>
-                    </div>
-                  </div>
+                      <IconActionButton
+                        icon={Trash2}
+                        label="Eliminar tarea"
+                        tone="red"
+                        onClick={() => setDeleteTaskTarget(task)}
+                      />
+                    </>
+                  ) : null}
                 </div>
-                {canWorkTasks ? (
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <label className="text-xs text-[#9CA3AF]">
-                      Estado
-                      <select
-                        className={`${fieldClass} mt-1`}
-                        value={task.status}
-                        disabled={submitting || task.status === 'CORRECTION'}
-                        title={
-                          task.status === 'CORRECTION'
-                            ? BACKLOG_MESSAGES.correctionLocked
-                            : undefined
-                        }
-                        onChange={(event) => {
-                          const next = event.target.value;
-                          if (next === 'CORRECTION') return;
-                          setSubmitting(true);
-                          void changeTaskStatus(project.id, task.id, next)
-                            .then((result) => {
-                              showToast(result.message, 'success');
-                              return reloadBacklog();
-                            })
-                            .catch((error) => notifyError(error))
-                            .finally(() => setSubmitting(false));
-                        }}
-                      >
-                        {TASK_STATUS_OPTIONS.map((option) => (
-                          <option
-                            key={option.value}
-                            value={option.value}
-                            disabled={option.value === 'CORRECTION'}
-                          >
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div>
-                      <label
-                        className="mb-1 block text-xs text-[#9CA3AF]"
-                        htmlFor={`log-${task.id}`}
-                      >
-                        Horas invertidas ({task.logged_hours ?? '0'} acumuladas)
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          id={`log-${task.id}`}
-                          type="number"
-                          min="0.01"
-                          max="24"
-                          step="0.01"
-                          className={fieldClass}
-                          value={logDraft[task.id] ?? ''}
-                          onChange={(event) =>
-                            setLogDraft((prev) => ({ ...prev, [task.id]: event.target.value }))
-                          }
-                        />
-                        <Button
-                          size="sm"
-                          disabled={submitting}
-                          onClick={() => {
-                            const raw = Number(logDraft[task.id]);
-                            if (!raw || raw <= 0) {
-                              showToast(BACKLOG_MESSAGES.hoursPositive, 'error');
-                              return;
-                            }
-                            setSubmitting(true);
-                            void logTaskHours(project.id, task.id, { hours_spent: raw })
-                              .then((result) => {
-                                showToast(result.message, 'success');
-                                setLogDraft((prev) => ({ ...prev, [task.id]: '' }));
-                                return reloadBacklog();
-                              })
-                              .catch((error) => notifyError(error))
-                              .finally(() => setSubmitting(false));
-                          }}
-                        >
-                          Registrar horas
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
               </li>
             ))}
           </ul>
         </div>
       )}
+
+      {previewStory ? (
+        <UserStoryPreviewModal
+          projectId={project.id}
+          story={previewStory}
+          stories={allStories}
+          tree={tree}
+          memberMap={memberMap}
+          canManage={canManage}
+          onClose={() => setPreviewStory(null)}
+          onNavigate={setPreviewStory}
+          onEdit={() => {
+            openStoryEditor(previewStory);
+            setPreviewStory(null);
+          }}
+        />
+      ) : null}
+
+      {taskWorkTarget && selectedStory ? (
+        <TaskWorkModal
+          projectId={project.id}
+          story={selectedStory}
+          task={taskWorkTarget}
+          members={assignableMembers}
+          memberMap={memberMap}
+          canWork={canWorkTasks}
+          submitting={submitting}
+          setSubmitting={setSubmitting}
+          onClose={() => setTaskWorkTarget(null)}
+          onSaved={reloadBacklog}
+          onPreviewStory={() => setPreviewStory(selectedStory)}
+          notifyError={notifyError}
+          showToast={showToast}
+        />
+      ) : null}
 
       {createEpicOpen && (
         <ProjectModal
@@ -987,6 +953,33 @@ export default function ProjectBacklogTab() {
                 }
               />
             </div>
+            {!editStory ? (
+              <div>
+                <label htmlFor="story-estimation-mode" className="mb-1 block text-sm font-medium">
+                  Modo de estimación *
+                </label>
+                <select
+                  id="story-estimation-mode"
+                  className={fieldClass}
+                  value={storyForm.estimationMode}
+                  onChange={(e) =>
+                    setStoryForm((f) => ({
+                      ...f,
+                      estimationMode: e.target.value as EstimationMode,
+                    }))
+                  }
+                >
+                  {ESTIMATION_MODE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-[#6B7280]">
+                  Solo puede elegirse al crear la historia; no se mezclan ambos modos.
+                </p>
+              </div>
+            ) : null}
             <div>
               <label htmlFor="story-moscow" className="mb-1 block text-sm font-medium">
                 Prioridad MoSCoW

@@ -45,6 +45,11 @@ export const FILTER_PRIORITY_OPTIONS = [
   { value: 'LOW', label: 'Baja' },
 ] as const;
 
+export const ESTIMATION_MODE_OPTIONS = [
+  { value: 'story', label: 'Puntos en la historia (único total)' },
+  { value: 'task', label: 'Puntos por tarea (suma en la HU)' },
+] as const;
+
 export const MOSCOW_OPTIONS = [
   { value: 'must_have', label: 'Must have' },
   { value: 'should_have', label: 'Should have' },

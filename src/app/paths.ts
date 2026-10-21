@@ -28,3 +28,8 @@ export function projectTabPath(projectId: string, tab: string): string {
 export function projectDetailPath(projectId: string): string {
   return projectTabPath(projectId, 'resumen');
 }
+
+export function projectStoryReaderPath(projectId: string, storyId?: string): string {
+  const base = `${PATHS.projects}/${projectId}/backlog/leer`;
+  return storyId ? `${base}/${storyId}` : base;
+}

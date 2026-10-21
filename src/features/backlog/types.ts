@@ -1,4 +1,5 @@
 export type MoscowPriority = 'must_have' | 'should_have' | 'could_have' | 'wont_have';
+export type EstimationMode = 'story' | 'task';
 
 export type StoryTaskType =
   'frontend' | 'backend' | 'bd' | 'qa' | 'seguridad' | 'devops' | 'documentacion' | 'ux_ui';
@@ -24,6 +25,7 @@ export interface UserStoryDTO {
   acceptance_criteria: string;
   moscow_priority: MoscowPriority;
   story_points: number | null;
+  estimation_mode: EstimationMode;
   sprint_id: string | null;
   sort_order: number;
   created_at: string;
@@ -40,6 +42,7 @@ export interface StoryTaskDTO {
   status: string;
   assignee_id: string | null;
   estimated_hours: string | null;
+  story_points?: number | null;
   logged_hours?: string;
   label?: string;
   created_at: string;
