@@ -204,5 +204,12 @@ Validación local:
 - Contrato alineado con backend (`EpicCreatedResponse`, árbol `BacklogTreeDTO`).
 - Toasts en operaciones exitosas con textos HU.
 
+## HU_DN_04_56 … HU_DN_04_61
+
+**Estado:** COMPLETED
+**Fecha:** 2026-10-20
+
+Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Invitación pública sin mostrar contraseñas. Atajo Ctrl+Shift+M. Transiciones CSS respetando `prefers-reduced-motion`.
+
 
 

@@ -18,7 +18,32 @@ export const BACKLOG_MESSAGES = {
   assigneeNotInProject: 'El usuario seleccionado no pertenece al proyecto.',
   estimatedHoursInvalid: 'Las horas estimadas deben ser mayores a 0.',
   estimatedHoursSaved: 'Horas estimadas registradas correctamente.',
+  hoursLogged: 'Horas registradas correctamente.',
+  hoursPositive: 'Las horas invertidas deben ser mayores a 0.',
+  statusUpdated: 'Estado de la tarea actualizado.',
+  correctionLocked: 'El estado Corrección solo cambia al reportar o resolver un fix.',
+  backlogEmpty: 'El backlog no tiene elementos.',
+  filterEmpty: 'No se encontraron elementos con los filtros aplicados.',
+  myTasksEmpty: 'No tiene tareas asignadas actualmente.',
+  myTasksFilterEmpty: 'No se encontraron tareas con los filtros aplicados.',
 } as const;
+
+export const TASK_STATUS_OPTIONS = [
+  { value: 'TODO', label: 'Por hacer' },
+  { value: 'IN_PROGRESS', label: 'En progreso' },
+  { value: 'CODE_REVIEW', label: 'Revisión de código' },
+  { value: 'TESTING', label: 'Pruebas' },
+  { value: 'CORRECTION', label: 'Corrección' },
+  { value: 'DONE', label: 'Completada' },
+] as const;
+
+export const FILTER_PRIORITY_OPTIONS = [
+  { value: '', label: 'Cualquier prioridad' },
+  { value: 'CRITICAL', label: 'Crítica' },
+  { value: 'HIGH', label: 'Alta' },
+  { value: 'MEDIUM', label: 'Media' },
+  { value: 'LOW', label: 'Baja' },
+] as const;
 
 export const MOSCOW_OPTIONS = [
   { value: 'must_have', label: 'Must have' },

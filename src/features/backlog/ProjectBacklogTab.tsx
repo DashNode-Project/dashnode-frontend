@@ -17,7 +17,9 @@ import {
   createStoryTask,
   createUserStory,
   deleteStoryTask,
+  changeTaskStatus,
   getProjectBacklog,
+  logTaskHours,
   updateEpic,
   updateStoryTask,
   updateStoryTaskHours,
@@ -26,6 +28,8 @@ import {
 import {
   BACKLOG_MESSAGES,
   EPIC_COLOR_OPTIONS,
+  FILTER_PRIORITY_OPTIONS,
+  TASK_STATUS_OPTIONS,
   FIBONACCI_OPTIONS,
   MOSCOW_OPTIONS,
   TASK_TYPE_OPTIONS,
@@ -47,6 +51,11 @@ export default function ProjectBacklogTab() {
   const { showToast } = useToast();
   const [tree, setTree] = useState<BacklogTreeDTO | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filterText, setFilterText] = useState('');
+  const [filterQuery, setFilterQuery] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterAssignee, setFilterAssignee] = useState('');
+  const [logDraft, setLogDraft] = useState<Record<string, string>>({});
   const [expandedEpic, setExpandedEpic] = useState<string | null>(null);
   const [selectedStory, setSelectedStory] = useState<UserStoryDTO | null>(null);
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
@@ -106,7 +115,11 @@ export default function ProjectBacklogTab() {
     setLoading(true);
     try {
       const [backlog, memberRows] = await Promise.all([
-        getProjectBacklog(project.id),
+        getProjectBacklog(project.id, {
+          q: filterQuery,
+          priority: filterPriority,
+          assignedTo: filterAssignee,
+        }),
         listProjectMembers(project.id),
       ]);
       setTree(backlog);
@@ -117,7 +130,12 @@ export default function ProjectBacklogTab() {
     } finally {
       setLoading(false);
     }
-  }, [project.id, notifyError]);
+  }, [project.id, notifyError, filterQuery, filterPriority, filterAssignee]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setFilterQuery(filterText.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [filterText]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +143,11 @@ export default function ProjectBacklogTab() {
       setLoading(true);
       try {
         const [backlog, memberRows] = await Promise.all([
-          getProjectBacklog(project.id),
+          getProjectBacklog(project.id, {
+            q: filterQuery,
+            priority: filterPriority,
+            assignedTo: filterAssignee,
+          }),
           listProjectMembers(project.id),
         ]);
         if (cancelled) return;
@@ -141,7 +163,7 @@ export default function ProjectBacklogTab() {
     return () => {
       cancelled = true;
     };
-  }, [project.id, notifyError]);
+  }, [project.id, notifyError, filterQuery, filterPriority, filterAssignee]);
 
   const tasksForStory = (storyId: string): StoryTaskDTO[] => tree?.tasks_by_story[storyId] ?? [];
 
@@ -354,6 +376,47 @@ export default function ProjectBacklogTab() {
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-3">
+        <label className="text-xs text-[#9CA3AF]">
+          Texto
+          <input
+            className={`${fieldClass} mt-1`}
+            value={filterText}
+            onChange={(event) => setFilterText(event.target.value)}
+            placeholder="Buscar"
+          />
+        </label>
+        <label className="text-xs text-[#9CA3AF]">
+          Prioridad
+          <select
+            className={`${fieldClass} mt-1`}
+            value={filterPriority}
+            onChange={(event) => setFilterPriority(event.target.value)}
+          >
+            {FILTER_PRIORITY_OPTIONS.map((option) => (
+              <option key={option.value || 'any'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs text-[#9CA3AF]">
+          Responsable
+          <select
+            className={`${fieldClass} mt-1`}
+            value={filterAssignee}
+            onChange={(event) => setFilterAssignee(event.target.value)}
+          >
+            <option value="">Todos</option>
+            <option value="unassigned">Sin responsable</option>
+            {members.map((member) => (
+              <option key={member.user_id} value={member.user_id}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       {canManage && (
         <div className="flex justify-end">
           <Button size="sm" onClick={() => setCreateEpicOpen(true)}>
@@ -366,7 +429,9 @@ export default function ProjectBacklogTab() {
       {epics.length === 0 ? (
         <div className="rounded-xl border border-white/6 bg-[#12131C] p-8 text-center">
           <Layers className="mx-auto mb-2 text-[#6B7280]" size={22} aria-hidden />
-          <p className="font-medium text-[#F9FAFB]">Sin épicas</p>
+          <p className="font-medium text-[#F9FAFB]">
+            {tree?.message ?? BACKLOG_MESSAGES.backlogEmpty}
+          </p>
           <p className="text-sm text-[#6B7280]">Crea la primera épica para organizar el backlog.</p>
         </div>
       ) : (
@@ -662,6 +727,89 @@ export default function ProjectBacklogTab() {
                     </div>
                   </div>
                 </div>
+                {canWorkTasks ? (
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <label className="text-xs text-[#9CA3AF]">
+                      Estado
+                      <select
+                        className={`${fieldClass} mt-1`}
+                        value={task.status}
+                        disabled={submitting || task.status === 'CORRECTION'}
+                        title={
+                          task.status === 'CORRECTION'
+                            ? BACKLOG_MESSAGES.correctionLocked
+                            : undefined
+                        }
+                        onChange={(event) => {
+                          const next = event.target.value;
+                          if (next === 'CORRECTION') return;
+                          setSubmitting(true);
+                          void changeTaskStatus(project.id, task.id, next)
+                            .then((result) => {
+                              showToast(result.message, 'success');
+                              return reloadBacklog();
+                            })
+                            .catch((error) => notifyError(error))
+                            .finally(() => setSubmitting(false));
+                        }}
+                      >
+                        {TASK_STATUS_OPTIONS.map((option) => (
+                          <option
+                            key={option.value}
+                            value={option.value}
+                            disabled={option.value === 'CORRECTION'}
+                          >
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div>
+                      <label
+                        className="mb-1 block text-xs text-[#9CA3AF]"
+                        htmlFor={`log-${task.id}`}
+                      >
+                        Horas invertidas ({task.logged_hours ?? '0'} acumuladas)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id={`log-${task.id}`}
+                          type="number"
+                          min="0.01"
+                          max="24"
+                          step="0.01"
+                          className={fieldClass}
+                          value={logDraft[task.id] ?? ''}
+                          onChange={(event) =>
+                            setLogDraft((prev) => ({ ...prev, [task.id]: event.target.value }))
+                          }
+                        />
+                        <Button
+                          size="sm"
+                          disabled={submitting}
+                          onClick={() => {
+                            const raw = Number(logDraft[task.id]);
+                            if (!raw || raw <= 0) {
+                              showToast(BACKLOG_MESSAGES.hoursPositive, 'error');
+                              return;
+                            }
+                            setSubmitting(true);
+                            void logTaskHours(project.id, task.id, { hours_spent: raw })
+                              .then((result) => {
+                                showToast(result.message, 'success');
+                                setLogDraft((prev) => ({ ...prev, [task.id]: '' }));
+                                return reloadBacklog();
+                              })
+                              .catch((error) => notifyError(error))
+                              .finally(() => setSubmitting(false));
+                          }}
+                        >
+                          Registrar horas
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

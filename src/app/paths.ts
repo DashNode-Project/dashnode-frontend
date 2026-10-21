@@ -15,6 +15,8 @@ export const PATHS = {
   projects: '/proyectos',
   availability: '/disponibilidad',
   meetings: '/reuniones',
+  myTasks: '/mis-tareas',
+  invitation: '/invitacion',
   calendar: '/calendario',
   userManual: '/manual-usuario',
 } as const;

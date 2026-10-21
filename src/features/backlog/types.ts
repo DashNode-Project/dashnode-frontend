@@ -40,6 +40,8 @@ export interface StoryTaskDTO {
   status: string;
   assignee_id: string | null;
   estimated_hours: string | null;
+  logged_hours?: string;
+  label?: string;
   created_at: string;
   updated_at: string;
 }
@@ -47,4 +49,5 @@ export interface StoryTaskDTO {
 export interface BacklogTreeDTO {
   epics: { epic: EpicDTO; stories: UserStoryDTO[] }[];
   tasks_by_story: Record<string, StoryTaskDTO[]>;
+  message?: string | null;
 }

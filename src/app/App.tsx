@@ -16,6 +16,8 @@ const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/features/auth/ForgotPasswordPage'));
 const SetPasswordPage = lazy(() => import('@/features/auth/SetPasswordPage'));
+const InvitationPage = lazy(() => import('@/features/auth/InvitationPage'));
+const MyTasksPage = lazy(() => import('@/features/backlog/MyTasksPage'));
 const HomePage = lazy(() => import('@/features/home/HomePage'));
 const UsersPage = lazy(() => import('@/features/users/UsersPage'));
 const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
@@ -51,6 +53,7 @@ export function AppRoutes() {
               <Routes>
                 <Route path={PATHS.landing} element={<LandingPage />} />
                 <Route path={PATHS.about} element={<AboutPage />} />
+                <Route path={PATHS.invitation} element={<InvitationPage />} />
 
                 <Route element={<GuestOnly />}>
                   <Route path={PATHS.login} element={<LoginPage />} />
@@ -64,6 +67,7 @@ export function AppRoutes() {
                     <Route path={PATHS.profile} element={<ProfilePage />} />
                     <Route path={PATHS.permissions} element={<PermissionsPage />} />
                     <Route path={PATHS.userManual} element={<UserManualPage />} />
+                    <Route path={PATHS.myTasks} element={<MyTasksPage />} />
                     <Route element={<RequireRole allow={['manager', 'developer']} />}>
                       <Route path={PATHS.projects} element={<ProjectsPage />} />
                       <Route path={PATHS.availability} element={<AvailabilityPage />} />

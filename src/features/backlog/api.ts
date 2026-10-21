@@ -8,8 +8,67 @@ import type {
   UserStoryDTO,
 } from './types';
 
-export async function getProjectBacklog(projectId: string): Promise<BacklogTreeDTO> {
-  return apiRequest<BacklogTreeDTO>(`/projects/${projectId}/backlog`);
+export interface BacklogQuery {
+  q?: string;
+  priority?: string;
+  assignedTo?: string;
+  label?: string;
+}
+
+export async function getProjectBacklog(
+  projectId: string,
+  query: BacklogQuery = {},
+): Promise<BacklogTreeDTO> {
+  const params = new URLSearchParams();
+  if (query.q) params.set('q', query.q);
+  if (query.priority) params.set('priority', query.priority);
+  if (query.assignedTo) params.set('assignedTo', query.assignedTo);
+  if (query.label) params.set('label', query.label);
+  const suffix = params.size ? `?${params.toString()}` : '';
+  return apiRequest<BacklogTreeDTO>(`/projects/${projectId}/backlog/tree${suffix}`);
+}
+
+export async function logTaskHours(
+  projectId: string,
+  taskId: string,
+  payload: { hours_spent: number; comment?: string },
+): Promise<{ message: string; total_logged_hours: string }> {
+  return apiRequest(`/projects/${projectId}/tasks/${taskId}/time-logs`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function changeTaskStatus(
+  projectId: string,
+  taskId: string,
+  status: string,
+): Promise<{ message: string; status: string }> {
+  return apiRequest(`/projects/${projectId}/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    body: { status },
+  });
+}
+
+export interface MyTaskItem {
+  id: string;
+  name: string;
+  project: { id: string; name: string };
+  user_story: { id: string; title: string };
+  status: string;
+  estimated_hours: string | null;
+  logged_hours: string;
+}
+
+export async function listMyTasks(query: { projectId?: string; status?: string } = {}): Promise<{
+  tasks: MyTaskItem[];
+  message?: string | null;
+}> {
+  const params = new URLSearchParams();
+  if (query.projectId) params.set('projectId', query.projectId);
+  if (query.status) params.set('status', query.status);
+  const suffix = params.size ? `?${params.toString()}` : '';
+  return apiRequest(`/users/me/tasks${suffix}`);
 }
 
 export async function createEpic(

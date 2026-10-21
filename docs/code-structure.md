@@ -88,3 +88,9 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - UI alineada a demo Figma: árbol de épicas, modales Crear/Editar épica, Agregar HU, detalle de HU con Fibonacci, sub-lista de tareas, confirmación de borrado.
 - Pruebas: `validation.test.ts`; placeholder backlog sustituido por ruta dedicada en `App.tsx`.
 
+## EP-06 — HU_DN_04_56 … HU_DN_04_61
+
+- Filtros, horas trabajadas y estado en `ProjectBacklogTab`.
+- `MyTasksPage` en `/mis-tareas`.
+- `InvitationPage` en `/invitacion` (sin contraseña visible para el gerente).
+

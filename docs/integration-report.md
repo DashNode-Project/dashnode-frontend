@@ -216,5 +216,9 @@ Frontend: `/disponibilidad` (pestañas «Mi disponibilidad», «Equipo», «Agen
 
 **Acceptance score (integración):** Pendiente ejecución CI local — código y tests añadidos.
 
+## HU_DN_04_56 … HU_DN_04_61
+
+El cliente llama `GET /projects/{id}/backlog/tree`, `POST .../time-logs`, `PATCH .../status` y `GET /users/me/tasks`. La invitación usa `POST /auth/invitations/decision` y `POST /auth/invitations/activate`. Login verificado en local contra la API en el puerto 8000.
+
 
 
