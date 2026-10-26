@@ -59,6 +59,25 @@ input:-webkit-autofill:focus {
   transform: translateY(0);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease,
+      transform 160ms ease,
+      opacity 160ms ease;
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

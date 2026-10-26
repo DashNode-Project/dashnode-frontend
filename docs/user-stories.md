@@ -764,3 +764,36 @@ Notificaciones: `lib/toast/ToastProvider.tsx` (10 s, esquina inferior derecha); 
 
 **Fecha recepción:** 2026-10-13  
 **Estado:** COMPLETED
+
+---
+
+## EP-06 — Backlog TAR (HU_DN_04_47 … HU_DN_04_55)
+
+Lote Sprint 4 / MVP 2 recibido 2026-10-20. Implementación en rama `feature/ep-06-backlog-tar`.
+
+| ID | Estado |
+|---|---|
+| HU_DN_04_47 | COMPLETED |
+| HU_DN_04_48 | COMPLETED |
+| HU_DN_04_49 | COMPLETED |
+| HU_DN_04_50 | COMPLETED |
+| HU_DN_04_51 | COMPLETED |
+| HU_DN_04_52 | COMPLETED |
+| HU_DN_04_53 | COMPLETED |
+| HU_DN_04_54 | COMPLETED |
+| HU_DN_04_55 | COMPLETED |
+
+## EP-06 — Backlog TAR (HU_DN_04_56 … HU_DN_04_61)
+
+Recibidas 2026-10-20.
+
+| ID | Estado |
+|---|---|
+| HU_DN_04_56 | COMPLETED |
+| HU_DN_04_57 | COMPLETED |
+| HU_DN_04_58 | COMPLETED |
+| HU_DN_04_59 | COMPLETED |
+| HU_DN_04_60 | COMPLETED |
+| HU_DN_04_61 | COMPLETED |
+
+Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-tareas`) e invitación (`/invitacion`).

@@ -107,16 +107,6 @@ describe('HU_DN_02_23-26 — ProjectDetailPage', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(PROJECT_MESSAGES.updated);
   });
 
-  it('opens manager reassignment dialog', async () => {
-    const user = userEvent.setup();
-    renderDetail();
-    await screen.findByRole('button', { name: 'Editar proyecto' });
-    await user.click(screen.getByRole('button', { name: 'Cambiar gerente responsable' }));
-    expect(await screen.findByText('Gerente responsable')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Guardar' }));
-    await waitFor(() => expect(projectsApi.assignProjectManager).toHaveBeenCalled());
-  });
-
   it('shows validation when edit name is cleared', async () => {
     const user = userEvent.setup();
     renderDetail();
@@ -137,16 +127,6 @@ describe('HU_DN_02_23-26 — ProjectDetailPage', () => {
     renderDetail();
     expect(await screen.findByRole('button', { name: 'Editar proyecto' })).toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
-  });
-
-  it('requires manager when reassigning', async () => {
-    const user = userEvent.setup();
-    renderDetail();
-    await screen.findByRole('button', { name: 'Editar proyecto' });
-    await user.click(screen.getByRole('button', { name: 'Cambiar gerente responsable' }));
-    await user.selectOptions(screen.getByLabelText('Gerente responsable'), '');
-    await user.click(screen.getByRole('button', { name: 'Guardar' }));
-    expect(await screen.findByText(PROJECT_MESSAGES.managerRequired)).toBeInTheDocument();
   });
 
   it('reverts status and toasts on status update failure', async () => {

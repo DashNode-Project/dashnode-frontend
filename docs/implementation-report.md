@@ -188,5 +188,28 @@ Validación local:
 - `npm run format:check`: 100% de archivos formateados con Prettier.
 - `vitest run`: 269 tests pasados (35 suites).
 
+---
+
+## EP-06 — Backlog TAR (HU_DN_04_47 … HU_DN_04_55)
+
+**Estado:** COMPLETED (código) / `vitest run`: NOT_RUN local (npm registry TLS en entorno agente)
+
+### Frontend
+- `ProjectBacklogTab` consume API real (`features/backlog/api.ts`).
+- Mensajes de éxito/error literales en `features/backlog/messages.ts` + `lib/messages.ts` (fallo técnico).
+- Validación cliente espejo de servidor (`validation.ts` + tests).
+- `projectWorkspaceTabs.ts`: backlog `implemented: true`.
+
+### Integración
+- Contrato alineado con backend (`EpicCreatedResponse`, árbol `BacklogTreeDTO`).
+- Toasts en operaciones exitosas con textos HU.
+
+## HU_DN_04_56 … HU_DN_04_61
+
+**Estado:** COMPLETED
+**Fecha:** 2026-10-20
+
+Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Invitación pública sin mostrar contraseñas. Atajo Ctrl+Shift+M. Transiciones CSS respetando `prefers-reduced-motion`.
+
 
 

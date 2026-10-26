@@ -11,6 +11,7 @@ const shortcuts = [
   { keys: 'Shift + Tab', action: 'Retroceder entre controles interactivos' },
   { keys: 'Enter', action: 'Activar botón o enlace enfocado' },
   { keys: 'Inicio', action: 'Ir al panel principal de su rol (desde la barra lateral)' },
+  { keys: 'Ctrl + Shift + M', action: 'Abrir Mis tareas' },
 ];
 
 function cell(value: boolean): string {
@@ -26,6 +27,12 @@ export default function UserManualPage() {
       />
 
       <Card className="mb-6 p-6">
+        <h2 className="mb-3 text-lg font-semibold text-[#F9FAFB]">Invitación de desarrollador</h2>
+        <p className="mb-4 text-sm text-[#9CA3AF]">
+          El gerente no recibe ni ve una contraseña. El desarrollador abre el enlace del correo,
+          autoriza o rechaza la cuenta, ingresa el código de 6 dígitos y define su contraseña. La
+          solicitud vence a las 24 horas y puede renovarse hasta tres veces.
+        </p>
         <h2 className="mb-3 text-lg font-semibold text-[#F9FAFB]">Atajos de teclado</h2>
         <p className="mb-4 text-sm text-[#9CA3AF]">
           Estos atajos aceleran tareas frecuentes. En macOS, use{' '}

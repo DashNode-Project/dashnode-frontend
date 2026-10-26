@@ -105,7 +105,6 @@ export interface InviteDeveloperPayload {
 export interface InviteDeveloperResult {
   message: string;
   user_id: string;
-  initial_password: string;
 }
 
 export function inviteDeveloper(payload: InviteDeveloperPayload): Promise<InviteDeveloperResult> {

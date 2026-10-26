@@ -1,11 +1,14 @@
 import { Bell, Bot, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
 import { notifyUnderDevelopment } from '@/lib/underDevelopment';
 import { CommandPalette } from './CommandPalette';
 
 export function HeaderTools() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const closePalette = () => setPaletteOpen(false);
 
@@ -15,10 +18,14 @@ export function HeaderTools() {
         e.preventDefault();
         setPaletteOpen(true);
       }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        navigate(PATHS.myTasks);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [navigate]);
 
   return (
     <>
