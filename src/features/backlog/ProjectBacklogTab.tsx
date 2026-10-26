@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, ChevronRight, Layers, MoreHorizontal, Pencil, Plus, Sparkles } from 'lucide-react';
+import {
+  BookOpen,
+  ChevronRight,
+  Layers,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Sparkles,
+  Target,
+} from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { IconActionButton } from '@/components/ui/IconActionButton';
@@ -13,6 +22,12 @@ import { useProjectWorkspace } from '@/features/projects/ProjectWorkspaceContext
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
+import {
+  assignStoryToSprint,
+  listProjectSprints,
+} from '@/features/sprints/api';
+import { SPRINT_MESSAGES } from '@/features/sprints/messages';
+import type { SprintSummary } from '@/features/sprints/types';
 import {
   createEpic,
   createStoryTask,
@@ -59,6 +74,9 @@ export default function ProjectBacklogTab() {
   const [filterAssignee, setFilterAssignee] = useState('');
   const [expandedEpic, setExpandedEpic] = useState<string | null>(null);
   const [createTaskStoryId, setCreateTaskStoryId] = useState<string | null>(null);
+  const [sprintAssignStory, setSprintAssignStory] = useState<UserStoryDTO | null>(null);
+  const [planningSprints, setPlanningSprints] = useState<SprintSummary[]>([]);
+  const [selectedSprintId, setSelectedSprintId] = useState('');
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
   const isMember = members.some((m) => m.user_id === user?.id);
   const canWorkTasks = canManage || isMember;
@@ -540,12 +558,34 @@ export default function ProjectBacklogTab() {
                                   />
                                 ) : null}
                                 {canManage ? (
-                                  <IconActionButton
-                                    icon={Pencil}
-                                    label="Editar historia"
-                                    tone="neutral"
-                                    onClick={() => openStoryEditor(s)}
-                                  />
+                                  <>
+                                    <IconActionButton
+                                      icon={Target}
+                                      label={SPRINT_MESSAGES.assignHu}
+                                      tone="violet"
+                                      onClick={async () => {
+                                        try {
+                                          const all = await listProjectSprints(project.id);
+                                          setPlanningSprints(
+                                            all.filter(
+                                              (sp) =>
+                                                sp.status === 'PLANNING' || sp.status === 'ACTIVE',
+                                            ),
+                                          );
+                                          setSelectedSprintId('');
+                                          setSprintAssignStory(s);
+                                        } catch (error) {
+                                          notifyError(error);
+                                        }
+                                      }}
+                                    />
+                                    <IconActionButton
+                                      icon={Pencil}
+                                      label="Editar historia"
+                                      tone="neutral"
+                                      onClick={() => openStoryEditor(s)}
+                                    />
+                                  </>
                                 ) : null}
                                 <IconActionButton
                                   icon={BookOpen}
@@ -900,6 +940,64 @@ export default function ProjectBacklogTab() {
           </div>
         </ProjectModal>
       )}
+
+      {sprintAssignStory ? (
+        <ProjectModal
+          title={SPRINT_MESSAGES.assignHu}
+          onClose={() => setSprintAssignStory(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setSprintAssignStory(null)}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={!selectedSprintId || submitting}
+                onClick={() =>
+                  void (async () => {
+                    if (!selectedSprintId) return;
+                    setSubmitting(true);
+                    try {
+                      const res = await assignStoryToSprint(
+                        project.id,
+                        sprintAssignStory.id,
+                        selectedSprintId,
+                      );
+                      showToast(res.message, 'success');
+                      setSprintAssignStory(null);
+                      await reloadBacklog();
+                    } catch (error) {
+                      notifyError(error);
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  })()
+                }
+              >
+                {SPRINT_MESSAGES.assignHu}
+              </Button>
+            </>
+          }
+        >
+          <p className="mb-3 text-sm text-[#9CA3AF]">{sprintAssignStory.title}</p>
+          <label htmlFor="sprint-dest" className="mb-1 block text-sm font-medium">
+            Sprint destino
+          </label>
+          <select
+            id="sprint-dest"
+            className={fieldClass}
+            value={selectedSprintId}
+            onChange={(e) => setSelectedSprintId(e.target.value)}
+          >
+            <option value="">Seleccione un sprint</option>
+            {planningSprints.map((sp) => (
+              <option key={sp.id} value={sp.id}>
+                {sp.name} ({sp.status === 'PLANNING' ? 'Planificado' : 'Activo'}) · {sp.total_points}{' '}
+                pt
+              </option>
+            ))}
+          </select>
+        </ProjectModal>
+      ) : null}
 
     </div>
   );
