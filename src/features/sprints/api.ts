@@ -1,5 +1,11 @@
 import { apiRequest } from '@/lib/api/client';
-import type { CurrentSprintResponse, SprintSummary } from './types';
+import type {
+  CloseSprintPayload,
+  CurrentSprintResponse,
+  SprintBurndownResponse,
+  SprintHistoryResponse,
+  SprintSummary,
+} from './types';
 
 export async function listProjectSprints(projectId: string): Promise<SprintSummary[]> {
   const res = await apiRequest<{ items: SprintSummary[] }>(`/projects/${projectId}/sprints`);
@@ -22,6 +28,28 @@ export async function startSprint(
 
 export async function getCurrentSprint(projectId: string): Promise<CurrentSprintResponse> {
   return apiRequest(`/projects/${projectId}/sprints/current`);
+}
+
+export async function getSprintBurndown(
+  projectId: string,
+  sprintId: string,
+): Promise<SprintBurndownResponse> {
+  return apiRequest(`/projects/${projectId}/sprints/${sprintId}/burndown`);
+}
+
+export async function closeSprint(
+  projectId: string,
+  sprintId: string,
+  body: CloseSprintPayload = {},
+): Promise<{ message: string; status: string; moved_stories_count: number }> {
+  return apiRequest(`/projects/${projectId}/sprints/${sprintId}/close`, {
+    method: 'POST',
+    body,
+  });
+}
+
+export async function getSprintHistory(projectId: string): Promise<SprintHistoryResponse> {
+  return apiRequest(`/projects/${projectId}/sprints/history`);
 }
 
 export async function assignStoryToSprint(

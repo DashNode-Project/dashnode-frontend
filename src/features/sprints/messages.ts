@@ -17,4 +17,12 @@ export const SPRINT_MESSAGES = {
   assignHu: 'Asignar a sprint',
   activeSprintTooltip:
     'Ya existe un sprint activo en este proyecto. Debe finalizarlo antes de iniciar uno nuevo.',
+  finishSprint: 'Finalizar sprint',
+  closeTitle: 'Finalizar sprint',
+  confirmClose: 'Confirmar cierre',
+  moveToBacklog: 'Mover al Backlog general',
+  moveToSprint: 'Mover a sprint planificado',
+  historyTitle: 'Historial de sprints',
+  noHistory: 'No hay sprints finalizados en este proyecto.',
+  metricsSection: 'Métricas del sprint',
 } as const;
