@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { ChevronLeft, ChevronRight, ListTree, Pencil, Plus, Sparkles, Trash2, Wrench } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ListTree,
+  Pencil,
+  Plus,
+  Sparkles,
+  Trash2,
+  Wrench,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { IconActionButton } from '@/components/ui/IconActionButton';
 import { TextField } from '@/components/ui/TextField';
@@ -215,7 +224,10 @@ export default function UserStoryReaderPage() {
 
           {canManage && story.estimation_mode === 'story' ? (
             <div className="mt-5 max-w-xs rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-              <label htmlFor={`points-${story.id}`} className="mb-1 block text-sm font-medium text-violet-200">
+              <label
+                htmlFor={`points-${story.id}`}
+                className="mb-1 block text-sm font-medium text-violet-200"
+              >
                 Puntos de historia
               </label>
               <select
@@ -259,7 +271,8 @@ export default function UserStoryReaderPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-[#F9FAFB]">{task.name}</p>
                     <p className="text-xs text-[#6B7280]">
-                      {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ?? task.task_type}
+                      {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ??
+                        task.task_type}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1 opacity-90 transition group-hover:opacity-100">
@@ -448,8 +461,9 @@ export default function UserStoryReaderPage() {
           projectId={project.id}
           story={taskWorkTarget.story}
           task={
-            tasksForStory(tree, taskWorkTarget.story.id).find((t) => t.id === taskWorkTarget.task.id) ??
-            taskWorkTarget.task
+            tasksForStory(tree, taskWorkTarget.story.id).find(
+              (t) => t.id === taskWorkTarget.task.id,
+            ) ?? taskWorkTarget.task
           }
           members={members}
           memberMap={memberMap}
@@ -479,7 +493,11 @@ export default function UserStoryReaderPage() {
               <Button variant="secondary" onClick={() => setDeleteTaskTarget(null)}>
                 Cancelar
               </Button>
-              <Button variant="danger" disabled={submitting} onClick={() => void confirmDeleteTask()}>
+              <Button
+                variant="danger"
+                disabled={submitting}
+                onClick={() => void confirmDeleteTask()}
+              >
                 Confirmar
               </Button>
             </>

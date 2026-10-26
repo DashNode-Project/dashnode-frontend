@@ -22,10 +22,7 @@ import { useProjectWorkspace } from '@/features/projects/ProjectWorkspaceContext
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
-import {
-  assignStoryToSprint,
-  listProjectSprints,
-} from '@/features/sprints/api';
+import { assignStoryToSprint, listProjectSprints } from '@/features/sprints/api';
 import { SPRINT_MESSAGES } from '@/features/sprints/messages';
 import type { SprintSummary } from '@/features/sprints/types';
 import {
@@ -51,12 +48,14 @@ import {
   visibleProjectMembers,
 } from './backlogHelpers';
 import { MoscowBadge } from './MoscowBadge';
-import type { BacklogTreeDTO, EstimationMode, MoscowPriority, StoryTaskDTO, UserStoryDTO } from './types';
-import {
-  validateEpicForm,
-  validateStoryForm,
-  validateTaskName,
-} from './validation';
+import type {
+  BacklogTreeDTO,
+  EstimationMode,
+  MoscowPriority,
+  StoryTaskDTO,
+  UserStoryDTO,
+} from './types';
+import { validateEpicForm, validateStoryForm, validateTaskName } from './validation';
 
 const fieldClass =
   'w-full rounded-md border border-white/10 bg-[#1E1F2B] p-3 text-sm text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-blue-500 focus:outline-none';
@@ -494,110 +493,109 @@ export default function ProjectBacklogTab() {
                           const points = storyPointsLabel(s, storyTasks);
                           const assignees = assigneeIdsForStory(storyTasks);
                           return (
-                          <tr
-                            key={s.id}
-                            className="border-b border-white/4 last:border-0 transition-colors hover:bg-gradient-to-r hover:from-violet-500/5 hover:to-transparent"
-                          >
-                            <td className="px-4 py-3">
-                              <p className="text-sm font-medium text-[#F9FAFB]">{s.title}</p>
-                              <p className="max-w-md truncate text-xs text-[#6B7280]">{s.reason}</p>
-                            </td>
-                            <td className="hidden px-4 py-3 sm:table-cell">
-                              <MoscowBadge priority={s.moscow_priority} />
-                            </td>
-                            <td className="hidden px-4 py-3 md:table-cell">
-                              {points.value !== null ? (
-                                <span className="rounded bg-violet-500/20 px-2 py-0.5 font-mono text-xs text-violet-300">
-                                  {points.value} pt
-                                </span>
-                              ) : (
-                                <span className="text-xs text-[#6B7280]">—</span>
-                              )}
-                            </td>
-                            <td className="hidden px-4 py-3 lg:table-cell">
-                              {storyTasks.length ? (
-                                <ol className="max-w-[200px] list-decimal space-y-0.5 pl-4 text-xs text-[#9CA3AF]">
-                                  {storyTasks.slice(0, 4).map((t) => (
-                                    <li key={t.id} className="truncate">
-                                      {t.name}
-                                    </li>
-                                  ))}
-                                  {storyTasks.length > 4 ? (
-                                    <li className="list-none pl-0 text-[#6B7280]">
-                                      +{storyTasks.length - 4} más
-                                    </li>
-                                  ) : null}
-                                </ol>
-                              ) : (
-                                <span className="text-xs text-[#6B7280]">Sin tareas</span>
-                              )}
-                            </td>
-                            <td className="hidden px-4 py-3 xl:table-cell">
-                              <div className="flex -space-x-1">
-                                {assignees.length ? (
-                                  assignees.map((id) => (
-                                    <Avatar
-                                      key={id}
-                                      name={memberMap.get(id) ?? '?'}
-                                      size={22}
-                                    />
-                                  ))
+                            <tr
+                              key={s.id}
+                              className="border-b border-white/4 last:border-0 transition-colors hover:bg-gradient-to-r hover:from-violet-500/5 hover:to-transparent"
+                            >
+                              <td className="px-4 py-3">
+                                <p className="text-sm font-medium text-[#F9FAFB]">{s.title}</p>
+                                <p className="max-w-md truncate text-xs text-[#6B7280]">
+                                  {s.reason}
+                                </p>
+                              </td>
+                              <td className="hidden px-4 py-3 sm:table-cell">
+                                <MoscowBadge priority={s.moscow_priority} />
+                              </td>
+                              <td className="hidden px-4 py-3 md:table-cell">
+                                {points.value !== null ? (
+                                  <span className="rounded bg-violet-500/20 px-2 py-0.5 font-mono text-xs text-violet-300">
+                                    {points.value} pt
+                                  </span>
                                 ) : (
                                   <span className="text-xs text-[#6B7280]">—</span>
                                 )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex justify-end gap-1">
-                                {canWorkTasks ? (
+                              </td>
+                              <td className="hidden px-4 py-3 lg:table-cell">
+                                {storyTasks.length ? (
+                                  <ol className="max-w-[200px] list-decimal space-y-0.5 pl-4 text-xs text-[#9CA3AF]">
+                                    {storyTasks.slice(0, 4).map((t) => (
+                                      <li key={t.id} className="truncate">
+                                        {t.name}
+                                      </li>
+                                    ))}
+                                    {storyTasks.length > 4 ? (
+                                      <li className="list-none pl-0 text-[#6B7280]">
+                                        +{storyTasks.length - 4} más
+                                      </li>
+                                    ) : null}
+                                  </ol>
+                                ) : (
+                                  <span className="text-xs text-[#6B7280]">Sin tareas</span>
+                                )}
+                              </td>
+                              <td className="hidden px-4 py-3 xl:table-cell">
+                                <div className="flex -space-x-1">
+                                  {assignees.length ? (
+                                    assignees.map((id) => (
+                                      <Avatar key={id} name={memberMap.get(id) ?? '?'} size={22} />
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-[#6B7280]">—</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex justify-end gap-1">
+                                  {canWorkTasks ? (
+                                    <IconActionButton
+                                      icon={Plus}
+                                      label="Agregar tarea"
+                                      tone="emerald"
+                                      onClick={() => openCreateTaskModal(s.id)}
+                                    />
+                                  ) : null}
+                                  {canManage ? (
+                                    <>
+                                      <IconActionButton
+                                        icon={Target}
+                                        label={SPRINT_MESSAGES.assignHu}
+                                        tone="violet"
+                                        onClick={async () => {
+                                          try {
+                                            const all = await listProjectSprints(project.id);
+                                            setPlanningSprints(
+                                              all.filter(
+                                                (sp) =>
+                                                  sp.status === 'PLANNING' ||
+                                                  sp.status === 'ACTIVE',
+                                              ),
+                                            );
+                                            setSelectedSprintId('');
+                                            setSprintAssignStory(s);
+                                          } catch (error) {
+                                            notifyError(error);
+                                          }
+                                        }}
+                                      />
+                                      <IconActionButton
+                                        icon={Pencil}
+                                        label="Editar historia"
+                                        tone="neutral"
+                                        onClick={() => openStoryEditor(s)}
+                                      />
+                                    </>
+                                  ) : null}
                                   <IconActionButton
-                                    icon={Plus}
-                                    label="Agregar tarea"
-                                    tone="emerald"
-                                    onClick={() => openCreateTaskModal(s.id)}
+                                    icon={BookOpen}
+                                    label="Ver detalle de la historia"
+                                    tone="blue"
+                                    onClick={() =>
+                                      navigate(projectStoryReaderPath(project.id, s.id))
+                                    }
                                   />
-                                ) : null}
-                                {canManage ? (
-                                  <>
-                                    <IconActionButton
-                                      icon={Target}
-                                      label={SPRINT_MESSAGES.assignHu}
-                                      tone="violet"
-                                      onClick={async () => {
-                                        try {
-                                          const all = await listProjectSprints(project.id);
-                                          setPlanningSprints(
-                                            all.filter(
-                                              (sp) =>
-                                                sp.status === 'PLANNING' || sp.status === 'ACTIVE',
-                                            ),
-                                          );
-                                          setSelectedSprintId('');
-                                          setSprintAssignStory(s);
-                                        } catch (error) {
-                                          notifyError(error);
-                                        }
-                                      }}
-                                    />
-                                    <IconActionButton
-                                      icon={Pencil}
-                                      label="Editar historia"
-                                      tone="neutral"
-                                      onClick={() => openStoryEditor(s)}
-                                    />
-                                  </>
-                                ) : null}
-                                <IconActionButton
-                                  icon={BookOpen}
-                                  label="Ver detalle de la historia"
-                                  tone="blue"
-                                  onClick={() =>
-                                    navigate(projectStoryReaderPath(project.id, s.id))
-                                  }
-                                />
-                              </div>
-                            </td>
-                          </tr>
+                                </div>
+                              </td>
+                            </tr>
                           );
                         })}
                       </tbody>
@@ -991,14 +989,13 @@ export default function ProjectBacklogTab() {
             <option value="">Seleccione un sprint</option>
             {planningSprints.map((sp) => (
               <option key={sp.id} value={sp.id}>
-                {sp.name} ({sp.status === 'PLANNING' ? 'Planificado' : 'Activo'}) · {sp.total_points}{' '}
-                pt
+                {sp.name} ({sp.status === 'PLANNING' ? 'Planificado' : 'Activo'}) ·{' '}
+                {sp.total_points} pt
               </option>
             ))}
           </select>
         </ProjectModal>
       ) : null}
-
     </div>
   );
 }

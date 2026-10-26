@@ -48,9 +48,7 @@ export default function ProjectWorkspaceLayout() {
         ]);
         if (!cancelled) {
           setProject(data);
-          setTeamNames(
-            members.filter((m) => m.role !== 'admin').map((m) => m.name),
-          );
+          setTeamNames(members.filter((m) => m.role !== 'admin').map((m) => m.name));
         }
       } catch (error) {
         if (cancelled) return;
