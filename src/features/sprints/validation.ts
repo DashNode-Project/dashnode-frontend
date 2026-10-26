@@ -7,7 +7,9 @@ export interface CreateSprintForm {
   endDate: string;
 }
 
-export function validateCreateSprintForm(form: CreateSprintForm): Partial<Record<keyof CreateSprintForm, string>> {
+export function validateCreateSprintForm(
+  form: CreateSprintForm,
+): Partial<Record<keyof CreateSprintForm, string>> {
   const errors: Partial<Record<keyof CreateSprintForm, string>> = {};
   if (!form.name.trim()) errors.name = SPRINT_MESSAGES.nameRequired;
   else if (form.name.trim().length > 100) errors.name = SPRINT_MESSAGES.nameRequired;

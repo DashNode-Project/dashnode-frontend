@@ -101,3 +101,9 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - Modal «Crear sprint», confirmación de inicio, panel del sprint activo con barra de progreso y métricas.
 - `ProjectBacklogTab`: acción «Asignar a sprint» con selector de sprints en PLANNING/ACTIVE.
 
+## EP-07 — Sprints SPR (HU_DN_05_68 … HU_DN_05_71)
+
+- `SprintBurndownChart.tsx`: gráfico SVG (línea ideal vs. real, leyenda, tooltip por día).
+- `ProjectSprintsTab`: sección métricas (burndown del sprint activo), botón «Finalizar sprint», modal de cierre con destino de HUs pendientes, sección «Historial de sprints» (tarjetas colapsables).
+- API: `getSprintBurndown`, `closeSprint`, `getSprintHistory` en `src/features/sprints/api.ts`.
+

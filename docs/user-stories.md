@@ -797,3 +797,13 @@ Recibidas 2026-10-20.
 | HU_DN_04_61 | COMPLETED |
 
 Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-tareas`) e invitación (`/invitacion`).
+
+## EP-07 — Sprints SPR (HU_DN_05_63 … HU_DN_05_71)
+
+| ID | Estado | UI |
+|---|---|---|
+| HU_DN_05_63 … 67 | COMPLETED | `ProjectSprintsTab`, asignación desde backlog |
+| HU_DN_05_68 | COMPLETED | Burndown en métricas del sprint activo |
+| HU_DN_05_69 | COMPLETED | Modal finalizar sprint |
+| HU_DN_05_70 | COMPLETED | Selector destino HUs incompletas |
+| HU_DN_05_71 | COMPLETED | Historial de sprints cerrados |
