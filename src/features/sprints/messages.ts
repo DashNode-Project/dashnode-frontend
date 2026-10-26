@@ -1,0 +1,20 @@
+export const SPRINT_MESSAGES = {
+  nameRequired: 'El nombre del sprint es obligatorio.',
+  startRequired: 'La fecha de inicio es obligatoria.',
+  endRequired: 'La fecha de fin es obligatoria.',
+  endAfterStart: 'La fecha de fin debe ser posterior a la fecha de inicio.',
+  created: 'Sprint creado correctamente.',
+  assigned: 'Historia asignada al sprint correctamente.',
+  started: 'Sprint iniciado correctamente.',
+  noActive: 'No hay ningún sprint activo en este proyecto.',
+  startConfirmTitle: 'Iniciar sprint',
+  createTitle: 'Crear sprint',
+  save: 'Guardar sprint',
+  cancel: 'Cancelar',
+  confirmStart: 'Confirmar inicio',
+  startSprint: 'Iniciar sprint',
+  createSprint: 'Crear sprint',
+  assignHu: 'Asignar a sprint',
+  activeSprintTooltip:
+    'Ya existe un sprint activo en este proyecto. Debe finalizarlo antes de iniciar uno nuevo.',
+} as const;

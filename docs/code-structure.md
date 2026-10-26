@@ -94,3 +94,10 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - `MyTasksPage` en `/mis-tareas`.
 - `InvitationPage` en `/invitacion` (sin contraseña visible para el gerente).
 
+## EP-07 — Sprints SPR (HU_DN_05_63 … HU_DN_05_67)
+
+- Ruta: `/proyectos/:projectId/sprints` → `ProjectSprintsTab.tsx`.
+- `src/features/sprints/`: `api.ts`, `types.ts`, `messages.ts`, `validation.ts`, `validation.test.ts`.
+- Modal «Crear sprint», confirmación de inicio, panel del sprint activo con barra de progreso y métricas.
+- `ProjectBacklogTab`: acción «Asignar a sprint» con selector de sprints en PLANNING/ACTIVE.
+
