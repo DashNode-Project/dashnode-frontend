@@ -35,6 +35,7 @@ const ProjectTeamTab = lazy(() => import('@/features/projects/ProjectTeamTab'));
 const ProjectBacklogTab = lazy(() => import('@/features/backlog/ProjectBacklogTab'));
 const UserStoryReaderPage = lazy(() => import('@/features/backlog/UserStoryReaderPage'));
 const ProjectSprintsTab = lazy(() => import('@/features/sprints/ProjectSprintsTab'));
+const ProjectKanbanTab = lazy(() => import('@/features/kanban/ProjectKanbanTab'));
 
 function PageLoading() {
   return (
@@ -87,6 +88,7 @@ export function AppRoutes() {
                         <Route path="backlog/leer" element={<UserStoryReaderPage />} />
                         <Route path="backlog/leer/:storyId" element={<UserStoryReaderPage />} />
                         <Route path="sprints" element={<ProjectSprintsTab />} />
+                        <Route path="kanban" element={<ProjectKanbanTab />} />
                         <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
                       </Route>
                     </Route>

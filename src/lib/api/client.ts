@@ -2,7 +2,7 @@ import { env } from '@/config/env';
 import { ApiError, NetworkError, parseErrorBody } from './errors';
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   signal?: AbortSignal;
 }
