@@ -1,0 +1,21 @@
+export const DOCUMENTATION_MESSAGES = {
+  TITLE_REQUIRED: 'El título es obligatorio.',
+  TITLE_TOO_LONG: 'El título no puede exceder 100 caracteres.',
+  CATEGORY_REQUIRED: 'Seleccione una categoría.',
+  INVALID_URL: 'El enlace no tiene un formato de URL válido.',
+  CONTENT_OR_URL_REQUIRED: 'Ingrese contenido o un enlace externo.',
+  EXTERNAL_RESOURCE_NOTICE:
+    'La visibilidad en DashNode no controla los permisos del recurso externo.',
+  ENTRY_CREATED: 'Entrada registrada correctamente. Quedó pendiente de aprobación.',
+  ENTRY_UPDATED: 'Entrada actualizada correctamente.',
+  ENTRY_DELETED: 'Entrada eliminada correctamente.',
+  NO_ENTRIES: 'No hay entradas de documentación.',
+  ENTRY_ACCESS_DENIED: 'No tiene acceso a esta entrada.',
+  ENTRY_NOT_FOUND: 'Entrada de documentación no encontrada.',
+  PROJECT_NOT_FOUND: 'Proyecto no encontrado.',
+  LOAD_ERROR: 'No fue posible cargar la información. Intente nuevamente.',
+  GENERIC_ERROR: 'No fue posible completar la operación. Intente nuevamente.',
+  DELETE_CONFIRMATION: '¿Está seguro de que desea eliminar esta entrada?',
+  STATUS_RESET_NOTICE:
+    'Al editar una entrada aprobada, su estado volverá a Pendiente para nueva revisión.',
+} as const;

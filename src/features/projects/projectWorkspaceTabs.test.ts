@@ -14,4 +14,10 @@ describe('projectWorkspaceTabs', () => {
       PROJECT_WORKSPACE_TABS.filter((t) => t.roles.includes('manager')).length,
     );
   });
+
+  it('marks conocimiento tab as implemented', () => {
+    const tab = PROJECT_WORKSPACE_TABS.find((t) => t.segment === 'conocimiento');
+    expect(tab).toBeDefined();
+    expect(tab?.implemented).toBe(true);
+  });
 });

@@ -66,7 +66,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'conocimiento',
     label: 'Conocimiento',
     roles: ['admin', 'manager', 'developer'],
-    implemented: false,
+    implemented: true,
   },
   {
     segment: 'devops',
