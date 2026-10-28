@@ -277,4 +277,3 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
   - `scan-secrets`: 188 archivos inspeccionados limpios.
 
 
-

@@ -276,4 +276,3 @@ Proxy `/api` → backend. Pestaña `/proyectos/:id/sprints`:
 | Frontend | `scan-secrets.mjs` | 0 secretos en 188 archivos inspeccionados | APROBADO |
 
 
-
