@@ -42,7 +42,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'sprints',
     label: 'Sprints',
     roles: ['admin', 'manager', 'developer'],
-    implemented: false,
+    implemented: true,
   },
   {
     segment: 'kanban',

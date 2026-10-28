@@ -94,3 +94,16 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - `MyTasksPage` en `/mis-tareas`.
 - `InvitationPage` en `/invitacion` (sin contraseña visible para el gerente).
 
+## EP-07 — Sprints SPR (HU_DN_05_63 … HU_DN_05_67)
+
+- Ruta: `/proyectos/:projectId/sprints` → `ProjectSprintsTab.tsx`.
+- `src/features/sprints/`: `api.ts`, `types.ts`, `messages.ts`, `validation.ts`, `validation.test.ts`.
+- Modal «Crear sprint», confirmación de inicio, panel del sprint activo con barra de progreso y métricas.
+- `ProjectBacklogTab`: acción «Asignar a sprint» con selector de sprints en PLANNING/ACTIVE.
+
+## EP-07 — Sprints SPR (HU_DN_05_68 … HU_DN_05_71)
+
+- `SprintBurndownChart.tsx`: gráfico SVG (línea ideal vs. real, leyenda, tooltip por día).
+- `ProjectSprintsTab`: sección métricas (burndown del sprint activo), botón «Finalizar sprint», modal de cierre con destino de HUs pendientes, sección «Historial de sprints» (tarjetas colapsables).
+- API: `getSprintBurndown`, `closeSprint`, `getSprintHistory` en `src/features/sprints/api.ts`.
+

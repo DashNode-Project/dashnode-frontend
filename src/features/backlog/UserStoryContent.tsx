@@ -36,7 +36,13 @@ export function UserStoryContent({
             Modo: {story.estimation_mode === 'task' ? 'por tarea' : 'por historia'}
           </span>
         </div>
-        <h2 className={compact ? 'text-lg font-semibold text-[#F9FAFB]' : 'text-xl font-semibold text-[#F9FAFB]'}>
+        <h2
+          className={
+            compact
+              ? 'text-lg font-semibold text-[#F9FAFB]'
+              : 'text-xl font-semibold text-[#F9FAFB]'
+          }
+        >
           {story.title}
         </h2>
       </header>
@@ -73,7 +79,8 @@ export function UserStoryContent({
               >
                 <p className="font-medium text-[#F9FAFB]">{task.name}</p>
                 <p className="text-xs text-[#6B7280]">
-                  {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ?? task.task_type}
+                  {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ??
+                    task.task_type}
                   {task.estimated_hours ? ` · ${task.estimated_hours} h est.` : ''}
                   {task.logged_hours ? ` · ${task.logged_hours} h registradas` : ''}
                   {story.estimation_mode === 'task' && task.story_points
@@ -83,7 +90,9 @@ export function UserStoryContent({
                 {task.assignee_id && memberMap.get(task.assignee_id) ? (
                   <div className="mt-1 flex items-center gap-1.5">
                     <Avatar name={memberMap.get(task.assignee_id)!} size={18} />
-                    <span className="text-xs text-[#9CA3AF]">{memberMap.get(task.assignee_id)}</span>
+                    <span className="text-xs text-[#9CA3AF]">
+                      {memberMap.get(task.assignee_id)}
+                    </span>
                   </div>
                 ) : null}
               </li>
@@ -96,5 +105,7 @@ export function UserStoryContent({
 }
 
 export function estimationModeLabel(mode: EstimationMode): string {
-  return mode === 'task' ? 'Estimar por tarea (puntos en cada tarea)' : 'Estimar en la historia (puntos únicos)';
+  return mode === 'task'
+    ? 'Estimar por tarea (puntos en cada tarea)'
+    : 'Estimar en la historia (puntos únicos)';
 }

@@ -211,5 +211,24 @@ Validación local:
 
 Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Invitación pública sin mostrar contraseñas. Atajo Ctrl+Shift+M. Transiciones CSS respetando `prefers-reduced-motion`.
 
+---
+
+## EP-07 — Sprints SPR (HU_DN_05_68 … HU_DN_05_71)
+
+**Estado:** COMPLETED
+
+### HU_DN_05_68
+- `SprintBurndownChart.tsx`: SVG con línea ideal (discontinua) y real, leyenda y tooltip por día.
+- Carga con `getSprintBurndown` al detectar sprint activo en `ProjectSprintsTab`.
+
+### HU_DN_05_69 / HU_DN_05_70
+- Botón «Finalizar sprint» (Admin/Gerente) en sprint activo.
+- Modal con resumen de puntos completados/pendientes, radio backlog vs. sprint planificado, `closeSprint`.
+
+### HU_DN_05_71
+- Sección «Historial de sprints» con tarjetas colapsables (`getSprintHistory`).
+
+### Estabilidad QA
+- `vite.config.ts`: `test.fileParallelism: false` evita condiciones de carrera en mocks HTTP entre archivos Vitest.
 
 

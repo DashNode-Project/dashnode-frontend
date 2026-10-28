@@ -220,5 +220,18 @@ Frontend: `/disponibilidad` (pestañas «Mi disponibilidad», «Equipo», «Agen
 
 El cliente llama `GET /projects/{id}/backlog/tree`, `POST .../time-logs`, `PATCH .../status` y `GET /users/me/tasks`. La invitación usa `POST /auth/invitations/decision` y `POST /auth/invitations/activate`. Login verificado en local contra la API en el puerto 8000.
 
+---
+
+## EP-07 — Sprints SPR (HU_DN_05_68 … HU_DN_05_71)
+
+Proxy `/api` → backend. Pestaña `/proyectos/:id/sprints`:
+
+| HU | Cliente | Mensajes |
+|---|---|---|
+| 68 | `getSprintBurndown` | Fallo carga → `MESSAGES.loadFailure` |
+| 69–70 | `closeSprint` | Éxito servidor; técnico → `MESSAGES.technicalFailure` |
+| 71 | `getSprintHistory` | Vacío → literal backend o `SPRINT_MESSAGES.noHistory` |
+
+**Evidencia:** `npm run check` (285 tests Vitest).
 
 

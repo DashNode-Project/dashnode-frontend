@@ -171,9 +171,7 @@ export function TaskWorkModal({
                 className={`${fieldClass} mt-1`}
                 value={task.status}
                 disabled={submitting || task.status === 'CORRECTION'}
-                title={
-                  task.status === 'CORRECTION' ? BACKLOG_MESSAGES.correctionLocked : undefined
-                }
+                title={task.status === 'CORRECTION' ? BACKLOG_MESSAGES.correctionLocked : undefined}
                 onChange={(event) => {
                   const next = event.target.value;
                   if (next === 'CORRECTION') return;
