@@ -117,3 +117,17 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `ProjectKanbanTab.tsx`: Tablero Kanban interactivo con 6 columnas estándar, drag & drop HTML5 y menú de movimiento, badges de bloqueo y dependencias, filtro de tareas y gestión de límites WIP (soft-limit)
   - `KanbanBoard.test.tsx`: suite de pruebas para HU_DN_05_72 .. 76
 
+## EP-09 — Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_81)
+
+- Ruta: `/proyectos/:projectId/conocimiento` → `ProjectKnowledgeTab.tsx` (pestaña Conocimiento implementada en `projectWorkspaceTabs.ts`).
+- `src/features/documentation/`:
+  - `types.ts`: `DocumentationEntry`, `DocumentationCategory`, `DocumentationApprovalStatus`, payloads
+  - `messages.ts`: literales de negocio y notificaciones alineados con el backend
+  - `api.ts`: clientes para listado, creación, edición, eliminación y consulta directa
+  - `components/DocumentationModal.tsx`: modal para registro y edición de entradas con validaciones de título, categoría, contenido/URL, aviso RN-DOC-03 y aviso de cambio de estado a PENDING en edición de entradas aprobadas
+  - `components/DeleteDocumentationModal.tsx`: diálogo de confirmación con mensaje literal exacto
+  - `components/DocumentationDetailModal.tsx`: vista detallada accesible con enlaces externos seguros y acciones de edición/eliminación
+  - `ProjectKnowledgeTab.tsx`: vista de la base de conocimiento con barra de búsqueda, filtros por categoría y estado de aprobación, soporte para entradas ancladas, badges de color y empty states
+  - `ProjectKnowledgeTab.test.tsx` y `api.test.ts`: suite completa de pruebas unitarias y de integración
+
+

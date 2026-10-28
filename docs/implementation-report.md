@@ -276,5 +276,50 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
   - `npm run test:coverage`: 310 pruebas pasadas en 40 suites; cobertura global de funciones 79.61% (umbral 78%), líneas 86.28%, sentencias 83.09%.
   - `scan-secrets`: 188 archivos inspeccionados limpios.
 
+---
+
+## Épica 09: Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_81)
+
+**Estado:** COMPLETED | **Rama:** `feature/ep-09-documentation-doc`
+
+### Análisis del Orquestador
+- **Clasificación global:** FULL_STACK (Lote de 5 HUs)
+- **Modo del proyecto:** EXTEND_EXISTING
+- **Complejidad:** MODERATE (score: 75/100)
+- **Componentes Frontend:**
+  - `ProjectKnowledgeTab.tsx`: Tablero de base de conocimiento integrado en `/proyectos/:projectId/conocimiento`.
+  - Pestaña "Conocimiento" activada (`implemented: true`) en `projectWorkspaceTabs.ts`.
+  - Grid responsivo de tarjetas con badges de categoría y estado (`Aprobada`, `Pendiente`, `Rechazada`).
+  - Entradas ancladas (`is_pinned: true`) mostradas de forma prioritaria y destacada.
+  - Modales: `DocumentationModal` (creación y edición con aviso RN-DOC-03 y aviso de reinicio de estado para entradas aprobadas), `DeleteDocumentationModal` (confirmación de borrado lógico con mensaje literal exacto), `DocumentationDetailModal` (vista completa sin truncamiento y enlaces externos seguros).
+  - Barra de búsqueda y filtros dinámicos por categoría y estado de aprobación.
+  - Control de acceso por rol: visibilidad de botones editar/eliminar según `can_edit` y `can_delete`.
+
+### Implementación Frontend
+- **Módulo Documentation (`src/features/documentation/`):**
+  - `types.ts`: Tipos estrictos para `DocumentationEntry`, `DocumentationCategory`, `DocumentationApprovalStatus`, y payloads.
+  - `messages.ts`: Mensajes literales exigidos por los criterios de aceptación.
+  - `api.ts`: Cliente HTTP para listado, creación, actualización, eliminación y consulta directa.
+  - `components/DocumentationModal.tsx`: Modal con validaciones de formulario, límite de 100 caracteres en título, contenido o enlace obligatorio, aviso explicativo de recurso externo (RN-DOC-03) y aviso de estado pendiente al editar aprobadas.
+  - `components/DeleteDocumentationModal.tsx`: Diálogo accesible con mensaje literal exacto: `'¿Está seguro de que desea eliminar esta entrada?'`.
+  - `components/DocumentationDetailModal.tsx`: Modal de detalle con fechas formateadas, tags, contenido extendido y enlace externo seguro.
+  - `ProjectKnowledgeTab.tsx`: Componente de pestaña con estados de carga, error 403, listado de tarjetas y empty state con mensaje literal.
+- **Rutas y Navegación:**
+  - `src/features/projects/projectWorkspaceTabs.ts`: Tab `conocimiento` marcado como `implemented: true`.
+  - `src/app/App.tsx`: Registro de la ruta `<Route path="conocimiento" element={<ProjectKnowledgeTab />} />`.
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias y de integración:**
+  - `src/features/documentation/ProjectKnowledgeTab.test.tsx`: 7 pruebas completas que validan listado con entradas ancladas, empty state, creación con aviso de recurso externo, edición con aviso de reinicio de estado, eliminación con diálogo exacto, manejo de error 403 y filtros combinados.
+  - `src/features/documentation/api.test.ts`: 5 pruebas unitarias cubriendo todos los métodos del cliente API.
+  - `src/features/projects/projectWorkspaceTabs.test.ts`: Verificación de que el tab `conocimiento` está implementado.
+- **Quality Gates Aprobados:**
+  - `npm run typecheck`: 0 errores TypeScript.
+  - `npm run lint`: 0 advertencias / 0 errores ESLint.
+  - `npm run format:check`: 100% de archivos formateados con Prettier.
+  - `npm run test:coverage`: Cobertura global de funciones > 78%, líneas > 85%.
+  - `scan-secrets`: 197 archivos inspeccionados limpios.
+
+
 
 
