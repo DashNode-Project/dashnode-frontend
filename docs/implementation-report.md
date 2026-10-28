@@ -231,4 +231,50 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 ### Estabilidad QA
 - `vite.config.ts`: `test.fileParallelism: false` evita condiciones de carrera en mocks HTTP entre archivos Vitest.
 
+---
+
+## EP-08 — Tablero Kanban (HU_DN_05_72 … HU_DN_05_76)
+
+**Estado:** COMPLETED | **Rama:** `feature/ep-08-kanban-kan`
+
+### Análisis del Orquestador
+- **Clasificación global:** FULL_STACK (Lote de 5 HUs)
+- **Modo del proyecto:** EXTEND_EXISTING
+- **Complejidad:** MODERATE (score: 65/100)
+- **Componentes Frontend:**
+  - `ProjectKanbanTab.tsx`: Tablero Kanban completo integrado en `/proyectos/:projectId/kanban`.
+  - 6 columnas estándar (`TODO`, `IN_PROGRESS`, `CODE_REVIEW`, `TESTING`, `CORRECTION`, `DONE`).
+  - Arrastre HTML5 y menú de cambio de estado ("Mover a..."). Rollback visual si la API rechaza el movimiento.
+  - Indicador de límite WIP en cabeceras con advertencia (`Límite WIP superado ([Actual]/[Límite])`). Modal de configuración para Admin/Gerente.
+  - Barra de 4 filtros (texto, responsable, historia de usuario, tipo de tarea) con aviso ante falta de coincidencias.
+  - Insignia visual de bloqueo/dependencia en la tarjeta con popover/tooltip informativo.
+  - Filtro por rol: Desarrollador solo visualiza y mueve sus propias tarjetas asignadas.
+
+### Implementación Frontend
+- **Módulo Kanban (`src/features/kanban/`):**
+  - `types.ts`: Tipos estrictos para columnas, tarjetas, filtros, respuestas de tablero y configuraciones de columnas con colores alineados a `demo/`.
+  - `messages.ts`: Mensajes literales exigidos por criterios de aceptación.
+  - `api.ts`: Cliente HTTP para tablero (`GET /projects/{id}/kanban`), límites WIP (`PUT /projects/{id}/kanban/columns/{col}/wip`), cambios de estado (`PATCH /projects/{id}/tasks/{taskId}/status`) y bloqueos (`PATCH /projects/{id}/tasks/{taskId}/block`).
+  - `components/KanbanCard.tsx`: Tarjeta con badges de tipo, bloqueo/dependencia en esquina, avatar del asignado, historia de usuario padre, barra de progreso horas estimadas vs trabajadas, menú accesible "Mover a...".
+  - `components/KanbanFilterBar.tsx`: Barra superior con búsqueda por texto libre, selector de responsable, selector de historia del sprint y tipo de tarea, con contador dinámico y botón de limpieza.
+  - `components/WipLimitModal.tsx`: Modal accesible para configuración de límite WIP (entero positivo o "Sin límite").
+  - `components/TaskBlockModal.tsx`: Modal para reporte y resolución de impedimentos o dependencias con predecesoras.
+  - `ProjectKanbanTab.tsx`: Componente principal del tablero con drag and drop HTML5 nativo, advertencia soft-limit en cabecera de columna, estados vacíos y manejo de errores.
+- **Rutas y Navegación:**
+  - `src/features/projects/projectWorkspaceTabs.ts`: Tab `kanban` marcado como `implemented: true`.
+  - `src/app/App.tsx`: Registro de la ruta `<Route path="kanban" element={<ProjectKanbanTab />} />`.
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias y de integración:**
+  - `src/features/kanban/ProjectKanbanTab.test.tsx`: 13 pruebas que validan los criterios de aceptación de HU_DN_05_72 a 76 (columnas, drag and drop, menú "Mover a...", restricciones de rol y columna Corrección, advertencia soft-limit WIP, filtros dinámicos, insignia de bloqueo y rollback visual).
+  - `src/features/kanban/api.test.ts`: 4 pruebas unitarias que cubren los métodos del cliente API.
+  - `src/features/projects/ProjectModulePlaceholder.test.tsx`: Actualizado para verificar módulo en desarrollo sobre tab `issues`.
+- **Quality Gates Aprobados:**
+  - `npm run typecheck`: 0 errores TypeScript.
+  - `npm run lint`: 0 advertencias / 0 errores ESLint.
+  - `npm run format:check`: 100% de archivos formateados con Prettier.
+  - `npm run test:coverage`: 310 pruebas pasadas en 40 suites; cobertura global de funciones 79.61% (umbral 78%), líneas 86.28%, sentencias 83.09%.
+  - `scan-secrets`: 188 archivos inspeccionados limpios.
+
+
 

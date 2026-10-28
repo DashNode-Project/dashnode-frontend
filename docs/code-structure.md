@@ -107,3 +107,13 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - `ProjectSprintsTab`: sección métricas (burndown del sprint activo), botón «Finalizar sprint», modal de cierre con destino de HUs pendientes, sección «Historial de sprints» (tarjetas colapsables).
 - API: `getSprintBurndown`, `closeSprint`, `getSprintHistory` en `src/features/sprints/api.ts`.
 
+## EP-08 — Tablero Kanban (HU_DN_05_72 … HU_DN_05_76)
+
+- Ruta: `/proyectos/:projectId/kanban` → `ProjectKanbanTab.tsx` (pestaña Kanban implementada).
+- `src/features/kanban/`:
+  - `api.ts`: `getKanbanBoard`, `updateColumnWipLimit`, `moveKanbanTaskStatus`, `updateTaskBlockage`
+  - `types.ts`: `KanbanBoardData`, `KanbanColumn`, `KanbanCard`, `KanbanFilters`
+  - `messages.ts`: literales de Kanban (advertencia WIP, rollback, filtros vacíos, sin sprint activo)
+  - `ProjectKanbanTab.tsx`: Tablero Kanban interactivo con 6 columnas estándar, drag & drop HTML5 y menú de movimiento, badges de bloqueo y dependencias, filtro de tareas y gestión de límites WIP (soft-limit)
+  - `KanbanBoard.test.tsx`: suite de pruebas para HU_DN_05_72 .. 76
+
