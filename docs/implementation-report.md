@@ -308,7 +308,7 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
   - `src/features/projects/projectWorkspaceTabs.ts`: Tab `conocimiento` marcado como `implemented: true`.
   - `src/app/App.tsx`: Registro de la ruta `<Route path="conocimiento" element={<ProjectKnowledgeTab />} />`.
 
-### Pruebas y Quality Gates Frontend
+### Pruebas y Quality Gates Frontend (Lote 1: HU_DN_06_77 … HU_DN_06_81)
 - **Pruebas unitarias y de integración:**
   - `src/features/documentation/ProjectKnowledgeTab.test.tsx`: 7 pruebas completas que validan listado con entradas ancladas, empty state, creación con aviso de recurso externo, edición con aviso de reinicio de estado, eliminación con diálogo exacto, manejo de error 403 y filtros combinados.
   - `src/features/documentation/api.test.ts`: 5 pruebas unitarias cubriendo todos los métodos del cliente API.
@@ -319,6 +319,42 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
   - `npm run format:check`: 100% de archivos formateados con Prettier.
   - `npm run test:coverage`: Cobertura global de funciones > 78%, líneas > 85%.
   - `scan-secrets`: 197 archivos inspeccionados limpios.
+
+---
+
+## Épica 09: Aprobación y visibilidad de documentación (HU_DN_06_82 … HU_DN_06_86)
+
+**Estado:** COMPLETED | **Rama:** `feature/ep-09-documentation-doc`
+
+### Análisis del Orquestador
+- **Clasificación global:** FULL_STACK (Lote 2 de 5 HUs)
+- **Modo del proyecto:** EXTEND_EXISTING
+- **Complejidad:** MODERATE (score: 80/100)
+- **Componentes Frontend:**
+  - `ProjectKnowledgeTab.tsx`: Subpestañas "Base de conocimiento" y "Cola de aprobación" (con badge de conteo para Admin/Gerente), conmutador interactivo "Visible para devs" / "Oculto para devs" (`HU_DN_06_82`), botón "Reenviar a aprobación" para autores en tarjetas rechazadas (`HU_DN_06_86`).
+  - `components/ApprovalQueueView.tsx`: Vista dedicada de la cola de aprobación (`HU_DN_06_83`), con control de acceso 403, botón "Aprobar" con prevención de auto-aprobación RN-DOC-01 (`HU_DN_06_84`) y botón "Rechazar" (`HU_DN_06_85`).
+  - `components/RejectDocumentationModal.tsx`: Diálogo modal para registrar feedback opcional en el rechazo de entradas pendientes (`HU_DN_06_85`).
+  - `components/DocumentationModal.tsx`: Soporte para modo `resubmit`, con visualización del motivo de rechazo previo y acción "Reenviar a aprobación".
+  - `components/DocumentationDetailModal.tsx`: Despliegue de observaciones de rechazo previo cuando la entrada está en estado `REJECTED`.
+
+### Implementación Frontend
+- **Módulo Documentation (`src/features/documentation/`):**
+  - `types.ts`: Extendido con `is_visible_to_devs`, `rejection_reason`, payloads de visibilidad, rechazo y reenvío.
+  - `messages.ts`: Literales `VISIBILITY_UPDATED`, `VISIBILITY_APPROVED_ONLY`, `NO_PENDING_ENTRIES`, `CANNOT_APPROVE_OWN_ENTRY`, `ENTRY_APPROVED`, `ENTRY_REJECTED`, `ENTRY_RESUBMITTED`, `ONLY_REJECTED_CAN_BE_RESUBMITTED`.
+  - `api.ts`: Métodos `toggleDocumentationVisibility`, `listPendingApprovals`, `approveDocumentationEntry`, `rejectDocumentationEntry`, `resubmitDocumentationEntry`.
+  - `components/ApprovalQueueView.tsx`: Manejo de estado asíncrono, permisos por rol, listado de entradas pendientes y acciones directas.
+  - `components/RejectDocumentationModal.tsx`: Captura de feedback opcional y confirmación destructiva.
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias y de integración:**
+  - `src/features/documentation/ProjectKnowledgeTab.test.tsx`: 13 pruebas que cubren exhaustivamente las 10 HUs de la épica (incluyendo visibilidad para desarrolladores HU 82, cola de aprobación y empty state HU 83, aprobación y auto-aprobación bloqueada HU 84, rechazo con feedback HU 85, reenvío con observaciones HU 86).
+  - `src/features/documentation/api.test.ts`: 10 pruebas unitarias para todos los endpoints del módulo.
+- **Quality Gates Aprobados:**
+  - `npm run typecheck`: 0 errores TypeScript.
+  - `npm run lint`: 0 advertencias / 0 errores ESLint.
+  - `npm run format:check`: 100% de archivos formateados con Prettier.
+  - `npm run test:coverage`: Cobertura global de statements 81.3%, líneas 84.25%.
+
 
 
 

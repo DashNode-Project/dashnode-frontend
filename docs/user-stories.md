@@ -1005,7 +1005,99 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 
 ---
 
-## Estado de implementación — EP-09 Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_81)
+### HU_DN_06_82 — Control de visibilidad de documentación para desarrolladores
+**Como** Administrador o Gerente  
+**Quiero** Alternar la visibilidad de una entrada de documentación aprobada para los desarrolladores  
+**Para** controlar qué información aprobada está disponible para el equipo de desarrollo
+
+**Criterios de aceptación:**
+1. Dónde: Pestaña “Conocimiento” del proyecto, conmutador de visibilidad en la tarjeta de entrada aprobada.
+2. Campos: Interruptor/conmutador “Visible para desarrolladores” (activo/inactivo).
+3. Validación: Solo se puede alternar la visibilidad de entradas en estado Aprobada (`APPROVED`).
+4. Restricción: Solo Administrador y Gerente pueden modificar la visibilidad. Una entrada no aprobada no puede ser visible para desarrolladores (`is_visible_to_devs = False`). El cambio genera trazabilidad en registro de auditoría (`audit_logs`, RNF-SEG-07).
+5. Éxito: Se muestra 'Visibilidad actualizada correctamente.' y el estado visual se actualiza de inmediato.
+6. Fallo: Si la entrada no está aprobada, se rechaza con 'Solo se puede cambiar la visibilidad de entradas aprobadas.' Ante error técnico: 'No fue posible completar la operación. Intente nuevamente.'
+
+**Fecha recepción:** 2026-10-28  
+**Estado:** COMPLETED
+
+---
+
+### HU_DN_06_83 — Visualización de cola de aprobación de documentación
+**Como** Administrador o Gerente  
+**Quiero** Consultar la cola de entradas de documentación pendientes de aprobación  
+**Para** revisar y gestionar las solicitudes de documentación enviadas por el equipo
+
+**Criterios de aceptación:**
+1. Dónde: Pestaña “Cola de aprobación” en la sección de Conocimiento del proyecto.
+2. Campos: Lista de entradas pendientes con: título, autor, categoría, fecha de creación y acciones directas (Aprobar, Rechazar).
+3. Validación: Si no hay entradas pendientes, se muestra el estado vacío: 'No hay entradas pendientes de aprobación.'
+4. Restricción: Si un Desarrollador intenta acceder a la cola, el servidor deniega el acceso con HTTP 403 Forbidden.
+5. Éxito: Se listan todas las entradas en estado `PENDING` del proyecto con contador visual.
+6. Fallo técnico: Ante un error de conexión se muestra 'No fue posible cargar la información. Intente nuevamente.'
+
+**Fecha recepción:** 2026-10-28  
+**Estado:** COMPLETED
+
+---
+
+### HU_DN_06_84 — Aprobación de entrada de documentación
+**Como** Administrador o Gerente  
+**Quiero** Aprobar una entrada de documentación pendiente  
+**Para** validar su contenido y ponerla a disposición del proyecto
+
+**Criterios de aceptación:**
+1. Dónde: Cola de aprobación de documentación, botón “Aprobar” de la entrada.
+2. Campos: Acción directa (sin formulario adicional requerido).
+3. Validación: Solo se pueden procesar entradas en estado Pendiente (`PENDING`).
+4. Restricción (RN-DOC-01): Si el usuario que intenta aprobar es el mismo autor de la entrada, la acción se deshabilita y se muestra 'No puede aprobar su propia entrada.' (también validado en backend con 403 Forbidden).
+5. Éxito: Se muestra 'Entrada aprobada correctamente.', el estado pasa a `APPROVED`, `is_visible_to_devs` queda habilitado por defecto y la entrada sale de la cola de aprobación. Registra trazabilidad en `audit_logs` (RNF-SEG-07).
+6. Fallo técnico: Ante un error no anticipado se muestra 'No fue posible completar la operación. Intente nuevamente.'
+
+**Fecha recepción:** 2026-10-28  
+**Estado:** COMPLETED
+
+---
+
+### HU_DN_06_85 — Rechazo de entrada de documentación con retroalimentación
+**Como** Administrador o Gerente  
+**Quiero** Rechazar una entrada de documentación pendiente indicando observaciones  
+**Para** que el autor conozca los motivos del rechazo y realice las correcciones necesarias
+
+**Criterios de aceptación:**
+1. Dónde: Cola de aprobación de documentación, botón “Rechazar” de la entrada.
+2. Campos: Modal con:
+   2.1 Campo de texto multilínea “Motivo de rechazo (opcional)”.
+   2.2 Botón “Confirmar rechazo” y botón “Cancelar”.
+3. Validación: Solo se pueden rechazar entradas en estado Pendiente (`PENDING`).
+4. Restricción: Solo Administrador y Gerente pueden rechazar. La entrada pasa a `REJECTED`, sale de la cola de aprobación y se oculta para otros desarrolladores. El autor conserva acceso exclusivo para consultar el motivo, editarla y reenviarla. Registra auditoría (RNF-SEG-07).
+5. Éxito: Se muestra 'Entrada rechazada correctamente.'
+6. Fallo técnico: Ante un error no anticipado se muestra 'No fue posible completar la operación. Intente nuevamente.'
+
+**Fecha recepción:** 2026-10-28  
+**Estado:** COMPLETED
+
+---
+
+### HU_DN_06_86 — Reenvío de entrada rechazada a nueva revisión
+**Como** Desarrollador, Gerente o Administrador (autor de la entrada rechazada)  
+**Quiero** Reenviar una entrada de documentación rechazada a aprobación tras realizar ajustes  
+**Para** que sea nuevamente revisada por el Administrador o Gerente
+
+**Criterios de aceptación:**
+1. Dónde: Tarjeta de entrada en estado Rechazada (`REJECTED`) en la base de conocimiento o modal de edición.
+2. Campos: El formulario muestra el motivo de rechazo previo como referencia y permite actualizar título, categoría, objetivo, contenido o recurso externo. Botón “Reenviar a aprobación”.
+3. Validación: Solo se pueden reenviar entradas en estado Rechazada (si no: 'Solo se pueden reenviar entradas rechazadas.').
+4. Restricción: Solo el autor original de la entrada puede reenviarla. Al confirmar el reenvío, el estado cambia a Pendiente (`PENDING`), `is_visible_to_devs` se mantiene activo para el ciclo de revisión, y reaparece en la cola de aprobación.
+5. Éxito: Se muestra 'Entrada reenviada a aprobación.'
+6. Fallo técnico: Ante un error no anticipado se muestra 'No fue posible completar la operación. Intente nuevamente.'
+
+**Fecha recepción:** 2026-10-28  
+**Estado:** COMPLETED
+
+---
+
+## Estado de implementación — EP-09 Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_86)
 
 | HU | Estado | Evidencia |
 | --- | --- | --- |
@@ -1014,3 +1106,8 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 | HU_DN_06_79 | Implementado | Botón eliminar visible según `can_delete` (solo Admin/Gerente), modal de confirmación `DeleteDocumentationModal` con texto literal exacto, borrado lógico, toast `ENTRY_DELETED`. Tests: `ProjectKnowledgeTab.test.tsx`. |
 | HU_DN_06_80 | Implementado | Pestaña `ProjectKnowledgeTab` en espacio de trabajo (`/proyectos/:projectId/conocimiento`), entradas ancladas con badge "Anclado" al inicio, filtros de búsqueda/categoría/estado, estado vacío con mensaje literal. Tests: `ProjectKnowledgeTab.test.tsx`. |
 | HU_DN_06_81 | Implementado | Manejo de rechazo 403 Forbidden con mensaje exacto `'No tiene acceso a esta entrada.'` impidiendo visualización de contenido no autorizado. Tests: `ProjectKnowledgeTab.test.tsx`. |
+| HU_DN_06_82 | Implementado | Conmutador interactivo "Visible para devs" / "Oculto para devs" en tarjetas aprobadas para Gerente/Admin, llamada a `toggleDocumentationVisibility`, toast `VISIBILITY_UPDATED`. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+| HU_DN_06_83 | Implementado | Subpestaña "Cola de aprobación" con contador de pendientes (`ApprovalQueueView`), lista con título, autor, categoría, fecha y acciones directas, estado vacío `NO_PENDING_ENTRIES`, control de acceso 403. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+| HU_DN_06_84 | Implementado | Botón "Aprobar", restricción RN-DOC-01 para auto-aprobación con botón deshabilitado y mensaje literal `CANNOT_APPROVE_OWN_ENTRY`, actualización reactiva de cola y toast `ENTRY_APPROVED`. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+| HU_DN_06_85 | Implementado | Modal `RejectDocumentationModal` con campo de texto opcional para observaciones, botón de confirmación de rechazo, toast `ENTRY_REJECTED` y actualización de cola. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+| HU_DN_06_86 | Implementado | Botón "Reenviar a aprobación" visible al autor en tarjetas rechazadas, visualización de observaciones de rechazo previo en tarjeta y modal, validación de estado `REJECTED`, toast `ENTRY_RESUBMITTED`. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |

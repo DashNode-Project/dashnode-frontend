@@ -117,17 +117,19 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `ProjectKanbanTab.tsx`: Tablero Kanban interactivo con 6 columnas estándar, drag & drop HTML5 y menú de movimiento, badges de bloqueo y dependencias, filtro de tareas y gestión de límites WIP (soft-limit)
   - `KanbanBoard.test.tsx`: suite de pruebas para HU_DN_05_72 .. 76
 
-## EP-09 — Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_81)
+## EP-09 — Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_86)
 
 - Ruta: `/proyectos/:projectId/conocimiento` → `ProjectKnowledgeTab.tsx` (pestaña Conocimiento implementada en `projectWorkspaceTabs.ts`).
 - `src/features/documentation/`:
-  - `types.ts`: `DocumentationEntry`, `DocumentationCategory`, `DocumentationApprovalStatus`, payloads
-  - `messages.ts`: literales de negocio y notificaciones alineados con el backend
-  - `api.ts`: clientes para listado, creación, edición, eliminación y consulta directa
-  - `components/DocumentationModal.tsx`: modal para registro y edición de entradas con validaciones de título, categoría, contenido/URL, aviso RN-DOC-03 y aviso de cambio de estado a PENDING en edición de entradas aprobadas
+  - `types.ts`: `DocumentationEntry` (incluyendo `is_visible_to_devs`, `rejection_reason`), `DocumentationCategory`, `DocumentationApprovalStatus`, payloads
+  - `messages.ts`: literales de negocio, visibilidad, aprobaciones, rechazos y reenvíos alineados con el backend
+  - `api.ts`: clientes para listado, creación, edición, eliminación, conmutación de visibilidad (`toggleDocumentationVisibility`), cola de aprobaciones (`listPendingApprovals`), aprobación (`approveDocumentationEntry`), rechazo con feedback (`rejectDocumentationEntry`) y reenvío (`resubmitDocumentationEntry`)
+  - `components/DocumentationModal.tsx`: modal para registro, edición y reenvío (`mode === 'resubmit'`) con validaciones de título, categoría, contenido/URL, aviso RN-DOC-03, aviso de reinicio de estado y consulta de motivo de rechazo previo
   - `components/DeleteDocumentationModal.tsx`: diálogo de confirmación con mensaje literal exacto
-  - `components/DocumentationDetailModal.tsx`: vista detallada accesible con enlaces externos seguros y acciones de edición/eliminación
-  - `ProjectKnowledgeTab.tsx`: vista de la base de conocimiento con barra de búsqueda, filtros por categoría y estado de aprobación, soporte para entradas ancladas, badges de color y empty states
-  - `ProjectKnowledgeTab.test.tsx` y `api.test.ts`: suite completa de pruebas unitarias y de integración
+  - `components/DocumentationDetailModal.tsx`: vista detallada con enlaces externos seguros, acciones y visualización de motivo de rechazo
+  - `components/ApprovalQueueView.tsx`: cola de aprobación de entradas pendientes (`HU_DN_06_83`), con control de acceso 403, botón "Aprobar" con prevención RN-DOC-01 de auto-aprobación (`HU_DN_06_84`) y botón "Rechazar"
+  - `components/RejectDocumentationModal.tsx`: modal para rechazar una entrada pendiente con captura opcional de observaciones (`HU_DN_06_85`)
+  - `ProjectKnowledgeTab.tsx`: vista de la base de conocimiento con subpestañas "Base de conocimiento" y "Cola de aprobación" (con badge numérico para Admin/Gerente), conmutador de visibilidad para desarrolladores en tarjetas aprobadas (`HU_DN_06_82`), botón "Reenviar a aprobación" para el autor en tarjetas rechazadas (`HU_DN_06_86`), filtros y barra de búsqueda
+  - `ProjectKnowledgeTab.test.tsx` y `api.test.ts`: suite completa de pruebas unitarias y de integración para todas las HUs de la épica
 
 
