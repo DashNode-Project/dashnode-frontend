@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, ok } from '@/test/fetchMock';
 import {
+  approveDocumentationEntry,
   createDocumentationEntry,
   deleteDocumentationEntry,
   getDocumentationEntry,
   listDocumentationEntries,
+  listPendingApprovals,
+  rejectDocumentationEntry,
+  resubmitDocumentationEntry,
+  toggleDocumentationVisibility,
   updateDocumentationEntry,
 } from './api';
 import type {
@@ -31,6 +36,8 @@ describe('documentation api', () => {
     external_url: 'https://docs.dashnode.io',
     approval_status: 'PENDING',
     is_pinned: false,
+    is_visible_to_devs: true,
+    rejection_reason: null,
     created_at: '2026-10-28T00:00:00Z',
     updated_at: '2026-10-28T00:00:00Z',
     can_edit: true,
@@ -116,5 +123,87 @@ describe('documentation api', () => {
     const res = await getDocumentationEntry('p-1', 'doc-1');
     expect(res.id).toBe('doc-1');
     expect(res.title).toBe('Guía técnica');
+  });
+
+  it('HU_DN_06_82: toggles documentation visibility for developers', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('PATCH');
+      expect(call.url).toContain('/projects/p-1/documentation/doc-1/visibility');
+      return ok({
+        message: 'Visibilidad actualizada correctamente.',
+        entry: { ...sampleEntry, is_visible_to_devs: false },
+      });
+    });
+
+    const res = await toggleDocumentationVisibility('p-1', 'doc-1', false);
+    expect(res.message).toBe('Visibilidad actualizada correctamente.');
+    expect(res.entry?.is_visible_to_devs).toBe(false);
+  });
+
+  it('HU_DN_06_83: lists pending approvals queue', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('GET');
+      expect(call.url).toContain('/projects/p-1/documentation/pending-approvals');
+      return ok({ entries: [sampleEntry], message: null });
+    });
+
+    const res = await listPendingApprovals('p-1');
+    expect(res.entries).toHaveLength(1);
+    expect(res.entries[0]?.id).toBe('doc-1');
+  });
+
+  it('HU_DN_06_84: approves documentation entry', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('POST');
+      expect(call.url).toContain('/projects/p-1/documentation/doc-1/approve');
+      return ok({
+        message: 'Entrada aprobada correctamente.',
+        entry: { ...sampleEntry, approval_status: 'APPROVED', is_visible_to_devs: true },
+      });
+    });
+
+    const res = await approveDocumentationEntry('p-1', 'doc-1');
+    expect(res.message).toBe('Entrada aprobada correctamente.');
+    expect(res.entry?.approval_status).toBe('APPROVED');
+  });
+
+  it('HU_DN_06_85: rejects documentation entry with feedback', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('POST');
+      expect(call.url).toContain('/projects/p-1/documentation/doc-1/reject');
+      return ok({
+        message: 'Entrada rechazada correctamente.',
+        entry: {
+          ...sampleEntry,
+          approval_status: 'REJECTED',
+          rejection_reason: 'Faltan detalles de despliegue',
+        },
+      });
+    });
+
+    const res = await rejectDocumentationEntry('p-1', 'doc-1', 'Faltan detalles de despliegue');
+    expect(res.message).toBe('Entrada rechazada correctamente.');
+    expect(res.entry?.approval_status).toBe('REJECTED');
+    expect(res.entry?.rejection_reason).toBe('Faltan detalles de despliegue');
+  });
+
+  it('HU_DN_06_86: resubmits rejected documentation entry', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('POST');
+      expect(call.url).toContain('/projects/p-1/documentation/doc-1/resubmit');
+      return ok({
+        message: 'Entrada reenviada a aprobación.',
+        entry: {
+          ...sampleEntry,
+          title: 'Guía técnica v2',
+          approval_status: 'PENDING',
+        },
+      });
+    });
+
+    const res = await resubmitDocumentationEntry('p-1', 'doc-1', { title: 'Guía técnica v2' });
+    expect(res.message).toBe('Entrada reenviada a aprobación.');
+    expect(res.entry?.title).toBe('Guía técnica v2');
+    expect(res.entry?.approval_status).toBe('PENDING');
   });
 });

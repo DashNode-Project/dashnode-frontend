@@ -18,4 +18,13 @@ export const DOCUMENTATION_MESSAGES = {
   DELETE_CONFIRMATION: '¿Está seguro de que desea eliminar esta entrada?',
   STATUS_RESET_NOTICE:
     'Al editar una entrada aprobada, su estado volverá a Pendiente para nueva revisión.',
+  VISIBILITY_UPDATED: 'Visibilidad actualizada correctamente.',
+  VISIBILITY_APPROVED_ONLY: 'Solo se puede cambiar la visibilidad de entradas aprobadas.',
+  NO_PENDING_ENTRIES: 'No hay entradas pendientes de aprobación.',
+  CANNOT_APPROVE_OWN_ENTRY: 'No puede aprobar su propia entrada.',
+  ENTRY_APPROVED: 'Entrada aprobada correctamente.',
+  ENTRY_REJECTED: 'Entrada rechazada correctamente.',
+  ENTRY_RESUBMITTED: 'Entrada reenviada a aprobación.',
+  ONLY_REJECTED_CAN_BE_RESUBMITTED: 'Solo se pueden reenviar entradas rechazadas.',
+  APPROVAL_QUEUE_TITLE: 'Cola de aprobación',
 } as const;

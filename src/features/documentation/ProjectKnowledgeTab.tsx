@@ -5,23 +5,31 @@ import {
   Calendar,
   Edit2,
   ExternalLink,
+  Eye,
+  EyeOff,
   Filter,
   Pin,
   Plus,
+  RotateCcw,
   Search,
   Trash2,
   User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge, Card } from '@/components/ui/demo-ui';
+import { useAuth } from '@/features/auth/AuthContext';
 import { useToast } from '@/lib/toast/ToastProvider';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import {
   createDocumentationEntry,
   deleteDocumentationEntry,
   listDocumentationEntries,
+  listPendingApprovals,
+  resubmitDocumentationEntry,
+  toggleDocumentationVisibility,
   updateDocumentationEntry,
 } from './api';
+import { ApprovalQueueView } from './components/ApprovalQueueView';
 import { DeleteDocumentationModal } from './components/DeleteDocumentationModal';
 import { DocumentationDetailModal } from './components/DocumentationDetailModal';
 import { DocumentationModal } from './components/DocumentationModal';
@@ -30,9 +38,14 @@ import type { CreateDocumentationPayload, DocumentationEntry } from './types';
 
 export default function ProjectKnowledgeTab() {
   const { projectId = '' } = useParams<{ projectId: string }>();
+  const { user } = useAuth();
   const { showToast } = useToast();
 
+  const canManageDoc = user?.role === 'admin' || user?.role === 'manager';
+
+  const [activeSubTab, setActiveSubTab] = useState<'knowledge' | 'queue'>('knowledge');
   const [entries, setEntries] = useState<DocumentationEntry[]>([]);
+  const [pendingCount, setPendingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,11 +55,12 @@ export default function ProjectKnowledgeTab() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
   // Modals state
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'resubmit' | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<DocumentationEntry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<DocumentationEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<DocumentationEntry | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null);
 
   const fetchEntries = useCallback(async () => {
     if (!projectId) return;
@@ -68,13 +82,31 @@ export default function ProjectKnowledgeTab() {
     }
   }, [projectId, showToast]);
 
+  const fetchPendingCount = useCallback(async () => {
+    if (!projectId || !canManageDoc) return;
+    try {
+      const res = await listPendingApprovals(projectId);
+      setPendingCount(res.entries ? res.entries.length : 0);
+    } catch {
+      // Ignore count fetch errors
+    }
+  }, [projectId, canManageDoc]);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await listDocumentationEntries(projectId);
+        const [res, pendingRes] = await Promise.all([
+          listDocumentationEntries(projectId),
+          canManageDoc
+            ? listPendingApprovals(projectId).catch(() => ({ entries: [] }))
+            : Promise.resolve({ entries: [] }),
+        ]);
         if (cancelled) return;
         setEntries(res.entries || []);
+        if (canManageDoc && pendingRes?.entries) {
+          setPendingCount(pendingRes.entries.length);
+        }
       } catch (err: unknown) {
         if (cancelled) return;
         if (err instanceof ApiError && !isTechnicalFailure(err)) {
@@ -93,7 +125,7 @@ export default function ProjectKnowledgeTab() {
     return () => {
       cancelled = true;
     };
-  }, [projectId, showToast]);
+  }, [projectId, canManageDoc, showToast]);
 
   const handleSave = async (payload: CreateDocumentationPayload) => {
     if (!projectId) return;
@@ -105,10 +137,18 @@ export default function ProjectKnowledgeTab() {
       } else if (modalMode === 'edit' && selectedEntry) {
         const res = await updateDocumentationEntry(projectId, selectedEntry.id, payload);
         showToast(res.message || DOCUMENTATION_MESSAGES.ENTRY_UPDATED, 'success');
+      } else if (modalMode === 'resubmit' && selectedEntry) {
+        if (selectedEntry.approval_status !== 'REJECTED') {
+          showToast(DOCUMENTATION_MESSAGES.ONLY_REJECTED_CAN_BE_RESUBMITTED, 'error');
+          return;
+        }
+        const res = await resubmitDocumentationEntry(projectId, selectedEntry.id, payload);
+        showToast(res.message || DOCUMENTATION_MESSAGES.ENTRY_RESUBMITTED, 'success');
       }
       setModalMode(null);
       setSelectedEntry(null);
       await fetchEntries();
+      await fetchPendingCount();
     } catch (err: unknown) {
       if (err instanceof ApiError && !isTechnicalFailure(err)) {
         showToast(err.message, 'error');
@@ -119,6 +159,36 @@ export default function ProjectKnowledgeTab() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleVisibility = async (entry: DocumentationEntry) => {
+    if (!projectId) return;
+    if (entry.approval_status !== 'APPROVED') {
+      showToast(DOCUMENTATION_MESSAGES.VISIBILITY_APPROVED_ONLY, 'error');
+      return;
+    }
+    setTogglingVisibilityId(entry.id);
+    try {
+      const res = await toggleDocumentationVisibility(
+        projectId,
+        entry.id,
+        !entry.is_visible_to_devs,
+      );
+      showToast(res.message || DOCUMENTATION_MESSAGES.VISIBILITY_UPDATED, 'success');
+      setEntries((prev) =>
+        prev.map((e) =>
+          e.id === entry.id ? { ...e, is_visible_to_devs: !e.is_visible_to_devs } : e,
+        ),
+      );
+    } catch (err: unknown) {
+      if (err instanceof ApiError && !isTechnicalFailure(err)) {
+        showToast(err.message, 'error');
+      } else {
+        showToast(DOCUMENTATION_MESSAGES.GENERIC_ERROR, 'error');
+      }
+    } finally {
+      setTogglingVisibilityId(null);
     }
   };
 
@@ -190,247 +260,370 @@ export default function ProjectKnowledgeTab() {
         </Button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por título, contenido o etiqueta…"
-            className="h-9 w-full rounded-lg border border-white/10 bg-[#0A0B0E] pl-9 pr-3 text-xs text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Filter size={14} className="text-[#6B7280]" />
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            aria-label="Filtrar por categoría"
-            className="h-9 rounded-lg border border-white/10 bg-[#0A0B0E] px-3 text-xs text-[#F9FAFB] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+      {/* Subtabs for Manager and Admin */}
+      {canManageDoc ? (
+        <div className="flex border-b border-white/10 gap-4">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('knowledge')}
+            data-testid="subtab-knowledge"
+            className={`pb-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeSubTab === 'knowledge'
+                ? 'border-blue-500 text-[#F9FAFB]'
+                : 'border-transparent text-[#9CA3AF] hover:text-[#F9FAFB]'
+            }`}
           >
-            <option value="all">Todas las categorías</option>
-            <option value="Técnica">Técnica</option>
-            <option value="Funcional">Funcional</option>
-            <option value="Reunión">Reunión</option>
-            <option value="General">General</option>
-            <option value="Prompt">Prompt</option>
-          </select>
-
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            aria-label="Filtrar por estado"
-            className="h-9 rounded-lg border border-white/10 bg-[#0A0B0E] px-3 text-xs text-[#F9FAFB] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+            Base de conocimiento
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('queue')}
+            data-testid="subtab-approval-queue"
+            className={`pb-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeSubTab === 'queue'
+                ? 'border-blue-500 text-[#F9FAFB]'
+                : 'border-transparent text-[#9CA3AF] hover:text-[#F9FAFB]'
+            }`}
           >
-            <option value="all">Todos los estados</option>
-            <option value="APPROVED">Aprobadas</option>
-            <option value="PENDING">Pendientes</option>
-            <option value="REJECTED">Rechazadas</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      {loading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[#9CA3AF]">
-          Cargando documentación…
-        </div>
-      ) : error ? (
-        <div className="flex h-48 flex-col items-center justify-center gap-2 text-center text-xs text-red-400">
-          <p>{error}</p>
-          <Button variant="secondary" size="sm" onClick={() => void fetchEntries()}>
-            Reintentar
-          </Button>
-        </div>
-      ) : filteredEntries.length === 0 ? (
-        <div
-          className="flex h-56 flex-col items-center justify-center gap-3 rounded-xl border border-white/6 bg-[#12131C] p-6 text-center"
-          data-testid="empty-documentation-state"
-        >
-          <div className="rounded-full bg-white/5 p-3 text-[#6B7280]">
-            <BookOpen size={24} />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-[#F9FAFB]">
-              {entries.length === 0
-                ? DOCUMENTATION_MESSAGES.NO_ENTRIES
-                : 'No se encontraron entradas con los filtros aplicados.'}
-            </h3>
-            <p className="mt-1 text-xs text-[#9CA3AF]">
-              {entries.length === 0
-                ? 'Documenta soluciones técnicas, patrones y aprendizajes del equipo.'
-                : 'Intenta cambiar los términos de búsqueda o filtros.'}
-            </p>
-          </div>
-          {entries.length === 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setSelectedEntry(null);
-                setModalMode('create');
-              }}
-            >
-              <Plus size={14} className="mr-1" />
-              Nueva entrada
-            </Button>
-          ) : null}
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredEntries.map((entry) => {
-            const formattedDate = new Date(entry.created_at).toLocaleDateString('es-ES', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            });
-
-            const statusTone =
-              entry.approval_status === 'APPROVED'
-                ? 'green'
-                : entry.approval_status === 'REJECTED'
-                  ? 'red'
-                  : 'yellow';
-
-            const statusLabel =
-              entry.approval_status === 'APPROVED'
-                ? 'Aprobada'
-                : entry.approval_status === 'REJECTED'
-                  ? 'Rechazada'
-                  : 'Pendiente';
-
-            return (
-              <Card
-                key={entry.id}
-                className={`flex flex-col justify-between p-4 transition-all duration-150 hover:border-white/15 ${
-                  entry.is_pinned ? 'border-amber-500/30 bg-[#161722]' : ''
-                }`}
-                data-testid={`doc-entry-card-${entry.id}`}
+            <span>{DOCUMENTATION_MESSAGES.APPROVAL_QUEUE_TITLE}</span>
+            {pendingCount > 0 ? (
+              <span
+                className="rounded-full bg-amber-500/20 text-amber-300 px-2 py-0.5 text-xs font-semibold"
+                data-testid="pending-approvals-count"
               >
-                <div>
-                  {/* Card Header: Badges & Actions */}
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {entry.is_pinned ? (
-                        <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
-                          <Pin size={11} className="text-amber-400" />
-                          Anclado
-                        </span>
-                      ) : null}
-                      <Badge tone="blue">{entry.category}</Badge>
-                      <Badge tone={statusTone}>{statusLabel}</Badge>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      {entry.can_edit ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedEntry(entry);
-                            setModalMode('edit');
-                          }}
-                          className="rounded p-1 text-[#9CA3AF] transition-colors hover:bg-white/5 hover:text-[#F9FAFB]"
-                          title="Editar entrada"
-                          aria-label={`Editar ${entry.title}`}
-                          data-testid={`edit-doc-${entry.id}`}
-                        >
-                          <Edit2 size={13} />
-                        </button>
-                      ) : null}
-                      {entry.can_delete ? (
-                        <button
-                          type="button"
-                          onClick={() => setDeletingEntry(entry)}
-                          className="rounded p-1 text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
-                          title="Eliminar entrada"
-                          aria-label={`Eliminar ${entry.title}`}
-                          data-testid={`delete-doc-${entry.id}`}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="line-clamp-2 text-sm font-semibold text-[#F9FAFB]">
-                    <button
-                      type="button"
-                      onClick={() => setViewingEntry(entry)}
-                      className="text-left font-semibold text-[#F9FAFB] hover:text-blue-400 focus:outline-none"
-                      title={entry.title}
-                    >
-                      {entry.title}
-                    </button>
-                  </h3>
-
-                  {/* Author & Date */}
-                  <div className="mt-1 flex items-center gap-3 text-[11px] text-[#6B7280]">
-                    <span className="flex items-center gap-1">
-                      <User size={11} />
-                      {entry.author_name || 'Desconocido'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar size={11} />
-                      {formattedDate}
-                    </span>
-                  </div>
-
-                  {/* Objective (if any) */}
-                  {entry.objective ? (
-                    <p className="mt-2 line-clamp-2 text-xs italic text-[#9CA3AF]">
-                      {entry.objective}
-                    </p>
-                  ) : null}
-
-                  {/* Content snippet */}
-                  {entry.content ? (
-                    <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-[#D1D5DB]">
-                      {entry.content}
-                    </p>
-                  ) : null}
-                </div>
-
-                {/* Card Footer: External link and Tags */}
-                <div className="mt-3 flex flex-col gap-2 border-t border-white/6 pt-2">
-                  {entry.external_url ? (
-                    <a
-                      href={entry.external_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline"
-                    >
-                      <ExternalLink size={11} />
-                      Recurso externo
-                    </a>
-                  ) : null}
-
-                  {entry.tags ? (
-                    <div className="flex flex-wrap gap-1">
-                      {entry.tags
-                        .split(',')
-                        .map((t) => t.trim())
-                        .filter(Boolean)
-                        .slice(0, 3)
-                        .map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[#9CA3AF]"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                    </div>
-                  ) : null}
-                </div>
-              </Card>
-            );
-          })}
+                {pendingCount}
+              </span>
+            ) : null}
+          </button>
         </div>
+      ) : null}
+
+      {/* When Queue SubTab is Active */}
+      {activeSubTab === 'queue' && canManageDoc ? (
+        <ApprovalQueueView
+          projectId={projectId}
+          currentUserId={user?.id}
+          onViewEntry={(entry) => setViewingEntry(entry)}
+          onQueueUpdated={() => {
+            void fetchPendingCount();
+            void fetchEntries();
+          }}
+        />
+      ) : (
+        <>
+          {/* Filter and Search Bar */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[220px] flex-1">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]"
+              />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por título, contenido o etiqueta…"
+                className="h-9 w-full rounded-lg border border-white/10 bg-[#0A0B0E] pl-9 pr-3 text-xs text-[#F9FAFB] placeholder:text-[#6B7280] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter size={14} className="text-[#6B7280]" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                aria-label="Filtrar por categoría"
+                className="h-9 rounded-lg border border-white/10 bg-[#0A0B0E] px-3 text-xs text-[#F9FAFB] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+              >
+                <option value="all">Todas las categorías</option>
+                <option value="Técnica">Técnica</option>
+                <option value="Funcional">Funcional</option>
+                <option value="Reunión">Reunión</option>
+                <option value="General">General</option>
+                <option value="Prompt">Prompt</option>
+              </select>
+
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                aria-label="Filtrar por estado"
+                className="h-9 rounded-lg border border-white/10 bg-[#0A0B0E] px-3 text-xs text-[#F9FAFB] focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="APPROVED">Aprobadas</option>
+                <option value="PENDING">Pendientes</option>
+                <option value="REJECTED">Rechazadas</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          {loading ? (
+            <div className="flex h-48 items-center justify-center text-xs text-[#9CA3AF]">
+              Cargando documentación…
+            </div>
+          ) : error ? (
+            <div className="flex h-48 flex-col items-center justify-center gap-2 text-center text-xs text-red-400">
+              <p>{error}</p>
+              <Button variant="secondary" size="sm" onClick={() => void fetchEntries()}>
+                Reintentar
+              </Button>
+            </div>
+          ) : filteredEntries.length === 0 ? (
+            <div
+              className="flex h-56 flex-col items-center justify-center gap-3 rounded-xl border border-white/6 bg-[#12131C] p-6 text-center"
+              data-testid="empty-documentation-state"
+            >
+              <div className="rounded-full bg-white/5 p-3 text-[#6B7280]">
+                <BookOpen size={24} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#F9FAFB]">
+                  {entries.length === 0
+                    ? DOCUMENTATION_MESSAGES.NO_ENTRIES
+                    : 'No se encontraron entradas con los filtros aplicados.'}
+                </h3>
+                <p className="mt-1 text-xs text-[#9CA3AF]">
+                  {entries.length === 0
+                    ? 'Documenta soluciones técnicas, patrones y aprendizajes del equipo.'
+                    : 'Intenta cambiar los términos de búsqueda o filtros.'}
+                </p>
+              </div>
+              {entries.length === 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setSelectedEntry(null);
+                    setModalMode('create');
+                  }}
+                >
+                  <Plus size={14} className="mr-1" />
+                  Nueva entrada
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredEntries.map((entry) => {
+                const formattedDate = new Date(entry.created_at).toLocaleDateString('es-ES', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                });
+
+                const statusTone =
+                  entry.approval_status === 'APPROVED'
+                    ? 'green'
+                    : entry.approval_status === 'REJECTED'
+                      ? 'red'
+                      : 'yellow';
+
+                const statusLabel =
+                  entry.approval_status === 'APPROVED'
+                    ? 'Aprobada'
+                    : entry.approval_status === 'REJECTED'
+                      ? 'Rechazada'
+                      : 'Pendiente';
+
+                const isAuthor = Boolean(user?.id && entry.author_id === user.id);
+
+                return (
+                  <Card
+                    key={entry.id}
+                    className={`flex flex-col justify-between p-4 transition-all duration-150 hover:border-white/15 ${
+                      entry.is_pinned ? 'border-amber-500/30 bg-[#161722]' : ''
+                    }`}
+                    data-testid={`doc-entry-card-${entry.id}`}
+                  >
+                    <div>
+                      {/* Card Header: Badges & Actions */}
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {entry.is_pinned ? (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                              <Pin size={11} className="text-amber-400" />
+                              Anclado
+                            </span>
+                          ) : null}
+                          <Badge tone="blue">{entry.category}</Badge>
+                          <Badge tone={statusTone}>{statusLabel}</Badge>
+                          {entry.approval_status === 'APPROVED' && !entry.is_visible_to_devs ? (
+                            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300">
+                              Oculto para devs
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-1">
+                          {entry.can_edit ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedEntry(entry);
+                                setModalMode('edit');
+                              }}
+                              className="rounded p-1 text-[#9CA3AF] transition-colors hover:bg-white/5 hover:text-[#F9FAFB]"
+                              title="Editar entrada"
+                              aria-label={`Editar ${entry.title}`}
+                              data-testid={`edit-doc-${entry.id}`}
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                          ) : null}
+                          {entry.can_delete ? (
+                            <button
+                              type="button"
+                              onClick={() => setDeletingEntry(entry)}
+                              className="rounded p-1 text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                              title="Eliminar entrada"
+                              aria-label={`Eliminar ${entry.title}`}
+                              data-testid={`delete-doc-${entry.id}`}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="line-clamp-2 text-sm font-semibold text-[#F9FAFB]">
+                        <button
+                          type="button"
+                          onClick={() => setViewingEntry(entry)}
+                          className="text-left font-semibold text-[#F9FAFB] hover:text-blue-400 focus:outline-none"
+                          title={entry.title}
+                        >
+                          {entry.title}
+                        </button>
+                      </h3>
+
+                      {/* Author & Date */}
+                      <div className="mt-1 flex items-center gap-3 text-[11px] text-[#6B7280]">
+                        <span className="flex items-center gap-1">
+                          <User size={11} />
+                          {entry.author_name || 'Desconocido'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar size={11} />
+                          {formattedDate}
+                        </span>
+                      </div>
+
+                      {/* Objective (if any) */}
+                      {entry.objective ? (
+                        <p className="mt-2 line-clamp-2 text-xs italic text-[#9CA3AF]">
+                          {entry.objective}
+                        </p>
+                      ) : null}
+
+                      {/* Content snippet */}
+                      {entry.content ? (
+                        <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-[#D1D5DB]">
+                          {entry.content}
+                        </p>
+                      ) : null}
+
+                      {/* Rejection reason feedback */}
+                      {entry.approval_status === 'REJECTED' && entry.rejection_reason ? (
+                        <div
+                          className="mt-2 rounded border border-red-500/20 bg-red-500/10 p-2 text-xs text-red-300"
+                          data-testid={`rejection-feedback-${entry.id}`}
+                        >
+                          <span className="font-semibold text-red-200">Motivo de rechazo: </span>
+                          <span>{entry.rejection_reason}</span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Card Actions & Footer */}
+                    <div className="mt-3 flex flex-col gap-2 border-t border-white/6 pt-2">
+                      {/* Visibility Toggle for Admin/Manager on Approved entries */}
+                      {canManageDoc && entry.approval_status === 'APPROVED' ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-[#9CA3AF]">
+                            Visibilidad desarrolladores:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void handleToggleVisibility(entry)}
+                            disabled={togglingVisibilityId === entry.id}
+                            className={`flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                              entry.is_visible_to_devs
+                                ? 'border border-blue-500/25 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
+                                : 'border border-amber-500/25 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                            }`}
+                            title="Cambiar visibilidad para desarrolladores"
+                            aria-label={`Visibilidad desarrolladores: ${
+                              entry.is_visible_to_devs ? 'Visible' : 'Oculto'
+                            }`}
+                            data-testid={`toggle-visibility-${entry.id}`}
+                          >
+                            {entry.is_visible_to_devs ? <Eye size={12} /> : <EyeOff size={12} />}
+                            {entry.is_visible_to_devs ? 'Visible para devs' : 'Oculto para devs'}
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {/* Resubmit button for Author on Rejected entries */}
+                      {entry.approval_status === 'REJECTED' && isAuthor ? (
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEntry(entry);
+                              setModalMode('resubmit');
+                            }}
+                            data-testid={`resubmit-doc-${entry.id}`}
+                            className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+                            iconLeft={<RotateCcw size={12} />}
+                          >
+                            Reenviar a aprobación
+                          </Button>
+                        </div>
+                      ) : null}
+
+                      {/* External resource link */}
+                      {entry.external_url ? (
+                        <a
+                          href={entry.external_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline"
+                        >
+                          <ExternalLink size={11} />
+                          Recurso externo
+                        </a>
+                      ) : null}
+
+                      {/* Tags */}
+                      {entry.tags ? (
+                        <div className="flex flex-wrap gap-1">
+                          {entry.tags
+                            .split(',')
+                            .map((t) => t.trim())
+                            .filter(Boolean)
+                            .slice(0, 3)
+                            .map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[#9CA3AF]"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Create / Edit Modal */}

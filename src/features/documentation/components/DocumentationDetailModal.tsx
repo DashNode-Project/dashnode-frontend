@@ -108,6 +108,13 @@ export function DocumentationDetailModal({
           </span>
         </div>
 
+        {entry.approval_status === 'REJECTED' && entry.rejection_reason ? (
+          <div className="flex flex-col gap-1 rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-xs text-red-300">
+            <span className="font-semibold text-red-200">Motivo de rechazo:</span>
+            <p className="whitespace-pre-wrap text-red-300/90">{entry.rejection_reason}</p>
+          </div>
+        ) : null}
+
         {entry.objective ? (
           <div className="rounded-lg border border-white/6 bg-[#0A0B0E] p-3 text-xs">
             <span className="font-semibold text-[#9CA3AF]">Objetivo: </span>

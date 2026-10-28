@@ -15,6 +15,9 @@ export interface DocumentationEntry {
   external_url?: string | null;
   approval_status: DocumentationApprovalStatus;
   is_pinned: boolean;
+  is_visible_to_devs: boolean;
+  rejection_reason?: string | null;
+  can_approve?: boolean;
   created_at: string;
   updated_at: string;
   can_edit: boolean;
@@ -33,6 +36,23 @@ export interface CreateDocumentationPayload {
 export interface UpdateDocumentationPayload {
   title: string;
   category: DocumentationCategory;
+  objective?: string;
+  tags?: string;
+  content?: string;
+  external_url?: string;
+}
+
+export interface UpdateVisibilityPayload {
+  is_visible_to_devs: boolean;
+}
+
+export interface RejectDocumentationPayload {
+  rejection_reason?: string;
+}
+
+export interface ResubmitDocumentationPayload {
+  title?: string;
+  category?: DocumentationCategory;
   objective?: string;
   tags?: string;
   content?: string;

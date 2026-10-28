@@ -21,7 +21,7 @@ const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
 
 interface DocumentationModalProps {
   isOpen: boolean;
-  mode: 'create' | 'edit';
+  mode: 'create' | 'edit' | 'resubmit';
   initialEntry?: DocumentationEntry | null;
   onClose: () => void;
   onSave: (payload: CreateDocumentationPayload) => Promise<void>;
@@ -37,22 +37,22 @@ export function DocumentationModal({
   loading,
 }: DocumentationModalProps) {
   const [title, setTitle] = useState(() =>
-    mode === 'edit' && initialEntry ? initialEntry.title || '' : '',
+    mode !== 'create' && initialEntry ? initialEntry.title || '' : '',
   );
   const [category, setCategory] = useState<DocumentationCategory>(() =>
-    mode === 'edit' && initialEntry ? initialEntry.category || 'Técnica' : 'Técnica',
+    mode !== 'create' && initialEntry ? initialEntry.category || 'Técnica' : 'Técnica',
   );
   const [objective, setObjective] = useState(() =>
-    mode === 'edit' && initialEntry ? initialEntry.objective || '' : '',
+    mode !== 'create' && initialEntry ? initialEntry.objective || '' : '',
   );
   const [tags, setTags] = useState(() =>
-    mode === 'edit' && initialEntry ? initialEntry.tags || '' : '',
+    mode !== 'create' && initialEntry ? initialEntry.tags || '' : '',
   );
   const [content, setContent] = useState(() =>
-    mode === 'edit' && initialEntry ? initialEntry.content || '' : '',
+    mode !== 'create' && initialEntry ? initialEntry.content || '' : '',
   );
   const [externalUrl, setExternalUrl] = useState(() =>
-    mode === 'edit' && initialEntry ? initialEntry.external_url || '' : '',
+    mode !== 'create' && initialEntry ? initialEntry.external_url || '' : '',
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -111,11 +111,19 @@ export function DocumentationModal({
   };
 
   const isApprovedEdit = mode === 'edit' && initialEntry?.approval_status === 'APPROVED';
+  const hasRejectionFeedback =
+    (mode === 'resubmit' || mode === 'edit') &&
+    initialEntry?.approval_status === 'REJECTED' &&
+    Boolean(initialEntry?.rejection_reason);
 
   return (
     <ProjectModal
       title={
-        mode === 'create' ? 'Nueva entrada de documentación' : 'Editar entrada de documentación'
+        mode === 'create'
+          ? 'Nueva entrada de documentación'
+          : mode === 'resubmit'
+            ? 'Reenviar entrada a aprobación'
+            : 'Editar entrada de documentación'
       }
       onClose={onClose}
       footer={
@@ -123,8 +131,18 @@ export function DocumentationModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button type="submit" form="documentation-form" loading={loading} disabled={loading}>
-            {mode === 'create' ? 'Registrar entrada' : 'Guardar cambios'}
+          <Button
+            type="submit"
+            form="documentation-form"
+            loading={loading}
+            disabled={loading}
+            data-testid="submit-doc-modal-btn"
+          >
+            {mode === 'create'
+              ? 'Registrar entrada'
+              : mode === 'resubmit'
+                ? 'Reenviar a aprobación'
+                : 'Guardar cambios'}
           </Button>
         </>
       }
@@ -141,6 +159,21 @@ export function DocumentationModal({
           >
             <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-400" />
             <span>{error}</span>
+          </div>
+        ) : null}
+
+        {hasRejectionFeedback ? (
+          <div
+            role="alert"
+            className="flex flex-col gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200"
+          >
+            <div className="flex items-center gap-1.5 font-semibold text-amber-300">
+              <Info size={15} />
+              <span>Motivo del rechazo anterior:</span>
+            </div>
+            <p className="mt-0.5 whitespace-pre-wrap text-amber-100/90">
+              {initialEntry?.rejection_reason}
+            </p>
           </div>
         ) : null}
 
