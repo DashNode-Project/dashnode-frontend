@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AI_MESSAGES } from './messages';
 
 const MAX_SECONDS = 60;
+const MIN_SECONDS = 1.2;
 
 export type VoiceCaptureError =
   'MIC_DENIED' | 'NO_SUPPORT' | 'MIC_UNAVAILABLE' | 'EMPTY' | 'TOO_LONG';
@@ -81,7 +82,7 @@ export function useVoiceCapture(): VoiceCaptureState {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         const resolver = stopResolverRef.current;
         stopResolverRef.current = null;
-        if (blob.size < 64) {
+        if (blob.size < 64 || durationSeconds < MIN_SECONDS) {
           setError('EMPTY');
           resolver?.(null);
           return;

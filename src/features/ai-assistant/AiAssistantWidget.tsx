@@ -40,9 +40,14 @@ function mapHistoryMessages(
   }));
 }
 
+function isVoiceNotUnderstood(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'VOICE_NOT_UNDERSTOOD';
+}
+
 function mapApiError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'EMPTY_AUDIO') return AI_MESSAGES.emptyAudio;
+    if (error.code === 'VOICE_NOT_UNDERSTOOD') return AI_MESSAGES.voiceNotUnderstood;
     if (error.code === 'AUDIO_TOO_LONG') return AI_MESSAGES.audioTooLong;
     if (error.code === 'FREE_QUOTA_EXHAUSTED') return AI_MESSAGES.quotaExhausted;
     if (error.code === 'AI_PROCESSING_ERROR') return AI_MESSAGES.aiProcessing;
@@ -109,6 +114,7 @@ export function AiAssistantWidget() {
   const [draft, setDraft] = useState('');
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [pendingRetry, setPendingRetry] = useState<PendingRetry | null>(null);
+  const [retryDisabled, setRetryDisabled] = useState(false);
   const [projectLabel, setProjectLabel] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -214,6 +220,7 @@ export function AiAssistantWidget() {
       if (!trimmed) return;
       clearIdleTimer();
       setBannerError(null);
+      setRetryDisabled(false);
       setAssistantState('PROCESSING');
       setProcessingMode('text');
       if (!retry) {
@@ -251,6 +258,7 @@ export function AiAssistantWidget() {
     ) => {
       clearIdleTimer();
       setBannerError(null);
+      setRetryDisabled(false);
       let recognized = options?.recognizedText?.trim() ?? '';
 
       if (!options?.skipTranscribe) {
@@ -264,7 +272,12 @@ export function AiAssistantWidget() {
           setAssistantState('ERROR');
           setProcessingMode(null);
           setBannerError(mapApiError(error));
-          setPendingRetry({ kind: 'voice', audioBlob: blob, durationSeconds });
+          if (isVoiceNotUnderstood(error)) {
+            setRetryDisabled(true);
+            setPendingRetry(null);
+          } else {
+            setPendingRetry({ kind: 'voice', audioBlob: blob, durationSeconds });
+          }
           return;
         }
       }
@@ -450,13 +463,15 @@ export function AiAssistantWidget() {
               role="alert"
             >
               <p>{bannerError}</p>
-              <button
-                type="button"
-                className="mt-2 rounded-lg border border-red-400/40 px-2 py-1 text-[11px] font-medium hover:bg-red-500/10"
-                onClick={() => void onRetry()}
-              >
-                {AI_MESSAGES.retry}
-              </button>
+              {!retryDisabled && pendingRetry ? (
+                <button
+                  type="button"
+                  className="mt-2 rounded-lg border border-red-400/40 px-2 py-1 text-[11px] font-medium hover:bg-red-500/10"
+                  onClick={() => void onRetry()}
+                >
+                  {AI_MESSAGES.retry}
+                </button>
+              ) : null}
             </div>
           ) : null}
 

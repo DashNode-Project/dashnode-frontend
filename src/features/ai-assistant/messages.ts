@@ -5,6 +5,8 @@ export const AI_MESSAGES = {
   micUnavailable: 'No se encontró un micrófono disponible.',
   noAudioSupport: 'Su navegador no admite la captura de audio.',
   emptyAudio: 'No se detectó audio. Intente nuevamente.',
+  voiceNotUnderstood:
+    'No pude interpretar el audio como una consulta sobre DashNode (proyectos, HUs, tareas o sprints). Hable con claridad y formule su pregunta en voz alta.',
   audioTooLong: 'La grabación excede la duración máxima permitida.',
   aiProcessing: 'El asistente no pudo procesar la consulta.',
   quotaExhausted: 'Se agotó la cuota gratuita del servicio de IA. Intente más tarde.',
