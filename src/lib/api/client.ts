@@ -5,12 +5,14 @@ interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }
 
 interface FormRequestOptions {
   method?: 'PATCH' | 'POST';
   formData: FormData;
   signal?: AbortSignal;
+  timeoutMs?: number;
 }
 
 /**
@@ -18,9 +20,9 @@ interface FormRequestOptions {
  * only thing this client does is send credentials (`include`) and never touches any token.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal } = options;
+  const { method = 'GET', body, signal, timeoutMs = env.requestTimeoutMs } = options;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), env.requestTimeoutMs);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort);
 
@@ -66,9 +68,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
 /** Multipart requests (e.g. profile avatar upload). */
 export async function apiFormRequest<T>(path: string, options: FormRequestOptions): Promise<T> {
-  const { method = 'PATCH', formData, signal } = options;
+  const { method = 'PATCH', formData, signal, timeoutMs = env.requestTimeoutMs } = options;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), env.requestTimeoutMs);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort);
 

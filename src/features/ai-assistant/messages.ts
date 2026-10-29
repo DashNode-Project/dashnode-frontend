@@ -20,11 +20,18 @@ export const AI_MESSAGES = {
   inputPlaceholder: 'Escriba una consulta o use el micrófono…',
   contextPrefix: 'Contexto:',
   noProjectContext: 'Sin contexto de proyecto',
+  voiceMessageBadge: 'Voz',
+  textMessageBadge: 'Texto',
   stateLabels: {
     INACTIVE: 'Inactivo',
     RECORDING: 'Grabando audio…',
-    PROCESSING: 'Procesando transcripción y respuesta…',
+    PROCESSING: 'Procesando…',
     RESPONDED: 'Respondida',
     ERROR: 'Error',
+  } as const,
+  processingLabels: {
+    text: 'Generando respuesta…',
+    'voice-transcribe': 'Transcribiendo audio…',
+    'voice-reply': 'Generando respuesta…',
   } as const,
 } as const;

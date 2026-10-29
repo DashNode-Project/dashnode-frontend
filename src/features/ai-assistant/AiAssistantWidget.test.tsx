@@ -7,7 +7,9 @@ import { escapeHtml } from './escapeHtml';
 import { AiAssistantWidget } from './AiAssistantWidget';
 
 vi.mock('./api', () => ({
+  fetchChatHistory: vi.fn(async () => ({ messages: [] })),
   postTextGenerate: vi.fn(),
+  postVoiceTranscribe: vi.fn(),
   postVoiceProcess: vi.fn(),
 }));
 
