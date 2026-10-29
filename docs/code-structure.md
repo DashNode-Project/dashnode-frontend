@@ -117,3 +117,17 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `ProjectKanbanTab.tsx`: Tablero Kanban interactivo con 6 columnas estándar, drag & drop HTML5 y menú de movimiento, badges de bloqueo y dependencias, filtro de tareas y gestión de límites WIP (soft-limit)
   - `KanbanBoard.test.tsx`: suite de pruebas para HU_DN_05_72 .. 76
 
+## EP-09 — Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_89)
+
+- Ruta: `/proyectos/:projectId/conocimiento` → `ProjectKnowledgeTab.tsx` (pestaña Conocimiento implementada en `projectWorkspaceTabs.ts`).
+- `src/features/documentation/`:
+  - `types.ts`: `DocumentationEntry` (incluyendo `is_pinned`, `can_pin`, `is_visible_to_devs`, `rejection_reason`), `TogglePinPayload`, `DocumentationCategory`, `DocumentationApprovalStatus`, payloads
+  - `messages.ts`: literales de negocio, visibilidad, anclado (`ENTRY_PINNED`, `ENTRY_UNPINNED`, `ENTRY_PINNED_SHORT`, `ENTRY_UNPINNED_SHORT`, `PIN_ACTION`, `UNPIN_ACTION`), aprobaciones, rechazos y reenvíos alineados con el backend
+  - `api.ts`: clientes para listado, creación, edición, eliminación, conmutación de anclado (`toggleDocumentationPin`), visibilidad (`toggleDocumentationVisibility`), cola de aprobaciones (`listPendingApprovals`), aprobación (`approveDocumentationEntry`), rechazo con feedback (`rejectDocumentationEntry`) y reenvío (`resubmitDocumentationEntry`)
+  - `components/DocumentationModal.tsx`: modal para registro, edición y reenvío (`mode === 'resubmit'`) con validaciones de título, categoría, contenido/URL, aviso RN-DOC-03, aviso de reinicio de estado y consulta de motivo de rechazo previo
+  - `components/DeleteDocumentationModal.tsx`: diálogo de confirmación con mensaje literal exacto
+  - `components/DocumentationDetailModal.tsx`: vista detallada con enlaces externos seguros, acciones y visualización de motivo de rechazo
+  - `components/ApprovalQueueView.tsx`: cola de aprobación de entradas pendientes (`HU_DN_06_83`), con control de acceso 403, botón "Aprobar" con prevención RN-DOC-01 de auto-aprobación (`HU_DN_06_84`) y botón "Rechazar"
+  - `components/RejectDocumentationModal.tsx`: modal para rechazar una entrada pendiente con captura opcional de observaciones (`HU_DN_06_85`)
+  - `ProjectKnowledgeTab.tsx`: vista de la base de conocimiento con subpestañas "Base de conocimiento" y "Cola de aprobación" (con badge numérico para Admin/Gerente), conmutador de visibilidad para desarrolladores en tarjetas aprobadas (`HU_DN_06_82`), botón "Reenviar a aprobación" para el autor en tarjetas rechazadas (`HU_DN_06_86`), control de anclado (`HU_DN_06_87` y `HU_DN_06_89`) con ícono de chincheta/pin (`lucide-react` Pin size 13), fondo destacado (`bg-[#161722] border-amber-500/30`), insignia "Anclado", reordenamiento reactivo y sin modales requeridos, filtros y barra de búsqueda
+  - `ProjectKnowledgeTab.test.tsx` y `api.test.ts`: suite completa de 28 pruebas unitarias y de integración para todas las HUs de la épica (incluyendo anclado/desanclado, restricciones de rol, persistencia en listado y fallos técnicos)

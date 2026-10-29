@@ -276,4 +276,122 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
   - `npm run test:coverage`: 310 pruebas pasadas en 40 suites; cobertura global de funciones 79.61% (umbral 78%), líneas 86.28%, sentencias 83.09%.
   - `scan-secrets`: 188 archivos inspeccionados limpios.
 
+---
 
+## Épica 09: Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_81)
+
+**Estado:** COMPLETED | **Rama:** `feature/ep-09-documentation-doc`
+
+### Análisis del Orquestador
+- **Clasificación global:** FULL_STACK (Lote de 5 HUs)
+- **Modo del proyecto:** EXTEND_EXISTING
+- **Complejidad:** MODERATE (score: 75/100)
+- **Componentes Frontend:**
+  - `ProjectKnowledgeTab.tsx`: Tablero de base de conocimiento integrado en `/proyectos/:projectId/conocimiento`.
+  - Pestaña "Conocimiento" activada (`implemented: true`) en `projectWorkspaceTabs.ts`.
+  - Grid responsivo de tarjetas con badges de categoría y estado (`Aprobada`, `Pendiente`, `Rechazada`).
+  - Entradas ancladas (`is_pinned: true`) mostradas de forma prioritaria y destacada.
+  - Modales: `DocumentationModal` (creación y edición con aviso RN-DOC-03 y aviso de reinicio de estado para entradas aprobadas), `DeleteDocumentationModal` (confirmación de borrado lógico con mensaje literal exacto), `DocumentationDetailModal` (vista completa sin truncamiento y enlaces externos seguros).
+  - Barra de búsqueda y filtros dinámicos por categoría y estado de aprobación.
+  - Control de acceso por rol: visibilidad de botones editar/eliminar según `can_edit` y `can_delete`.
+
+### Implementación Frontend
+- **Módulo Documentation (`src/features/documentation/`):**
+  - `types.ts`: Tipos estrictos para `DocumentationEntry`, `DocumentationCategory`, `DocumentationApprovalStatus`, y payloads.
+  - `messages.ts`: Mensajes literales exigidos por los criterios de aceptación.
+  - `api.ts`: Cliente HTTP para listado, creación, actualización, eliminación y consulta directa.
+  - `components/DocumentationModal.tsx`: Modal con validaciones de formulario, límite de 100 caracteres en título, contenido o enlace obligatorio, aviso explicativo de recurso externo (RN-DOC-03) y aviso de estado pendiente al editar aprobadas.
+  - `components/DeleteDocumentationModal.tsx`: Diálogo accesible con mensaje literal exacto: `'¿Está seguro de que desea eliminar esta entrada?'`.
+  - `components/DocumentationDetailModal.tsx`: Modal de detalle con fechas formateadas, tags, contenido extendido y enlace externo seguro.
+  - `ProjectKnowledgeTab.tsx`: Componente de pestaña con estados de carga, error 403, listado de tarjetas y empty state con mensaje literal.
+- **Rutas y Navegación:**
+  - `src/features/projects/projectWorkspaceTabs.ts`: Tab `conocimiento` marcado como `implemented: true`.
+  - `src/app/App.tsx`: Registro de la ruta `<Route path="conocimiento" element={<ProjectKnowledgeTab />} />`.
+
+### Pruebas y Quality Gates Frontend (Lote 1: HU_DN_06_77 … HU_DN_06_81)
+- **Pruebas unitarias y de integración:**
+  - `src/features/documentation/ProjectKnowledgeTab.test.tsx`: 7 pruebas completas que validan listado con entradas ancladas, empty state, creación con aviso de recurso externo, edición con aviso de reinicio de estado, eliminación con diálogo exacto, manejo de error 403 y filtros combinados.
+  - `src/features/documentation/api.test.ts`: 5 pruebas unitarias cubriendo todos los métodos del cliente API.
+  - `src/features/projects/projectWorkspaceTabs.test.ts`: Verificación de que el tab `conocimiento` está implementado.
+- **Quality Gates Aprobados:**
+  - `npm run typecheck`: 0 errores TypeScript.
+  - `npm run lint`: 0 advertencias / 0 errores ESLint.
+  - `npm run format:check`: 100% de archivos formateados con Prettier.
+  - `npm run test:coverage`: Cobertura global de funciones > 78%, líneas > 85%.
+  - `scan-secrets`: 197 archivos inspeccionados limpios.
+
+---
+
+## Épica 09: Aprobación y visibilidad de documentación (HU_DN_06_82 … HU_DN_06_86)
+
+**Estado:** COMPLETED | **Rama:** `feature/ep-09-documentation-doc`
+
+### Análisis del Orquestador
+- **Clasificación global:** FULL_STACK (Lote 2 de 5 HUs)
+- **Modo del proyecto:** EXTEND_EXISTING
+- **Complejidad:** MODERATE (score: 80/100)
+- **Componentes Frontend:**
+  - `ProjectKnowledgeTab.tsx`: Subpestañas "Base de conocimiento" y "Cola de aprobación" (con badge de conteo para Admin/Gerente), conmutador interactivo "Visible para devs" / "Oculto para devs" (`HU_DN_06_82`), botón "Reenviar a aprobación" para autores en tarjetas rechazadas (`HU_DN_06_86`).
+  - `components/ApprovalQueueView.tsx`: Vista dedicada de la cola de aprobación (`HU_DN_06_83`), con control de acceso 403, botón "Aprobar" con prevención de auto-aprobación RN-DOC-01 (`HU_DN_06_84`) y botón "Rechazar" (`HU_DN_06_85`).
+  - `components/RejectDocumentationModal.tsx`: Diálogo modal para registrar feedback opcional en el rechazo de entradas pendientes (`HU_DN_06_85`).
+  - `components/DocumentationModal.tsx`: Soporte para modo `resubmit`, con visualización del motivo de rechazo previo y acción "Reenviar a aprobación".
+  - `components/DocumentationDetailModal.tsx`: Despliegue de observaciones de rechazo previo cuando la entrada está en estado `REJECTED`.
+
+### Implementación Frontend
+- **Módulo Documentation (`src/features/documentation/`):**
+  - `types.ts`: Extendido con `is_visible_to_devs`, `rejection_reason`, payloads de visibilidad, rechazo y reenvío.
+  - `messages.ts`: Literales `VISIBILITY_UPDATED`, `VISIBILITY_APPROVED_ONLY`, `NO_PENDING_ENTRIES`, `CANNOT_APPROVE_OWN_ENTRY`, `ENTRY_APPROVED`, `ENTRY_REJECTED`, `ENTRY_RESUBMITTED`, `ONLY_REJECTED_CAN_BE_RESUBMITTED`.
+  - `api.ts`: Métodos `toggleDocumentationVisibility`, `listPendingApprovals`, `approveDocumentationEntry`, `rejectDocumentationEntry`, `resubmitDocumentationEntry`.
+  - `components/ApprovalQueueView.tsx`: Manejo de estado asíncrono, permisos por rol, listado de entradas pendientes y acciones directas.
+  - `components/RejectDocumentationModal.tsx`: Captura de feedback opcional y confirmación destructiva.
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias y de integración:**
+  - `src/features/documentation/ProjectKnowledgeTab.test.tsx`: 13 pruebas que cubren exhaustivamente las 10 HUs de la épica (incluyendo visibilidad para desarrolladores HU 82, cola de aprobación y empty state HU 83, aprobación y auto-aprobación bloqueada HU 84, rechazo con feedback HU 85, reenvío con observaciones HU 86).
+  - `src/features/documentation/api.test.ts`: 10 pruebas unitarias para todos los endpoints del módulo.
+- **Quality Gates Aprobados:**
+  - `npm run typecheck`: 0 errores TypeScript.
+  - `npm run lint`: 0 advertencias / 0 errores ESLint.
+  - `npm run format:check`: 100% de archivos formateados con Prettier.
+  - `npm run test:coverage`: Cobertura global de statements 81.3%, líneas 84.25%.
+
+
+
+---
+
+## Épica 09: Anclado de documentación destacada (HU_DN_06_87 y HU_DN_06_89)
+
+### Análisis del Orquestador (Modo Lote / Consolidación de HU)
+- **Fecha:** 2026-10-28
+- **Clasificación del lote:** FULL_STACK
+- **Complejidad:** MODERATE (Score: 78/100)
+- **Project Mode:** EXTEND_EXISTING
+- **Ramas:** `feature/ep-09-documentation-doc` (backend y frontend)
+- **Consolidación:** Ambas historias cubren la capacidad de anclar/desanclar entradas al inicio del listado de la base de conocimiento para Gerentes y Administradores, sin apertura de modales y con retroalimentación visual destacada según la plantilla Figma en `demo/`.
+
+### Implementación Frontend
+- **Tipos y Contratos:**
+  - `src/features/documentation/types.ts`: extensión de `DocumentationEntry` con `is_pinned: boolean` y `can_pin?: boolean`; `TogglePinPayload`.
+- **Mensajes y Textos Literales:**
+  - `src/features/documentation/messages.ts`: definición de `ENTRY_PINNED`, `ENTRY_UNPINNED`, `ENTRY_PINNED_SHORT`, `ENTRY_UNPINNED_SHORT`, `PIN_ACTION` (`"Anclar al inicio"`), `UNPIN_ACTION` (`"Desanclar"`), `GENERIC_ERROR` (`"No fue posible completar la operación. Intente nuevamente."`).
+- **Cliente API:**
+  - `src/features/documentation/api.ts`: función `toggleDocumentationPin(projectId, entryId, isPinned?)` con método HTTP `PATCH`.
+- **Componentes y UI (Plantilla Figma / Demo):**
+  - `src/features/documentation/ProjectKnowledgeTab.tsx`:
+    - Botón de acción con ícono de chincheta (`Pin` de `lucide-react` tamaño 13) visible únicamente para Administrador, Gerente o según flag `entry.can_pin` (`HU_DN_06_87`, Criterios 1, 2 y 4).
+    - Alternancia directa entre "Anclar al inicio" y "Desanclar" en tooltip y accesibilidad `aria-label` (`HU_DN_06_89`, Criterio 1 y 2).
+    - Tarjeta destacada con fondo oscuro (`bg-[#161722]`), borde distintivo (`border-amber-500/30`) e insignia "Anclado" con ícono (`HU_DN_06_87`, Criterio 3; `HU_DN_06_89`, Criterio 3) alineada con los estilos de la plantilla demo.
+    - Ordenamiento automático reactivo mediante `useMemo` asegurando que las entradas ancladas se ubiquen en el tope de la lista y recuperen su orden normal al desanclar (`HU_DN_06_89`, Criterio 3).
+    - Notificaciones toast de éxito (`ENTRY_PINNED` / `ENTRY_UNPINNED`) y manejo de fallo técnico con `DOCUMENTATION_MESSAGES.GENERIC_ERROR` sin alterar datos locales (`HU_DN_06_87`, Criterios 5 y 6; `HU_DN_06_89`, Criterios 5 y 6).
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias e integración:**
+  - `src/features/documentation/ProjectKnowledgeTab.test.tsx`: 17 pruebas que verifican anclado, desanclado, reordenamiento a la cabecera, restricción para desarrolladores y manejo de fallo técnico.
+  - `src/features/documentation/api.test.ts`: 11 pruebas unitarias cubriendo la llamada a `toggleDocumentationPin`.
+- **Quality Gates Aprobados:**
+  - `npm run typecheck`: 0 errores TypeScript.
+  - `npm run lint`: 0 advertencias / 0 errores ESLint.
+  - `npm run format:check`: 100% de archivos formateados con Prettier.
+  - `npm run test`: 340 pruebas pasadas en 42 archivos.
+  - `npm run build`: Compilación limpia en 2.8s.
+  - `scan-secrets.mjs`: 0 secretos detectados.
