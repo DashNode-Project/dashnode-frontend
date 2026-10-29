@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => {
           'src/features/users/UsersPage.tsx',
         ],
         reporter: ['text-summary', 'text'],
-        thresholds: { lines: 80, statements: 80, functions: 78, branches: 71 },
+        thresholds: { lines: 80, statements: 80, functions: 78, branches: 72 },
       },
     },
   };

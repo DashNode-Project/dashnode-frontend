@@ -357,9 +357,6 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 
 
 
-
-
-
 ---
 
 ## Épica 09: Anclado de documentación destacada (HU_DN_06_87 y HU_DN_06_89)
