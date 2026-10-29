@@ -359,3 +359,42 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 
 
 
+
+---
+
+## Épica 09: Anclado de documentación destacada (HU_DN_06_87 y HU_DN_06_89)
+
+### Análisis del Orquestador (Modo Lote / Consolidación de HU)
+- **Fecha:** 2026-10-28
+- **Clasificación del lote:** FULL_STACK
+- **Complejidad:** MODERATE (Score: 78/100)
+- **Project Mode:** EXTEND_EXISTING
+- **Ramas:** `feature/ep-09-documentation-doc` (backend y frontend)
+- **Consolidación:** Ambas historias cubren la capacidad de anclar/desanclar entradas al inicio del listado de la base de conocimiento para Gerentes y Administradores, sin apertura de modales y con retroalimentación visual destacada según la plantilla Figma en `demo/`.
+
+### Implementación Frontend
+- **Tipos y Contratos:**
+  - `src/features/documentation/types.ts`: extensión de `DocumentationEntry` con `is_pinned: boolean` y `can_pin?: boolean`; `TogglePinPayload`.
+- **Mensajes y Textos Literales:**
+  - `src/features/documentation/messages.ts`: definición de `ENTRY_PINNED`, `ENTRY_UNPINNED`, `ENTRY_PINNED_SHORT`, `ENTRY_UNPINNED_SHORT`, `PIN_ACTION` (`"Anclar al inicio"`), `UNPIN_ACTION` (`"Desanclar"`), `GENERIC_ERROR` (`"No fue posible completar la operación. Intente nuevamente."`).
+- **Cliente API:**
+  - `src/features/documentation/api.ts`: función `toggleDocumentationPin(projectId, entryId, isPinned?)` con método HTTP `PATCH`.
+- **Componentes y UI (Plantilla Figma / Demo):**
+  - `src/features/documentation/ProjectKnowledgeTab.tsx`:
+    - Botón de acción con ícono de chincheta (`Pin` de `lucide-react` tamaño 13) visible únicamente para Administrador, Gerente o según flag `entry.can_pin` (`HU_DN_06_87`, Criterios 1, 2 y 4).
+    - Alternancia directa entre "Anclar al inicio" y "Desanclar" en tooltip y accesibilidad `aria-label` (`HU_DN_06_89`, Criterio 1 y 2).
+    - Tarjeta destacada con fondo oscuro (`bg-[#161722]`), borde distintivo (`border-amber-500/30`) e insignia "Anclado" con ícono (`HU_DN_06_87`, Criterio 3; `HU_DN_06_89`, Criterio 3) alineada con los estilos de la plantilla demo.
+    - Ordenamiento automático reactivo mediante `useMemo` asegurando que las entradas ancladas se ubiquen en el tope de la lista y recuperen su orden normal al desanclar (`HU_DN_06_89`, Criterio 3).
+    - Notificaciones toast de éxito (`ENTRY_PINNED` / `ENTRY_UNPINNED`) y manejo de fallo técnico con `DOCUMENTATION_MESSAGES.GENERIC_ERROR` sin alterar datos locales (`HU_DN_06_87`, Criterios 5 y 6; `HU_DN_06_89`, Criterios 5 y 6).
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias e integración:**
+  - `src/features/documentation/ProjectKnowledgeTab.test.tsx`: 17 pruebas que verifican anclado, desanclado, reordenamiento a la cabecera, restricción para desarrolladores y manejo de fallo técnico.
+  - `src/features/documentation/api.test.ts`: 11 pruebas unitarias cubriendo la llamada a `toggleDocumentationPin`.
+- **Quality Gates Aprobados:**
+  - `npm run typecheck`: 0 errores TypeScript.
+  - `npm run lint`: 0 advertencias / 0 errores ESLint.
+  - `npm run format:check`: 100% de archivos formateados con Prettier.
+  - `npm run test`: 340 pruebas pasadas en 42 archivos.
+  - `npm run build`: Compilación limpia en 2.8s.
+  - `scan-secrets.mjs`: 0 secretos detectados.

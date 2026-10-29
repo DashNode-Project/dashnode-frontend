@@ -1097,7 +1097,43 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 
 ---
 
-## Estado de implementación — EP-09 Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_86)
+### HU_DN_06_87 — Anclar o desanclar una entrada de documentación al inicio de la lista
+**Como** Administrador o Gerente  
+**Quiero** Anclar o desanclar una entrada de documentación al inicio de la lista  
+**Para** destacar información relevante o de consulta frecuente
+
+**Criterios de aceptación:**
+1. Dónde: Pestaña “Conocimiento”, acción “Anclar” / “Desanclar” en la entrada.
+2. Campos: Control: 2.1 Ícono / Botón “Anclar al inicio” o “Desanclar”.
+3. Validación: Al anclar, la entrada pasa a mostrarse destacada al inicio del listado.
+4. Restricción: Solo Administrador y Gerente pueden anclar o desanclar entradas.
+5. Éxito: 'Entrada anclada correctamente.' o 'Entrada desanclada correctamente.'
+6. Fallo técnico: Ante un error no anticipado se muestra 'No fue posible completar la operación. Intente nuevamente.' sin alterar datos.
+
+**Fecha recepción:** 2026-10-28  
+**Estado:** COMPLETED
+
+---
+
+### HU_DN_06_89 — Anclar una entrada importante al inicio de la lista
+**Como** Administrador o Gerente  
+**Quiero** Anclar una entrada importante al inicio de la lista  
+**Para** destacar la documentación clave del proyecto
+
+**Criterios de aceptación:**
+1. Dónde: Pestaña “Conocimiento”, acción “Anclar” de la entrada; la misma acción alterna a “Desanclar”.
+2. Campos: No aplica captura de datos; la acción no requiere formulario.
+3. Validación: Las entradas ancladas aparecen destacadas al inicio de la lista; al desanclar vuelven a su posición normal.
+4. Restricción: Solo Administrador y Gerente anclan o desanclan.
+5. Éxito: 'Entrada anclada.' o 'Entrada desanclada.' según la acción.
+6. Fallo técnico: Ante un error no anticipado se muestra 'No fue posible completar la operación. Intente nuevamente.' sin alterar datos.
+
+**Fecha recepción:** 2026-10-28  
+**Estado:** COMPLETED
+
+---
+
+## Estado de implementación — EP-09 Documentación y base de conocimiento (HU_DN_06_77 … HU_DN_06_89)
 
 | HU | Estado | Evidencia |
 | --- | --- | --- |
@@ -1111,3 +1147,5 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 | HU_DN_06_84 | Implementado | Botón "Aprobar", restricción RN-DOC-01 para auto-aprobación con botón deshabilitado y mensaje literal `CANNOT_APPROVE_OWN_ENTRY`, actualización reactiva de cola y toast `ENTRY_APPROVED`. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
 | HU_DN_06_85 | Implementado | Modal `RejectDocumentationModal` con campo de texto opcional para observaciones, botón de confirmación de rechazo, toast `ENTRY_REJECTED` y actualización de cola. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
 | HU_DN_06_86 | Implementado | Botón "Reenviar a aprobación" visible al autor en tarjetas rechazadas, visualización de observaciones de rechazo previo en tarjeta y modal, validación de estado `REJECTED`, toast `ENTRY_RESUBMITTED`. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+| HU_DN_06_87 | Implementado | Botón icono Pin en tarjeta (`title` "Anclar al inicio" / "Desanclar") exclusivo para Admin/Gerente, ordenamiento en cabecera del listado, borde y fondo destacado (`border-amber-500/30 bg-[#161722]`), insignia "Anclado", toasts literales de éxito y fallo técnico. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+| HU_DN_06_89 | Implementado | Acción directa sin apertura de formulario ni modal, conmutación instantánea a la parte superior y retorno reactivo al desanclar a la posición cronológica original. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
