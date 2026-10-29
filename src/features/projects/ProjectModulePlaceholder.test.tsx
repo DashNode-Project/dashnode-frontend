@@ -9,15 +9,15 @@ vi.mock('@/lib/underDevelopment', () => ({
 }));
 
 describe('ProjectModulePlaceholder', () => {
-  it('notifies under development for kanban tab', () => {
+  it('notifies under development for issues tab', () => {
     render(
-      <MemoryRouter initialEntries={['/proyectos/p1/kanban']}>
+      <MemoryRouter initialEntries={['/proyectos/p1/issues']}>
         <Routes>
           <Route path="/proyectos/:projectId/:moduleTab" element={<ProjectModulePlaceholder />} />
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByText(/Kanban/)).toBeInTheDocument();
-    expect(underDev.notifyUnderDevelopment).toHaveBeenCalledWith('Kanban');
+    expect(screen.getByText(/Issues/)).toBeInTheDocument();
+    expect(underDev.notifyUnderDevelopment).toHaveBeenCalledWith('Issues');
   });
 });
