@@ -9,6 +9,8 @@ import * as docApi from './api';
 import { DOCUMENTATION_MESSAGES } from './messages';
 import type { DocumentationEntry } from './types';
 
+import type { Role } from '@/features/auth/types';
+
 vi.mock('./api');
 
 const useAuthMock = vi.fn(() => ({
@@ -16,7 +18,7 @@ const useAuthMock = vi.fn(() => ({
     id: 'user-manager-1',
     name: 'Manager User',
     email: 'manager@example.com',
-    role: 'manager' as const,
+    role: 'manager' as Role,
   },
 }));
 
@@ -107,7 +109,7 @@ describe('ProjectKnowledgeTab', () => {
         id: 'user-manager-1',
         name: 'Manager User',
         email: 'manager@example.com',
-        role: 'manager' as const,
+        role: 'manager' as Role,
       },
     });
     vi.mocked(docApi.listPendingApprovals).mockResolvedValue({
@@ -540,5 +542,133 @@ describe('ProjectKnowledgeTab', () => {
 
     expect(screen.queryByText('Guía de Arquitectura Hexagonal')).not.toBeInTheDocument();
     expect(screen.getByText('Minuta de Reunión de Inicio')).toBeInTheDocument();
+  });
+
+  it('HU_DN_06_87: allows Admin and Manager to pin and unpin documentation entries with highlight and notification', async () => {
+    const user = userEvent.setup();
+    vi.mocked(docApi.listDocumentationEntries).mockResolvedValue({
+      entries: sampleEntries,
+      message: null,
+    });
+    vi.mocked(docApi.toggleDocumentationPin).mockResolvedValueOnce({
+      message: DOCUMENTATION_MESSAGES.ENTRY_PINNED,
+      entry: { ...sampleEntries[1]!, is_pinned: true },
+    });
+
+    renderKnowledgeTab();
+
+    await waitFor(() => {
+      expect(screen.getByText('Minuta de Reunión de Inicio')).toBeInTheDocument();
+    });
+
+    // doc-2 is initially unpinned: action button says "Anclar al inicio"
+    const pinBtn = screen.getByTestId('toggle-pin-doc-doc-2');
+    expect(pinBtn).toHaveAttribute('title', DOCUMENTATION_MESSAGES.PIN_ACTION);
+
+    // Manager clicks to pin doc-2
+    await user.click(pinBtn);
+
+    await waitFor(() => {
+      expect(docApi.toggleDocumentationPin).toHaveBeenCalledWith('p-1', 'doc-2');
+      expect(screen.getByText(DOCUMENTATION_MESSAGES.ENTRY_PINNED)).toBeInTheDocument();
+    });
+
+    // Unpin action mock
+    vi.mocked(docApi.toggleDocumentationPin).mockResolvedValueOnce({
+      message: DOCUMENTATION_MESSAGES.ENTRY_UNPINNED,
+      entry: { ...sampleEntries[1]!, is_pinned: false },
+    });
+
+    // Action button now says "Desanclar"
+    expect(pinBtn).toHaveAttribute('title', DOCUMENTATION_MESSAGES.UNPIN_ACTION);
+    await user.click(pinBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(DOCUMENTATION_MESSAGES.ENTRY_UNPINNED)).toBeInTheDocument();
+    });
+  });
+
+  it('HU_DN_06_89: pins entry to the top of the list and restores normal order without form', async () => {
+    const user = userEvent.setup();
+    // sampleEntries has doc-1 (pinned, older) and doc-2 (unpinned, newer)
+    vi.mocked(docApi.listDocumentationEntries).mockResolvedValue({
+      entries: sampleEntries,
+      message: null,
+    });
+    vi.mocked(docApi.toggleDocumentationPin).mockResolvedValue({
+      message: DOCUMENTATION_MESSAGES.ENTRY_PINNED_SHORT,
+      entry: { ...sampleEntries[1]!, is_pinned: true },
+    });
+
+    renderKnowledgeTab();
+
+    await waitFor(() => {
+      expect(screen.getByText('Guía de Arquitectura Hexagonal')).toBeInTheDocument();
+    });
+
+    // Initial order: doc-1 is pinned, so doc-1 appears first in the list
+    const cardsBefore = screen.getAllByTestId(/^doc-entry-card-/);
+    expect(cardsBefore[0]).toHaveAttribute('data-testid', 'doc-entry-card-doc-1');
+
+    // Pin doc-2 without opening any modal/form
+    const pinBtn = screen.getByTestId('toggle-pin-doc-doc-2');
+    await user.click(pinBtn);
+
+    await waitFor(() => {
+      expect(docApi.toggleDocumentationPin).toHaveBeenCalledWith('p-1', 'doc-2');
+    });
+
+    // Verification: doc-2 is now pinned, and since doc-2 is newer than doc-1, both are pinned and doc-2 is at top
+    const cardsAfter = screen.getAllByTestId(/^doc-entry-card-/);
+    expect(cardsAfter[0]).toHaveAttribute('data-testid', 'doc-entry-card-doc-2');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('HU_DN_06_87 & HU_DN_06_89: Developer cannot pin or unpin entries', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'dev-1',
+        name: 'Developer User',
+        email: 'dev@example.com',
+        role: 'developer' as const,
+      },
+    });
+
+    vi.mocked(docApi.listDocumentationEntries).mockResolvedValue({
+      entries: sampleEntries,
+      message: null,
+    });
+
+    renderKnowledgeTab();
+
+    await waitFor(() => {
+      expect(screen.getByText('Guía de Arquitectura Hexagonal')).toBeInTheDocument();
+    });
+
+    // Developer should not see the pin toggle button
+    expect(screen.queryByTestId('toggle-pin-doc-doc-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('toggle-pin-doc-doc-2')).not.toBeInTheDocument();
+  });
+
+  it('HU_DN_06_87 & HU_DN_06_89: shows generic error on technical failure without altering data', async () => {
+    const user = userEvent.setup();
+    vi.mocked(docApi.listDocumentationEntries).mockResolvedValue({
+      entries: sampleEntries,
+      message: null,
+    });
+    vi.mocked(docApi.toggleDocumentationPin).mockRejectedValue(new Error('Network error'));
+
+    renderKnowledgeTab();
+
+    await waitFor(() => {
+      expect(screen.getByText('Minuta de Reunión de Inicio')).toBeInTheDocument();
+    });
+
+    const pinBtn = screen.getByTestId('toggle-pin-doc-doc-2');
+    await user.click(pinBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(DOCUMENTATION_MESSAGES.GENERIC_ERROR)).toBeInTheDocument();
+    });
   });
 });

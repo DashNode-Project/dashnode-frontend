@@ -18,10 +18,15 @@ export interface DocumentationEntry {
   is_visible_to_devs: boolean;
   rejection_reason?: string | null;
   can_approve?: boolean;
+  can_pin?: boolean;
   created_at: string;
   updated_at: string;
   can_edit: boolean;
   can_delete: boolean;
+}
+
+export interface TogglePinPayload {
+  is_pinned?: boolean;
 }
 
 export interface CreateDocumentationPayload {

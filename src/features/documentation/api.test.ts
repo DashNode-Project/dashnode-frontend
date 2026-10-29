@@ -9,6 +9,7 @@ import {
   listPendingApprovals,
   rejectDocumentationEntry,
   resubmitDocumentationEntry,
+  toggleDocumentationPin,
   toggleDocumentationVisibility,
   updateDocumentationEntry,
 } from './api';
@@ -205,5 +206,23 @@ describe('documentation api', () => {
     expect(res.message).toBe('Entrada reenviada a aprobación.');
     expect(res.entry?.title).toBe('Guía técnica v2');
     expect(res.entry?.approval_status).toBe('PENDING');
+  });
+
+  it('HU_DN_06_87 & HU_DN_06_89: toggles pin state of documentation entry', async () => {
+    mockFetch((call) => {
+      expect(call.method).toBe('PATCH');
+      expect(call.url).toContain('/projects/p-1/documentation/doc-1/pin');
+      return ok({
+        message: 'Entrada anclada correctamente.',
+        entry: {
+          ...sampleEntry,
+          is_pinned: true,
+        },
+      });
+    });
+
+    const res = await toggleDocumentationPin('p-1', 'doc-1', true);
+    expect(res.message).toBe('Entrada anclada correctamente.');
+    expect(res.entry?.is_pinned).toBe(true);
   });
 });

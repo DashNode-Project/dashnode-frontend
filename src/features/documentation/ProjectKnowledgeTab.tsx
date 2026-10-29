@@ -26,6 +26,7 @@ import {
   listDocumentationEntries,
   listPendingApprovals,
   resubmitDocumentationEntry,
+  toggleDocumentationPin,
   toggleDocumentationVisibility,
   updateDocumentationEntry,
 } from './api';
@@ -61,6 +62,7 @@ export default function ProjectKnowledgeTab() {
   const [viewingEntry, setViewingEntry] = useState<DocumentationEntry | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null);
+  const [togglingPinId, setTogglingPinId] = useState<string | null>(null);
 
   const fetchEntries = useCallback(async () => {
     if (!projectId) return;
@@ -192,6 +194,30 @@ export default function ProjectKnowledgeTab() {
     }
   };
 
+  const handleTogglePin = async (entry: DocumentationEntry) => {
+    if (!projectId) return;
+    setTogglingPinId(entry.id);
+    try {
+      const res = await toggleDocumentationPin(projectId, entry.id);
+      const newPinned = !entry.is_pinned;
+      const defaultMsg = newPinned
+        ? DOCUMENTATION_MESSAGES.ENTRY_PINNED
+        : DOCUMENTATION_MESSAGES.ENTRY_UNPINNED;
+      showToast(res.message || defaultMsg, 'success');
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entry.id ? { ...e, is_pinned: newPinned } : e)),
+      );
+    } catch (err: unknown) {
+      if (err instanceof ApiError && !isTechnicalFailure(err)) {
+        showToast(err.message, 'error');
+      } else {
+        showToast(DOCUMENTATION_MESSAGES.GENERIC_ERROR, 'error');
+      }
+    } finally {
+      setTogglingPinId(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!projectId || !deletingEntry) return;
     setSubmitting(true);
@@ -212,7 +238,7 @@ export default function ProjectKnowledgeTab() {
   };
 
   const filteredEntries = useMemo(() => {
-    return entries.filter((entry) => {
+    const list = entries.filter((entry) => {
       // Category filter
       if (selectedCategory !== 'all' && entry.category !== selectedCategory) {
         return false;
@@ -233,6 +259,14 @@ export default function ProjectKnowledgeTab() {
         }
       }
       return true;
+    });
+
+    // Pinned entries always appear at the top; otherwise sorted by created_at desc
+    return [...list].sort((a, b) => {
+      if (a.is_pinned !== b.is_pinned) {
+        return a.is_pinned ? -1 : 1;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [entries, selectedCategory, selectedStatus, searchTerm]);
 
@@ -457,6 +491,31 @@ export default function ProjectKnowledgeTab() {
                         </div>
 
                         <div className="flex shrink-0 items-center gap-1">
+                          {canManageDoc || entry.can_pin ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleTogglePin(entry)}
+                              disabled={togglingPinId === entry.id}
+                              className={`rounded p-1 transition-colors ${
+                                entry.is_pinned
+                                  ? 'text-amber-400 hover:bg-amber-500/10 hover:text-amber-300'
+                                  : 'text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]'
+                              }`}
+                              title={
+                                entry.is_pinned
+                                  ? DOCUMENTATION_MESSAGES.UNPIN_ACTION
+                                  : DOCUMENTATION_MESSAGES.PIN_ACTION
+                              }
+                              aria-label={
+                                entry.is_pinned
+                                  ? `${DOCUMENTATION_MESSAGES.UNPIN_ACTION} ${entry.title}`
+                                  : `${DOCUMENTATION_MESSAGES.PIN_ACTION} ${entry.title}`
+                              }
+                              data-testid={`toggle-pin-doc-${entry.id}`}
+                            >
+                              <Pin size={13} className={entry.is_pinned ? 'fill-amber-400' : ''} />
+                            </button>
+                          ) : null}
                           {entry.can_edit ? (
                             <button
                               type="button"

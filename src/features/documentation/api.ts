@@ -116,3 +116,17 @@ export async function resubmitDocumentationEntry(
     },
   );
 }
+
+export async function toggleDocumentationPin(
+  projectId: string,
+  entryId: string,
+  isPinned?: boolean,
+): Promise<DocumentationOperationResponse> {
+  return apiRequest<DocumentationOperationResponse>(
+    `/projects/${projectId}/documentation/${entryId}/pin`,
+    {
+      method: 'PATCH',
+      body: isPinned !== undefined ? { is_pinned: isPinned } : {},
+    },
+  );
+}

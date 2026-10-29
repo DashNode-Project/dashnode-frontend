@@ -27,4 +27,10 @@ export const DOCUMENTATION_MESSAGES = {
   ENTRY_RESUBMITTED: 'Entrada reenviada a aprobación.',
   ONLY_REJECTED_CAN_BE_RESUBMITTED: 'Solo se pueden reenviar entradas rechazadas.',
   APPROVAL_QUEUE_TITLE: 'Cola de aprobación',
+  ENTRY_PINNED: 'Entrada anclada correctamente.',
+  ENTRY_UNPINNED: 'Entrada desanclada correctamente.',
+  ENTRY_PINNED_SHORT: 'Entrada anclada.',
+  ENTRY_UNPINNED_SHORT: 'Entrada desanclada.',
+  PIN_ACTION: 'Anclar al inicio',
+  UNPIN_ACTION: 'Desanclar',
 } as const;
