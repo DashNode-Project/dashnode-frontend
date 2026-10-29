@@ -131,3 +131,13 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `components/RejectDocumentationModal.tsx`: modal para rechazar una entrada pendiente con captura opcional de observaciones (`HU_DN_06_85`)
   - `ProjectKnowledgeTab.tsx`: vista de la base de conocimiento con subpestañas "Base de conocimiento" y "Cola de aprobación" (con badge numérico para Admin/Gerente), conmutador de visibilidad para desarrolladores en tarjetas aprobadas (`HU_DN_06_82`), botón "Reenviar a aprobación" para el autor en tarjetas rechazadas (`HU_DN_06_86`), control de anclado (`HU_DN_06_87` y `HU_DN_06_89`) con ícono de chincheta/pin (`lucide-react` Pin size 13), fondo destacado (`bg-[#161722] border-amber-500/30`), insignia "Anclado", reordenamiento reactivo y sin modales requeridos, filtros y barra de búsqueda
   - `ProjectKnowledgeTab.test.tsx` y `api.test.ts`: suite completa de 28 pruebas unitarias y de integración para todas las HUs de la épica (incluyendo anclado/desanclado, restricciones de rol, persistencia en listado y fallos técnicos)
+
+## EP-10 — Asistente de IA por voz (HU_DN_06_90 … HU_DN_06_96)
+
+- Widget global: `AiAssistantWidget` exportado desde `HeaderTools.tsx` e incluido en `AppShell` (`fixed bottom-6 right-6`, icono `Bot`).
+- `src/features/ai-assistant/`:
+  - `AiAssistantWidget.tsx`: panel de chat, estados accesibles, focus trap, Esc para cerrar, burbujas con `escapeHtml`, grabación MediaRecorder (60s), reintento y contexto de proyecto en cabecera
+  - `useVoiceCapture.ts`: permisos, temporizador y errores literales de captura
+  - `api.ts`: `postVoiceProcess`, `postTextGenerate`
+  - `messages.ts`, `types.ts`, `escapeHtml.ts`
+  - `AiAssistantWidget.test.tsx`: a11y (jest-axe) y apertura/cierre por teclado

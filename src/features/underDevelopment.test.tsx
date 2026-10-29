@@ -92,18 +92,25 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     expect(home).toHaveAttribute('aria-current', 'page');
   });
 
-  it('search opens the command palette; notifications and AI log the notice', async () => {
+  it('search opens the command palette; notifications log the notice', async () => {
     const info = await authenticated('developer');
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Buscar/i }));
     expect(await screen.findByRole('dialog', { name: 'Búsqueda rápida' })).toBeInTheDocument();
     info.mockClear();
-    for (const name of ['Notificaciones', 'Asistente de IA']) {
-      await user.click(screen.getByRole('button', { name }));
-      expect(info).toHaveBeenCalledTimes(1);
-      expect(info.mock.calls[0]?.[0]).toBe(UNDER_DEVELOPMENT_MESSAGE);
-      info.mockClear();
-    }
+    await user.click(screen.getByRole('button', { name: 'Notificaciones' }));
+    expect(info).toHaveBeenCalledTimes(1);
+    expect(info.mock.calls[0]?.[0]).toBe(UNDER_DEVELOPMENT_MESSAGE);
+  });
+
+  it('the floating AI assistant opens its chat panel (HU_DN_06_90)', async () => {
+    await authenticated('developer');
+    const user = userEvent.setup();
+    const toggle = screen.getByRole('button', { name: /Abrir asistente de IA/i });
+    await user.click(toggle);
+    expect(
+      await screen.findByRole('dialog', { name: /Ventana de conversación del asistente/i }),
+    ).toBeInTheDocument();
   });
 
   it('the administrator has no notifications control', async () => {
