@@ -10,7 +10,15 @@ import {
   Square,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { useMatch } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -31,8 +39,15 @@ import type {
   ProcessingMode,
 } from './types';
 import { mapVoiceCaptureError, useVoiceCapture } from './useVoiceCapture';
+import {
+  clampChatPanelSize,
+  loadChatPanelSize,
+  saveChatPanelSize,
+  type ChatPanelSize,
+} from './chatPanelSize';
 
 const IDLE_AFTER_MS = 2500;
+const SCROLL_BOTTOM_THRESHOLD_PX = 48;
 
 function mapHistoryMessages(
   payload: Awaited<ReturnType<typeof fetchChatHistory>>,
@@ -125,8 +140,14 @@ export function AiAssistantWidget() {
   const [retryDisabled, setRetryDisabled] = useState(false);
   const [projectLabel, setProjectLabel] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const [panelSize, setPanelSize] = useState<ChatPanelSize>(() => loadChatPanelSize());
+  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(
+    null,
+  );
   const idleTimerRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
   const voice = useVoiceCapture();
@@ -155,10 +176,60 @@ export function AiAssistantWidget() {
 
   useEffect(() => () => clearIdleTimer(), []);
 
-  const scrollToLatest = () => {
+  const scrollToLatest = useCallback((force = false) => {
+    if (!force && !stickToBottomRef.current) return;
     requestAnimationFrame(() => {
-      endRef.current?.scrollIntoView?.({ behavior: 'smooth' });
+      endRef.current?.scrollIntoView?.({ behavior: force ? 'auto' : 'smooth' });
     });
+  }, []);
+
+  const onMessagesScroll = useCallback(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distance <= SCROLL_BOTTOM_THRESHOLD_PX;
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => {
+      setPanelSize((current) => clampChatPanelSize(current));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    saveChatPanelSize(panelSize);
+  }, [open, panelSize]);
+
+  const onResizePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    resizeRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startW: panelSize.width,
+      startH: panelSize.height,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onResizePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const start = resizeRef.current;
+    if (!start) return;
+    const deltaX = start.startX - event.clientX;
+    const deltaY = start.startY - event.clientY;
+    setPanelSize(
+      clampChatPanelSize({
+        width: start.startW + deltaX,
+        height: start.startH + deltaY,
+      }),
+    );
+  };
+
+  const onResizePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    resizeRef.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
   const refreshProjectContext = async (activeProjectId: string | null) => {
@@ -214,15 +285,20 @@ export function AiAssistantWidget() {
     try {
       const payload = await fetchChatHistory();
       setMessages(mapHistoryMessages(payload));
-      scrollToLatest();
+      scrollToLatest(true);
     } catch {
       setMessages([]);
     } finally {
       setHistoryLoading(false);
     }
-  }, []);
+  }, [scrollToLatest]);
 
   const visibleMessages = user?.id ? messages : [];
+
+  useEffect(() => {
+    if (!open) return;
+    scrollToLatest();
+  }, [open, visibleMessages.length, scrollToLatest]);
 
   const runTextQuery = useCallback(
     async (text: string, retry = false) => {
@@ -421,9 +497,22 @@ export function AiAssistantWidget() {
           role="dialog"
           aria-modal="true"
           aria-label={AI_MESSAGES.chatPanelLabel}
-          className="pointer-events-auto flex w-[min(100vw-2rem,22rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#12131C] shadow-2xl shadow-violet-950/40"
+          style={{
+            width: Math.min(panelSize.width, window.innerWidth - 32),
+            height: Math.min(panelSize.height, window.innerHeight - 32),
+          }}
+          className="pointer-events-auto relative flex max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#12131C] shadow-2xl shadow-violet-950/40"
         >
-          <header className="flex items-start justify-between gap-2 border-b border-white/8 bg-gradient-to-r from-[#0A0B0E] to-[#151628] px-4 py-3">
+          <button
+            type="button"
+            aria-label="Redimensionar panel del asistente"
+            className="absolute left-0 top-0 z-10 h-4 w-4 cursor-nwse-resize rounded-br-md bg-white/10 hover:bg-violet-500/30"
+            onPointerDown={onResizePointerDown}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+            onPointerCancel={onResizePointerUp}
+          />
+          <header className="flex shrink-0 items-start justify-between gap-2 border-b border-white/8 bg-gradient-to-r from-[#0A0B0E] to-[#151628] px-4 py-3">
             <div className="min-w-0 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-500/20 text-violet-300">
@@ -446,7 +535,12 @@ export function AiAssistantWidget() {
             </button>
           </header>
 
-          <div className="max-h-72 space-y-3 overflow-y-auto px-3 py-3" aria-live="polite">
+          <div
+            ref={messagesRef}
+            onScroll={onMessagesScroll}
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3 [scrollbar-color:rgba(139,92,246,0.45)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-violet-500/40 [&::-webkit-scrollbar]:w-1.5"
+            aria-live="polite"
+          >
             {historyLoading ? (
               <p className="text-xs text-[#9CA3AF]">Cargando historial…</p>
             ) : null}
@@ -500,7 +594,7 @@ export function AiAssistantWidget() {
             </div>
           ) : null}
 
-          <footer className="border-t border-white/8 px-3 py-3">
+          <footer className="shrink-0 border-t border-white/8 px-3 py-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               <button
                 type="button"
