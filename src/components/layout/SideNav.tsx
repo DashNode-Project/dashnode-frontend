@@ -176,18 +176,20 @@ export function SideNav() {
         {!sidebarCollapsed ? 'Manual' : null}
       </NavLink>
 
-      {items.map(({ id, label, icon: Icon }) => (
-        <button
-          key={id}
-          type="button"
-          title={label}
-          onClick={() => notifyUnderDevelopment(`nav:${id}`)}
-          className={`${base} ${sidebarCollapsed ? 'justify-center' : ''} text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]`}
-        >
-          <Icon size={20} aria-hidden="true" />
-          {!sidebarCollapsed ? label : null}
-        </button>
-      ))}
+      {items.length > 0
+        ? items.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              title={label}
+              onClick={() => notifyUnderDevelopment(`nav:${id}`)}
+              className={`${base} ${sidebarCollapsed ? 'justify-center' : ''} text-[#9CA3AF] hover:bg-white/5 hover:text-[#F9FAFB]`}
+            >
+              <Icon size={20} aria-hidden="true" />
+              {!sidebarCollapsed ? label : null}
+            </button>
+          ))
+        : null}
     </nav>
   );
 }

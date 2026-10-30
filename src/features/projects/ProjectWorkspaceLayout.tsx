@@ -18,23 +18,11 @@ export default function ProjectWorkspaceLayout() {
   const [project, setProject] = useState<ProjectSummary | null>(null);
   const [teamNames, setTeamNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const load = useCallback(async () => {
-    if (!projectId) return;
-    setLoading(true);
-    try {
-      setProject(await getProject(projectId));
-    } catch (error) {
-      showToast(
-        error instanceof ApiError && !isTechnicalFailure(error)
-          ? error.message
-          : MESSAGES.loadFailure,
-        'error',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, showToast]);
+  const reload = useCallback(async () => {
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     if (!projectId) return;
@@ -42,16 +30,19 @@ export default function ProjectWorkspaceLayout() {
     (async () => {
       setLoading(true);
       try {
-        const [data, members] = await Promise.all([
-          getProject(projectId),
-          listProjectMembers(projectId),
-        ]);
-        if (!cancelled) {
-          setProject(data);
+        const data = await getProject(projectId);
+        if (cancelled) return;
+        setProject(data);
+        try {
+          const members = await listProjectMembers(projectId);
+          if (cancelled) return;
           setTeamNames(members.filter((m) => m.role !== 'admin').map((m) => m.name));
+        } catch {
+          if (!cancelled) setTeamNames([]);
         }
       } catch (error) {
         if (cancelled) return;
+        setProject(null);
         showToast(
           error instanceof ApiError && !isTechnicalFailure(error)
             ? error.message
@@ -65,13 +56,33 @@ export default function ProjectWorkspaceLayout() {
     return () => {
       cancelled = true;
     };
-  }, [projectId, showToast]);
+  }, [projectId, showToast, refreshKey]);
 
-  if (loading || !project || !user) {
+  if (loading) {
     return (
       <p className="text-sm text-[#9CA3AF]" role="status">
         Cargando proyecto…
       </p>
+    );
+  }
+
+  if (!project || !user) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-[#F9FAFB]" role="alert">
+          {MESSAGES.loadFailure}
+        </p>
+        <button
+          type="button"
+          className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-500"
+          onClick={reload}
+        >
+          Reintentar
+        </button>
+        <Link to={PATHS.projects} className="block text-sm text-blue-400 hover:underline">
+          ← Proyectos
+        </Link>
+      </div>
     );
   }
 
@@ -81,7 +92,7 @@ export default function ProjectWorkspaceLayout() {
   const tabs = visibleProjectTabs(user.role);
 
   return (
-    <ProjectWorkspaceProvider value={{ project, reload: load, canManage, isAdmin }}>
+    <ProjectWorkspaceProvider value={{ project, reload, canManage, isAdmin }}>
       <div>
         <Link
           to={PATHS.projects}
@@ -111,11 +122,15 @@ export default function ProjectWorkspaceLayout() {
           {tabs.map((tab) => (
             <NavLink
               key={tab.segment}
-              to={projectTabPath(projectId, tab.segment)}
+              to={
+                tab.segment === 'tareas'
+                  ? projectTabPath(projectId, 'tareas/lista')
+                  : projectTabPath(projectId, tab.segment)
+              }
               className={({ isActive }) => {
                 const tabActive =
-                  tab.segment === 'backlog'
-                    ? location.pathname.includes(`${PATHS.projects}/${projectId}/backlog`)
+                  tab.segment === 'tareas'
+                    ? location.pathname.includes(`${PATHS.projects}/${projectId}/tareas`)
                     : isActive;
                 return [
                   'whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium transition-colors',

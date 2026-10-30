@@ -9,7 +9,6 @@ import { PATHS } from '@/app/paths';
 import {
   addProjectMember,
   deleteProject,
-  getProject,
   getProjectHealth,
   listActiveUsers,
   listProjectMembers,
@@ -21,6 +20,7 @@ import {
   type ProjectSummary,
   type ProjectStatus,
 } from './api';
+import { useProjectWorkspace } from './ProjectWorkspaceContext';
 import { ProjectModal } from './ProjectModal';
 import { ProjectFormFields } from './ProjectsPage';
 import { PROJECT_MESSAGES, PROJECT_PRIORITY_LABELS, PROJECT_STATUS_LABELS } from './messages';
@@ -41,8 +41,7 @@ export default function ProjectDetailPage() {
   const { projectId = '' } = useParams();
   const { user } = useAuth();
   const { showToast } = useToast();
-  const [project, setProject] = useState<ProjectSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { project, reload } = useProjectWorkspace();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [form, setForm] = useState<ProjectFormValues | null>(null);
@@ -50,7 +49,6 @@ export default function ProjectDetailPage() {
     {},
   );
   const [submitting, setSubmitting] = useState(false);
-  const [statusValue, setStatusValue] = useState<ProjectStatus>('planificacion');
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
   const [health, setHealth] = useState<ProjectHealth | null>(null);
   const [memberOpen, setMemberOpen] = useState(false);
@@ -68,36 +66,23 @@ export default function ProjectDetailPage() {
     if (!projectId) return;
     let cancelled = false;
     (async () => {
-      setLoading(true);
       try {
-        const data = await getProject(projectId);
-        if (cancelled) return;
-        setProject(data);
-        setStatusValue(data.status);
-        setForm(toForm(data));
-        const [memberRows, healthRow] = await Promise.all([
-          listProjectMembers(projectId),
-          getProjectHealth(projectId),
-        ]);
-        if (cancelled) return;
-        setMembers(memberRows);
-        setHealth(healthRow);
-      } catch (error) {
-        if (cancelled) return;
-        showToast(
-          error instanceof ApiError && !isTechnicalFailure(error)
-            ? error.message
-            : MESSAGES.technicalFailure,
-          'error',
-        );
-      } finally {
-        if (!cancelled) setLoading(false);
+        const memberRows = await listProjectMembers(projectId);
+        if (!cancelled) setMembers(memberRows);
+      } catch {
+        if (!cancelled) setMembers([]);
+      }
+      try {
+        const healthRow = await getProjectHealth(projectId);
+        if (!cancelled) setHealth(healthRow);
+      } catch {
+        if (!cancelled) setHealth(null);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [projectId, showToast]);
+  }, [projectId]);
 
   const refreshMembers = async () => {
     if (!projectId) return;
@@ -178,15 +163,15 @@ export default function ProjectDetailPage() {
     }
     setSubmitting(true);
     try {
-      const updated = await updateProject(project.id, {
+      await updateProject(project.id, {
         name: form.name.trim(),
         description: form.description.trim(),
         priority: form.priority as ProjectSummary['priority'],
         tech_stack: parseTechStack(form.techStackInput),
         meeting_link: form.meetingLink.trim() || null,
       });
-      setProject(updated);
       setEditOpen(false);
+      reload();
       showToast(PROJECT_MESSAGES.updated, 'success');
     } catch (error) {
       showToast(
@@ -202,13 +187,12 @@ export default function ProjectDetailPage() {
 
   const handleStatusChange = async (next: ProjectStatus) => {
     if (!project) return;
-    setStatusValue(next);
     try {
       const res = await updateProjectStatus(project.id, next);
-      setProject({ ...project, status: next });
+      reload();
       showToast(res.message, 'success');
     } catch (error) {
-      setStatusValue(project.status);
+      reload();
       showToast(
         error instanceof ApiError && !isTechnicalFailure(error)
           ? error.message
@@ -238,14 +222,6 @@ export default function ProjectDetailPage() {
     }
   };
 
-  if (loading || !project || !form) {
-    return (
-      <p className="text-sm text-[#9CA3AF]" role="status">
-        Cargando proyecto…
-      </p>
-    );
-  }
-
   const filteredCandidates = memberCandidates.filter((c) => {
     const q = memberSearch.trim().toLowerCase();
     if (!q) return true;
@@ -257,7 +233,14 @@ export default function ProjectDetailPage() {
       <div className="mb-6 flex flex-wrap items-start justify-end gap-2">
         <div className="flex flex-wrap gap-2">
           {canManage ? (
-            <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setForm(toForm(project));
+                setEditOpen(true);
+              }}
+            >
               Editar proyecto
             </Button>
           ) : null}
@@ -291,7 +274,7 @@ export default function ProjectDetailPage() {
             <dd className="mt-1">
               {canManage ? (
                 <select
-                  value={statusValue}
+                  value={project.status}
                   onChange={(e) => void handleStatusChange(e.target.value as ProjectStatus)}
                   className="h-9 rounded-md border border-white/10 bg-[#1E1F2B] px-3 text-sm text-[#F9FAFB] focus:border-blue-500 focus:outline-none"
                   aria-label="Estado"
@@ -388,13 +371,23 @@ export default function ProjectDetailPage() {
         )}
       </section>
 
-      {editOpen ? (
+      {editOpen && form ? (
         <ProjectModal
           title="Editar proyecto"
-          onClose={() => setEditOpen(false)}
+          onClose={() => {
+            setEditOpen(false);
+            setForm(null);
+          }}
           footer={
             <>
-              <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setEditOpen(false);
+                  setForm(null);
+                }}
+              >
                 Cancelar
               </Button>
               <Button type="button" loading={submitting} onClick={() => void handleSaveEdit()}>

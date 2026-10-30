@@ -2,12 +2,8 @@ import { useEffect, useState } from 'react';
 import { listProjectMembers, type ProjectMemberRow } from './api';
 import { useProjectWorkspace } from './ProjectWorkspaceContext';
 import { Avatar, Card } from '@/components/ui/demo-ui';
-import { useToast } from '@/lib/toast/ToastProvider';
-import { MESSAGES } from '@/lib/messages';
-
 export default function ProjectTeamTab() {
   const { project } = useProjectWorkspace();
-  const { showToast } = useToast();
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -18,7 +14,7 @@ export default function ProjectTeamTab() {
         const rows = await listProjectMembers(project.id);
         if (!cancelled) setMembers(rows);
       } catch {
-        if (!cancelled) showToast(MESSAGES.loadFailure, 'error');
+        if (!cancelled) setMembers([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -26,7 +22,7 @@ export default function ProjectTeamTab() {
     return () => {
       cancelled = true;
     };
-  }, [project.id, showToast]);
+  }, [project.id]);
 
   return (
     <div>
