@@ -326,8 +326,8 @@ export default function UserStoryReaderPage() {
     return (
       <p className="text-sm text-[#9CA3AF]">
         No hay historias para mostrar.{' '}
-        <Link to={projectTabPath(projectId, 'backlog')} className="text-blue-400 hover:underline">
-          Volver al backlog
+        <Link to={projectTabPath(projectId, 'tareas/lista')} className="text-blue-400 hover:underline">
+          Volver a tareas
         </Link>
       </p>
     );
@@ -337,10 +337,10 @@ export default function UserStoryReaderPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#12131C]/80 px-4 py-3 backdrop-blur-sm">
         <Link
-          to={projectTabPath(projectId, 'backlog')}
+          to={projectTabPath(projectId, 'tareas/lista')}
           className="text-sm font-medium text-blue-400 transition hover:text-blue-300"
         >
-          ← Tablero de backlog
+          ← Volver a tareas
         </Link>
         <div className="flex flex-wrap gap-2">
           <Button

@@ -1,4 +1,4 @@
-import { Bell, Bot, Search } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { PATHS } from '@/app/paths';
@@ -57,15 +57,4 @@ export function HeaderTools() {
   );
 }
 
-export function AiAssistantButton() {
-  return (
-    <button
-      type="button"
-      aria-label="Asistente de IA"
-      onClick={() => notifyUnderDevelopment('ai-assistant')}
-      className="fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white shadow-xl transition-transform hover:bg-violet-500 hover:scale-105 active:scale-95"
-    >
-      <Bot size={20} aria-hidden="true" />
-    </button>
-  );
-}
+export { AiAssistantWidget as AiAssistantButton } from '@/features/ai-assistant/AiAssistantWidget';
