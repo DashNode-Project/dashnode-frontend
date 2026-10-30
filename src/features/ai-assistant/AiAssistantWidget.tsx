@@ -41,6 +41,7 @@ import type {
 import { mapVoiceCaptureError, useVoiceCapture } from './useVoiceCapture';
 import {
   clampChatPanelSize,
+  DEFAULT_CHAT_PANEL_SIZE,
   loadChatPanelSize,
   saveChatPanelSize,
   type ChatPanelSize,
@@ -144,7 +145,8 @@ export function AiAssistantWidget() {
   const toggleRef = useRef<HTMLButtonElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
-  const [panelSize, setPanelSize] = useState<ChatPanelSize>(() => loadChatPanelSize());
+  const panelSizeHydratedRef = useRef(false);
+  const [panelSize, setPanelSize] = useState<ChatPanelSize>(DEFAULT_CHAT_PANEL_SIZE);
   const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(
     null,
   );
@@ -198,8 +200,14 @@ export function AiAssistantWidget() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  const hydratePanelSize = useCallback(() => {
+    if (panelSizeHydratedRef.current) return;
+    panelSizeHydratedRef.current = true;
+    setPanelSize(loadChatPanelSize());
+  }, []);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open || !panelSizeHydratedRef.current) return;
     saveChatPanelSize(panelSize);
   }, [open, panelSize]);
 
@@ -424,6 +432,7 @@ export function AiAssistantWidget() {
     setOpen((value) => {
       const next = !value;
       if (next) {
+        hydratePanelSize();
         void refreshProjectContext(projectId);
         scrollToLatest();
         if (user?.id) void reloadHistory();
