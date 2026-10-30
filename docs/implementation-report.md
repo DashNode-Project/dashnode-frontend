@@ -395,3 +395,31 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
   - `npm run test`: 340 pruebas pasadas en 42 archivos.
   - `npm run build`: Compilación limpia en 2.8s.
   - `scan-secrets.mjs`: 0 secretos detectados.
+
+---
+
+## Épica 10: Asistente de IA por voz (HU_DN_06_90 … HU_DN_06_96)
+
+### Implementación Frontend
+- Widget global `AiAssistantWidget` (botón flotante `Bot`, `fixed bottom-6 right-6`, HU_DN_06_90).
+- Grabación MediaRecorder 60s, estados accesibles y chat con escape XSS (HU_DN_06_91, HU_DN_06_93, HU_DN_06_94).
+- Errores literales y reintento (HU_DN_06_95); indicador de contexto de proyecto (HU_DN_06_96).
+- Cliente `postVoiceProcess` / `postTextGenerate` en `src/features/ai-assistant/api.ts`.
+
+### Pruebas
+- `AiAssistantWidget.test.tsx` (jest-axe), `api.test.ts`, `useVoiceCapture.test.ts`.
+- Actualización de `underDevelopment.test.tsx` (panel de chat en lugar de stub).
+
+---
+
+## Épica 10: Asistente de IA por voz (HU_DN_06_90 … HU_DN_06_96)
+
+### Implementación Frontend
+- Widget global `AiAssistantWidget` (botón flotante `Bot`, `fixed bottom-6 right-6`, HU_DN_06_90).
+- Grabación MediaRecorder 60s, estados accesibles y chat con escape XSS (HU_DN_06_91, HU_DN_06_93, HU_DN_06_94).
+- Errores literales y reintento (HU_DN_06_95); indicador de contexto de proyecto (HU_DN_06_96).
+- Cliente `postVoiceProcess` / `postTextGenerate` en `src/features/ai-assistant/api.ts`.
+
+### Pruebas
+- `AiAssistantWidget.test.tsx` (jest-axe), `api.test.ts`, `useVoiceCapture.test.ts`.
+- Actualización de `underDevelopment.test.tsx` (panel de chat en lugar de stub).

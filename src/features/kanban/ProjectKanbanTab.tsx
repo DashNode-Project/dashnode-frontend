@@ -380,6 +380,11 @@ export default function ProjectKanbanTab() {
               key={col.id}
               data-testid={`kanban-column-${col.id}`}
               className="flex w-[280px] shrink-0 flex-col rounded-xl border border-white/6 bg-[#0E0F17] p-2.5 transition-colors"
+              style={{
+                borderTopWidth: 3,
+                borderTopColor: config.color,
+                boxShadow: isOver ? `0 0 0 1px ${config.color}55` : undefined,
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragOverCol(col.id);
@@ -388,13 +393,18 @@ export default function ProjectKanbanTab() {
               onDrop={(e) => handleDrop(e, col.id)}
             >
               {/* Column Header */}
-              <div className="mb-2 flex items-center justify-between gap-1.5 px-1 py-1">
+              <div
+                className="mb-2 flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5"
+                style={{ background: `${config.color}18` }}
+              >
                 <div className="flex items-center gap-2 min-w-0">
                   <div
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/10"
                     style={{ background: config.color }}
                   />
-                  <h3 className="truncate text-sm font-semibold text-[#F9FAFB]">{col.label}</h3>
+                  <h3 className="truncate text-sm font-semibold" style={{ color: config.color }}>
+                    {col.label}
+                  </h3>
                   <span className="rounded bg-white/8 px-1.5 py-0.5 font-mono text-xs text-[#9CA3AF]">
                     {col.tasks.length}
                     {col.wip_limit !== null && (

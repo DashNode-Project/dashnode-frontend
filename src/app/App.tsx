@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { LoadFailureBoundary } from '@/components/LoadFailureBoundary';
 import { AppShell } from '@/components/layout/AppShell';
 import { AuthProvider } from '@/features/auth/AuthContext';
@@ -36,6 +36,12 @@ const ProjectBacklogTab = lazy(() => import('@/features/backlog/ProjectBacklogTa
 const UserStoryReaderPage = lazy(() => import('@/features/backlog/UserStoryReaderPage'));
 const ProjectSprintsTab = lazy(() => import('@/features/sprints/ProjectSprintsTab'));
 const ProjectKanbanTab = lazy(() => import('@/features/kanban/ProjectKanbanTab'));
+const ProjectTasksTabLayout = lazy(() => import('@/features/projects/ProjectTasksTabLayout'));
+const ProjectLegacyTabRedirect = lazy(() =>
+  import('@/features/projects/ProjectLegacyTabRedirect').then((m) => ({
+    default: m.ProjectLegacyTabRedirect,
+  })),
+);
 const ProjectKnowledgeTab = lazy(() => import('@/features/documentation/ProjectKnowledgeTab'));
 
 function PageLoading() {
@@ -85,11 +91,22 @@ export function AppRoutes() {
                         <Route path="resumen" element={<ProjectSummaryTab />} />
                         <Route path="equipo" element={<ProjectTeamTab />} />
                         <Route path="reuniones" element={<ProjectMeetingsTab />} />
-                        <Route path="backlog" element={<ProjectBacklogTab />} />
+                        <Route path="tareas" element={<ProjectTasksTabLayout />}>
+                          <Route index element={<Navigate to="lista" replace />} />
+                          <Route path="lista" element={<ProjectBacklogTab />} />
+                          <Route path="kanban" element={<ProjectKanbanTab />} />
+                        </Route>
+                        <Route
+                          path="backlog"
+                          element={<ProjectLegacyTabRedirect target="tareas/lista" />}
+                        />
                         <Route path="backlog/leer" element={<UserStoryReaderPage />} />
                         <Route path="backlog/leer/:storyId" element={<UserStoryReaderPage />} />
                         <Route path="sprints" element={<ProjectSprintsTab />} />
-                        <Route path="kanban" element={<ProjectKanbanTab />} />
+                        <Route
+                          path="kanban"
+                          element={<ProjectLegacyTabRedirect target="tareas/kanban" />}
+                        />
                         <Route path="conocimiento" element={<ProjectKnowledgeTab />} />
                         <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
                       </Route>
