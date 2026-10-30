@@ -20,8 +20,9 @@ export const AI_MESSAGES = {
   stop: 'Detener',
   send: 'Enviar consulta',
   inputPlaceholder: 'Escriba una consulta o use el micrófono…',
-  contextPrefix: 'Contexto:',
-  noProjectContext: 'Sin contexto de proyecto',
+  contextPrefix: 'Vista actual:',
+  globalAssistantScope: 'Asistente global — consulta todos sus proyectos autorizados',
+  noProjectContext: 'Asistente global — consulta todos sus proyectos autorizados',
   voiceMessageBadge: 'Voz',
   textMessageBadge: 'Texto',
   stateLabels: {

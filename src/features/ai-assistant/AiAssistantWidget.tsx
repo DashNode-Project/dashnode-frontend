@@ -381,8 +381,10 @@ export function AiAssistantWidget() {
   };
 
   const contextLine = useMemo(() => {
-    if (!projectId) return AI_MESSAGES.noProjectContext;
-    return projectLabel ? `${AI_MESSAGES.contextPrefix} ${projectLabel}` : 'Cargando contexto…';
+    const globalLine = AI_MESSAGES.globalAssistantScope;
+    if (!projectId) return globalLine;
+    if (!projectLabel) return `${globalLine} · Cargando vista…`;
+    return `${globalLine} · ${AI_MESSAGES.contextPrefix} ${projectLabel}`;
   }, [projectId, projectLabel]);
 
   if (!user) return null;
