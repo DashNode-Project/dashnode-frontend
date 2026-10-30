@@ -9,6 +9,10 @@ export const AI_MESSAGES = {
     'No pude interpretar el audio como una consulta sobre DashNode (proyectos, HUs, tareas o sprints). Hable con claridad y formule su pregunta en voz alta.',
   audioTooLong: 'La grabación excede la duración máxima permitida.',
   aiProcessing: 'El asistente no pudo procesar la consulta.',
+  requestTimeout:
+    'La consulta tardó demasiado. Intente de nuevo con una pregunta más concreta.',
+  aiUnavailable:
+    'El servicio de IA no respondió a tiempo. Intente nuevamente en unos momentos.',
   quotaExhausted: 'Se agotó la cuota gratuita del servicio de IA. Intente más tarde.',
   widgetTitle: 'Asistente DashNode',
   openAssistant: 'Abrir asistente de IA',
@@ -21,8 +25,8 @@ export const AI_MESSAGES = {
   send: 'Enviar consulta',
   inputPlaceholder: 'Escriba una consulta o use el micrófono…',
   contextPrefix: 'Vista actual:',
-  globalAssistantScope: 'Asistente global — consulta todos sus proyectos autorizados',
-  noProjectContext: 'Asistente global — consulta todos sus proyectos autorizados',
+  globalAssistantScope: 'Asistente global — consulta tus proyectos',
+  noProjectContext: 'Asistente global — consulta tus proyectos',
   voiceMessageBadge: 'Voz',
   textMessageBadge: 'Texto',
   stateLabels: {

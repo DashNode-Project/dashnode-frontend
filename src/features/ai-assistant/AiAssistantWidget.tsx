@@ -15,7 +15,12 @@ import { useMatch } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getProject } from '@/features/projects/api';
-import { ApiError, isTechnicalFailure, NetworkError } from '@/lib/api/errors';
+import {
+  ApiError,
+  isTechnicalFailure,
+  NetworkError,
+  RequestTimeoutError,
+} from '@/lib/api/errors';
 import { fetchChatHistory, postTextGenerate, postVoiceTranscribe } from './api';
 import { escapeHtml } from './escapeHtml';
 import { AI_MESSAGES } from './messages';
@@ -45,11 +50,14 @@ function isVoiceNotUnderstood(error: unknown): boolean {
 }
 
 function mapApiError(error: unknown): string {
+  if (error instanceof RequestTimeoutError) return AI_MESSAGES.requestTimeout;
   if (error instanceof ApiError) {
     if (error.code === 'EMPTY_AUDIO') return AI_MESSAGES.emptyAudio;
     if (error.code === 'VOICE_NOT_UNDERSTOOD') return AI_MESSAGES.voiceNotUnderstood;
     if (error.code === 'AUDIO_TOO_LONG') return AI_MESSAGES.audioTooLong;
     if (error.code === 'FREE_QUOTA_EXHAUSTED') return AI_MESSAGES.quotaExhausted;
+    if (error.code === 'AI_REQUEST_TIMEOUT') return AI_MESSAGES.requestTimeout;
+    if (error.code === 'AI_GEMINI_UNAVAILABLE') return AI_MESSAGES.aiUnavailable;
     if (error.code === 'AI_PROCESSING_ERROR') return AI_MESSAGES.aiProcessing;
     if (error.code === 'HTTP_404' || error.status === 404) {
       return AI_MESSAGES.technicalFailure;
@@ -120,7 +128,15 @@ export function AiAssistantWidget() {
   const toggleRef = useRef<HTMLButtonElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const idleTimerRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
   const voice = useVoiceCapture();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const clearIdleTimer = () => {
     if (idleTimerRef.current !== null) {
@@ -206,13 +222,7 @@ export function AiAssistantWidget() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!user?.id) {
-      setMessages([]);
-      return;
-    }
-    if (open) void reloadHistory();
-  }, [user?.id, open, reloadHistory]);
+  const visibleMessages = user?.id ? messages : [];
 
   const runTextQuery = useCallback(
     async (text: string, retry = false) => {
@@ -228,7 +238,7 @@ export function AiAssistantWidget() {
       }
       try {
         const result = await postTextGenerate(trimmed, projectId);
-        await reloadHistory();
+        if (!mountedRef.current) return;
         if (result.assistant_response) {
           setAssistantState('RESPONDED');
           setProcessingMode(null);
@@ -240,11 +250,17 @@ export function AiAssistantWidget() {
           setBannerError(result.error ?? AI_MESSAGES.aiProcessing);
           setPendingRetry({ kind: 'text', text: trimmed });
         }
+        void reloadHistory();
       } catch (error) {
+        if (!mountedRef.current) return;
         setAssistantState('ERROR');
         setProcessingMode(null);
         setBannerError(mapApiError(error));
         setPendingRetry({ kind: 'text', text: trimmed });
+      } finally {
+        if (mountedRef.current) {
+          setProcessingMode((mode) => (mode === 'text' ? null : mode));
+        }
       }
     },
     [projectId, reloadHistory, scheduleReturnToInactive],
@@ -288,7 +304,7 @@ export function AiAssistantWidget() {
         const result = await postTextGenerate(recognized, projectId, {
           persistUserMessage: false,
         });
-        await reloadHistory();
+        if (!mountedRef.current) return;
         if (result.assistant_response) {
           setAssistantState('RESPONDED');
           setProcessingMode(null);
@@ -306,7 +322,9 @@ export function AiAssistantWidget() {
             voiceTranscribed: true,
           });
         }
+        void reloadHistory();
       } catch (error) {
+        if (!mountedRef.current) return;
         setAssistantState('ERROR');
         setProcessingMode(null);
         setBannerError(mapApiError(error));
@@ -317,6 +335,10 @@ export function AiAssistantWidget() {
           text: recognized,
           voiceTranscribed: Boolean(recognized),
         });
+      } finally {
+        if (mountedRef.current) {
+          setProcessingMode((mode) => (mode === 'voice-reply' ? null : mode));
+        }
       }
     },
     [projectId, reloadHistory, scheduleReturnToInactive],
@@ -328,6 +350,7 @@ export function AiAssistantWidget() {
       if (next) {
         void refreshProjectContext(projectId);
         scrollToLatest();
+        if (user?.id) void reloadHistory();
       }
       return next;
     });
@@ -427,13 +450,13 @@ export function AiAssistantWidget() {
             {historyLoading ? (
               <p className="text-xs text-[#9CA3AF]">Cargando historial…</p>
             ) : null}
-            {!historyLoading && messages.length === 0 ? (
+            {!historyLoading && visibleMessages.length === 0 ? (
               <p className="text-xs leading-relaxed text-[#9CA3AF]">
                 Consulte al asistente por voz o por texto. El historial es personal y se conserva
                 durante 24 horas.
               </p>
             ) : null}
-            {messages.map((message) => (
+            {visibleMessages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}

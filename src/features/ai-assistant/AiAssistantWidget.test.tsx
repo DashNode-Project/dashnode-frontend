@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@/lib/api/errors';
 import { escapeHtml } from './escapeHtml';
 import { AiAssistantWidget } from './AiAssistantWidget';
+import * as aiApi from './api';
 
 vi.mock('./api', () => ({
   fetchChatHistory: vi.fn(async () => ({ messages: [] })),
@@ -57,6 +59,29 @@ describe('AiAssistantWidget', () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Cerrar ventana de chat/i }));
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('clears PROCESSING after text-generate failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(aiApi.postTextGenerate).mockRejectedValueOnce(
+      new ApiError(503, {
+        code: 'AI_REQUEST_TIMEOUT',
+        message: 'timeout',
+        fields: {},
+      }),
+    );
+    renderWidget();
+    const toggle = await waitFor(() =>
+      screen.getByRole('button', { name: /Abrir asistente de IA/i }),
+    );
+    await user.click(toggle);
+    const input = await screen.findByPlaceholderText(/Escriba una consulta/i);
+    await user.type(input, 'pregunta abierta');
+    await user.click(screen.getByRole('button', { name: /Enviar consulta/i }));
+    await waitFor(() => {
+      expect(screen.queryByText(/Generando respuesta/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/tardó demasiado/i)).toBeInTheDocument();
   });
 
   it('has no critical a11y violations when open', async () => {

@@ -11,6 +11,6 @@ export const env = {
   apiBaseUrl: readApiBaseUrl(import.meta.env.VITE_API_BASE_URL),
   /** Milliseconds after which an API call is considered a technical failure. */
   requestTimeoutMs: 15_000,
-  /** AI assistant calls (Gemini can take over a minute). */
-  aiRequestTimeoutMs: 190_000,
+  /** AI assistant calls — slightly above backend AI_TEXT_GENERATE_TIMEOUT (default 60s). */
+  aiRequestTimeoutMs: 65_000,
 } as const;

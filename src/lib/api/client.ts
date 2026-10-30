@@ -1,5 +1,5 @@
 import { env } from '@/config/env';
-import { ApiError, NetworkError, parseErrorBody } from './errors';
+import { ApiError, NetworkError, RequestTimeoutError, parseErrorBody } from './errors';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -39,7 +39,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new RequestTimeoutError();
+    }
     throw new NetworkError();
   } finally {
     clearTimeout(timeout);
@@ -84,7 +87,10 @@ export async function apiFormRequest<T>(path: string, options: FormRequestOption
       body: formData,
       signal: controller.signal,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new RequestTimeoutError();
+    }
     throw new NetworkError();
   } finally {
     clearTimeout(timeout);
