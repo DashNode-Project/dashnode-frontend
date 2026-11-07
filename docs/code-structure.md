@@ -141,3 +141,17 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `api.ts`: `postVoiceProcess`, `postTextGenerate`
   - `messages.ts`, `types.ts`, `escapeHtml.ts`
   - `AiAssistantWidget.test.tsx`: a11y (jest-axe) y apertura/cierre por teclado
+
+
+## EP-11 — Issues y evidencias (HU_DN_07_97 … HU_DN_07_101)
+
+- Ruta: `/proyectos/:projectId/issues` → `ProjectIssuesTab.tsx` (pestaña Issues activada como `implemented: true` en `projectWorkspaceTabs.ts`).
+- `src/features/issues/`:
+  - `types.ts`: `Issue`, `Evidence`, `IssueSeverity`, `IssueType`, `IssueStatus`, `EvidenceType`, `IssueDetail`, `CreateIssuePayload`, `IssueListResponse`
+  - `messages.ts`: literales de validación, límites de peso, duplicados y estado vacío exactamente alineados con backend
+  - `validation.ts`: validación en cliente para creación de issue y archivos de evidencia
+  - `api.ts`: cliente HTTP (`listIssues`, `createIssue`, `getIssueDetail`, `attachEvidence`) con soporte de `Idempotency-Key` y subida multipart
+  - `components/CreateIssueModal.tsx`: modal para registro de nuevo fix con campos de título, descripción, severidad, tipo y validaciones inline
+  - `components/AddEvidenceModal.tsx`: modal para adjuntar evidencia (imagen, video, registro) con barra de progreso y validación previa de tamaño
+  - `ProjectIssuesTab.tsx`: pestaña completa con barra de filtros por Estado, Severidad y Tipo (sincronizada en URL con `useSearchParams`), botón "Nuevo fix", vista dividida listado y detalle, previsualización de evidencias con URLs firmadas y sección consultiva de IA (DA-08)
+  - `ProjectIssuesTab.test.tsx`, `validation.test.ts`, `api.test.ts`: tests unitarios y de componentes cubriendo exhaustivamente HU_DN_07_97 a HU_DN_07_101

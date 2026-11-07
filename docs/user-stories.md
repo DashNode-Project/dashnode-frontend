@@ -1149,3 +1149,115 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 | HU_DN_06_86 | Implementado | Botón "Reenviar a aprobación" visible al autor en tarjetas rechazadas, visualización de observaciones de rechazo previo en tarjeta y modal, validación de estado `REJECTED`, toast `ENTRY_RESUBMITTED`. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
 | HU_DN_06_87 | Implementado | Botón icono Pin en tarjeta (`title` "Anclar al inicio" / "Desanclar") exclusivo para Admin/Gerente, ordenamiento en cabecera del listado, borde y fondo destacado (`border-amber-500/30 bg-[#161722]`), insignia "Anclado", toasts literales de éxito y fallo técnico. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
 | HU_DN_06_89 | Implementado | Acción directa sin apertura de formulario ni modal, conmutación instantánea a la parte superior y retorno reactivo al desanclar a la posición cronológica original. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+
+
+---
+
+# Épica 11: Issues y evidencias (HU_DN_07_97 … HU_DN_07_101)
+
+## HU_DN_07_97 — Crear un issue (Fix) en un proyecto
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Crear un issue (Fix) en un proyecto  
+**Para** registrar un problema del proyecto y darle seguimiento  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña “Issues” del proyecto, botón “Nuevo fix”.
+2. Campos: El formulario contiene:
+   2.1 Título: texto, obligatorio, máximo 100 caracteres. Si está vacío: 'El título es obligatorio.'
+   2.2 Descripción: texto, opcional, máximo 5000 caracteres. Si excede: 'La descripción no puede superar 5000 caracteres.'
+   2.3 Severidad: lista desplegable obligatoria con Baja, Media, Alta y Crítica. Si falta: 'Debe seleccionar la severidad.'
+   2.4 Tipo: lista desplegable obligatoria con Bug, Regresión, Rendimiento, Seguridad y UX. Si falta: 'Debe seleccionar el tipo.'
+   2.5 Botón “Crear fix” y botón “Cancelar”.
+3. Validación: Un issue sin título, severidad o tipo se rechaza.
+4. Restricción: El usuario debe ser miembro activo del proyecto. El estado inicial es Abierto (OPEN). Un reintento con la misma Idempotency-Key devuelve el issue ya creado.
+5. Éxito: 'Issue creado correctamente.'; el issue aparece en la lista del proyecto y se encola el evento de notificación.
+6. Fallo técnico: Ante un error no anticipado se muestra 'No fue posible completar la operación. Intente nuevamente.'
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_98 — Asociar evidencia a un issue
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Asociar evidencia a un issue  
+**Para** respaldar el problema con imágenes, videos o registros  
+
+### Criterios de aceptación:
+1. Dónde: Detalle del issue, botón “Adjuntar evidencia”.
+2. Campos: Archivo (Imagen <= 5MB, Video <= 25MB y 60s, Registro <= 1MB), Título (opcional), Botones Adjuntar/Cancelar con barra de progreso.
+3. Validación: Tamaño, formato real (firma binaria), decodificación y eliminación de metadata EXIF. Detección de duplicados con hash SHA-256.
+4. Restricción: El archivo falso se rechaza (polyglots). Evidencias almacenadas en buckets privados con nombre UUID.
+5. Éxito: 'Evidencia adjuntada correctamente.'
+6. Fallo: Mensajes específicos para formato no admitido, tamaño excesivo, video muy largo o evidencia duplicada.
+7. Fallo técnico: Error 500 estándar. Sin archivos parciales almacenados.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_99 — Consultar la lista de issues de un proyecto
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Consultar la lista de issues de un proyecto  
+**Para** conocer los problemas abiertos y resueltos  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña “Issues” del proyecto.
+2. Campos: Lista de issues mostrando título, severidad, tipo, estado, responsable, fecha de creación y cantidad de evidencias.
+3. Validación: Orden por defecto (abiertos primero, luego severidad, luego fecha). Paginación por cursor de 25 elementos.
+4. Restricción: Solo miembros del proyecto.
+5. Éxito: Muestra la tabla de issues. Si vacío: 'El proyecto no tiene issues.'
+6. Fallo técnico: Mensaje de error estándar.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_100 — Consultar el detalle de un issue con su evidencia, respuestas de IA, responsable y nota de resolución
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Consultar el detalle de un issue con su evidencia, respuestas de IA, responsable y nota de resolución  
+**Para** tener toda la información del problema en un solo lugar  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña “Issues”, al seleccionar un issue.
+2. Campos: Detalles generales (título, descripción, severidad, tipo, estado), evidencias (miniatura, tamaño), resumen respuestas IA y nota de resolución/responsable.
+3. Validación: Muestra los componentes cuando existen.
+4. Restricción: Las URLs de evidencia deben ser URLs firmadas generadas en backend y con vencimiento de 5 min.
+5. Éxito: Renderizado completo del issue.
+6. Fallo técnico: Mensaje de error estándar o 404/403 según permisos.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_101 — Filtrar los issues por estado, severidad y tipo
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Filtrar los issues por estado, severidad y tipo  
+**Para** priorizar los problemas que requieren atención  
+
+### Criterios de aceptación:
+1. Dónde: Barra de filtros de la pestaña “Issues”.
+2. Campos: Desplegables de Estado, Severidad y Tipo.
+3. Validación: Combinables (AND lógico), filtrado aplicado en servidor y URL sincronizada.
+4. Restricción: No modifican datos. Paginación mantenida (pero reseteo de cursor al cambiar).
+5. Éxito: Lista actualizada de issues.
+6. Fallo: Si no hay matches: 'No se encontraron issues con los filtros aplicados.'
+7. Fallo técnico: Error estándar.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## Estado de implementación — EP-11 Issues y evidencias (HU_DN_07_97 … HU_DN_07_101)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_07_97 | Implementado | Componente `ProjectIssuesTab`, `CreateIssueModal`, validación en tiempo real y mensajes literales exactos. Tests: `ProjectIssuesTab.test.tsx`, `validation.test.ts`. |
+| HU_DN_07_98 | Implementado | Componente `AddEvidenceModal`, subida multipart con barra de progreso, validación de tipo y peso. Tests: `ProjectIssuesTab.test.tsx`, `api.test.ts`. |
+| HU_DN_07_99 | Implementado | Vista dividida listado/detalle, ordenamiento, avatares, contador de evidencias, estado vacío literal. Tests: `ProjectIssuesTab.test.tsx`. |
+| HU_DN_07_100 | Implementado | Renderizado de detalle de issue con previsualización de evidencias mediante URL firmada, sección consultiva de IA. Tests: `ProjectIssuesTab.test.tsx`. |
+| HU_DN_07_101 | Implementado | Barra de filtros por Estado, Severidad y Tipo con sincronización reactiva en URL (`useSearchParams`). Tests: `ProjectIssuesTab.test.tsx`. |

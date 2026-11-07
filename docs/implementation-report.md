@@ -423,3 +423,42 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 ### Pruebas
 - `AiAssistantWidget.test.tsx` (jest-axe), `api.test.ts`, `useVoiceCapture.test.ts`.
 - Actualización de `underDevelopment.test.tsx` (panel de chat en lugar de stub).
+
+
+---
+
+## Épica 11: Issues y evidencias (HU_DN_07_97 … HU_DN_07_101)
+
+### Análisis del Orquestador (Modo Lote / Épica)
+- **Fecha:** 2026-11-07
+- **Clasificación del lote:** FULL_STACK
+- **Complejidad:** MODERATE (Score: 84/100)
+- **Project Mode:** EXTEND_EXISTING
+- **Ramas:** `feature/ep-11-issues-evidences` (backend y frontend, derivadas de `origin/feature/ep-10-ai-assistant`)
+- **Alineación con plantilla Figma Make (`demo/`):** Estricta fidelidad visual con `DashNode-Demo/src/pages/ProjectWorkspace.tsx`, respetando paleta de colores (`bg-[#12131C]`, `bg-[#1E1F2B]`), badges de severidad (`critical`, `high`, `medium`, `low`), estados (`open`, `in-progress`, `resolved`, `closed`), disposición en 3 columnas (listado / detalle) y sección de evidencias con previsualización.
+
+### Implementación Frontend
+- **Navegación y rutas:**
+  - `src/features/projects/projectWorkspaceTabs.ts`: Tab `issues` marcado como `implemented: true`.
+  - `src/app/App.tsx`: Incorporación de ruta `/proyectos/:projectId/issues` renderizando `ProjectIssuesTab` con lazy loading y redirección de compatibilidad para `/fixes`.
+- **Módulo de Issues (`src/features/issues/`):**
+  - `types.ts`: Tipos estrictos para `Issue`, `Evidence`, `IssueDetail`, `CreateIssuePayload`, `IssueListResponse` y enumeraciones de dominio.
+  - `messages.ts`: Literales de validación y de negocio idénticos a los criterios de aceptación y al backend.
+  - `validation.ts`: Validación de formularios y comprobación previa de límites de archivos (imágenes <= 5MB, video <= 25MB, logs <= 1MB).
+  - `api.ts`: Clientes para `listIssues`, `createIssue`, `getIssueDetail` y `attachEvidence` (con soporte para `Idempotency-Key` y subida multipart).
+  - `components/CreateIssueModal.tsx`: Formulario modal con validación inline de campos obligatorios (título, severidad, tipo) y descripción opcional.
+  - `components/AddEvidenceModal.tsx`: Subida de archivos con barra de progreso, alertas de límites y soporte de formatos admitidos.
+  - `ProjectIssuesTab.tsx`: Pestaña interactiva con:
+    - Barra de filtros por Estado, Severidad y Tipo con sincronización reactiva en URL (`useSearchParams`).
+    - Botón "Nuevo fix" para abrir modal de registro.
+    - Listado de issues ordenados por defecto (abiertos primero, severidad, fecha más reciente).
+    - Vista detallada del issue seleccionado con estados, descripción, nota de resolución, responsable y lista de evidencias con URLs firmadas (descarga y vista previa).
+    - Sección consultiva de análisis de IA con el principio DA-08 (cero mutaciones automáticas por la IA, recomendaciones orientativas para el desarrollador).
+    - Estados vacíos literales: `'El proyecto no tiene issues.'` y `'No se encontraron issues con los filtros aplicados.'`.
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias e integración:**
+  - `src/features/issues/validation.test.ts`: Pruebas de validación de campos, longitudes máximas y restricciones de formato y peso de archivos.
+  - `src/features/issues/api.test.ts`: Pruebas unitarias para los métodos del cliente API, asegurando construcción correcta de queries y headers.
+  - `src/features/issues/ProjectIssuesTab.test.tsx`: Pruebas de integración de componentes, renderizado de estados vacíos, creación de issues, subida de evidencia y sincronización de filtros.
+- **Escaneo de secretos:** 213 archivos revisados, 0 secretos detectados.

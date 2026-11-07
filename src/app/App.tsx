@@ -43,6 +43,7 @@ const ProjectLegacyTabRedirect = lazy(() =>
   })),
 );
 const ProjectKnowledgeTab = lazy(() => import('@/features/documentation/ProjectKnowledgeTab'));
+const ProjectIssuesTab = lazy(() => import('@/features/issues/ProjectIssuesTab'));
 
 function PageLoading() {
   return (
@@ -108,6 +109,8 @@ export function AppRoutes() {
                           element={<ProjectLegacyTabRedirect target="tareas/kanban" />}
                         />
                         <Route path="conocimiento" element={<ProjectKnowledgeTab />} />
+                        <Route path="issues" element={<ProjectIssuesTab />} />
+                        <Route path="fixes" element={<Navigate to="../issues" replace />} />
                         <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
                       </Route>
                     </Route>
