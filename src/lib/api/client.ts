@@ -27,7 +27,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort);
 
-  const headers: Record<string, string> = { Accept: 'application/json', ...(options.headers || {}) };
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...(options.headers || {}),
+  };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
   let response: Response;

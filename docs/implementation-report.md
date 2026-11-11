@@ -458,7 +458,9 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 
 ### Pruebas y Quality Gates Frontend
 - **Pruebas unitarias e integración:**
-  - `src/features/issues/validation.test.ts`: Pruebas de validación de campos, longitudes máximas y restricciones de formato y peso de archivos.
-  - `src/features/issues/api.test.ts`: Pruebas unitarias para los métodos del cliente API, asegurando construcción correcta de queries y headers.
-  - `src/features/issues/ProjectIssuesTab.test.tsx`: Pruebas de integración de componentes, renderizado de estados vacíos, creación de issues, subida de evidencia y sincronización de filtros.
-- **Escaneo de secretos:** 213 archivos revisados, 0 secretos detectados.
+  - `src/features/issues/validation.test.ts` (7 tests): validación de campos, longitudes máximas y restricciones de formato y peso de archivos.
+  - `src/features/issues/api.test.ts` (4 tests): métodos del cliente API, query strings, cabecera `Idempotency-Key` y subida multipart `FormData`.
+  - `src/features/issues/ProjectIssuesTab.test.tsx` (6 tests): renderizado de estados vacíos, creación de issues, subida de evidencia y sincronización de filtros.
+  - `src/features/projects/ProjectModulePlaceholder.test.tsx` (2 tests): verificación de tabs no implementados (`devops`) y que `issues` no dispara stub.
+- **Checks globales (`typecheck`, `lint`, `build`, `prettier` sobre EP-11):** `tsc --noEmit`, `eslint .` y `vite build` limpios; 26/26 tests verdes en los 5 archivos de issues y workspace de proyecto.
+- **Escaneo de secretos:** `node scripts/scan-secrets.mjs` limpio (223 archivos revisados, 0 secretos detectados).

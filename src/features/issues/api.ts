@@ -64,10 +64,7 @@ export async function createIssue(
   });
 }
 
-export async function getIssueDetail(
-  projectId: string,
-  issueId: string,
-): Promise<IssueDetail> {
+export async function getIssueDetail(projectId: string, issueId: string): Promise<IssueDetail> {
   return apiRequest<IssueDetail>(`/projects/${projectId}/issues/${issueId}`);
 }
 

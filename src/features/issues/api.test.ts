@@ -38,8 +38,10 @@ describe('issues api client', () => {
         file_type: 'image',
         mime_type: 'image/png',
         file_size: 1024,
-        download_url: '/api/v1/projects/p-1/issues/issue-1/evidences/ev-1/content?signature=xyz&expires=999999999',
-        thumbnail_url: '/api/v1/projects/p-1/issues/issue-1/evidences/ev-1/content?signature=xyz&expires=999999999',
+        download_url:
+          '/api/v1/projects/p-1/issues/issue-1/evidences/ev-1/content?signature=xyz&expires=999999999',
+        thumbnail_url:
+          '/api/v1/projects/p-1/issues/issue-1/evidences/ev-1/content?signature=xyz&expires=999999999',
         duration_seconds: null,
         uploaded_by: 'user-1',
         uploaded_by_name: 'Dev One',
@@ -78,7 +80,7 @@ describe('issues api client', () => {
       expect(call.method).toBe('POST');
       expect(call.url).toContain('/projects/p-1/issues');
       expect(call.headers['Idempotency-Key']).toBe('idemp-key-123');
-      const body = JSON.parse(call.body as string);
+      const body = call.body as { title: string; severity: string };
       expect(body.title).toBe('Nuevo fix');
       expect(body.severity).toBe('high');
       return ok({ message: 'Issue creado correctamente.', issue: sampleIssue });
@@ -113,18 +115,27 @@ describe('issues api client', () => {
   });
 
   it('attaches evidence file via multipart form-data', async () => {
-    mockFetch((call) => {
-      expect(call.method).toBe('POST');
-      expect(call.url).toContain('/projects/p-1/issues/issue-1/evidences');
-      expect(call.body).toBeInstanceOf(FormData);
-      return ok({
-        message: 'Evidencia adjuntada correctamente.',
-        evidence: sampleDetail.evidences[0],
-      });
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      expect(init?.method).toBe('POST');
+      expect(url).toContain('/projects/p-1/issues/issue-1/evidences');
+      expect(init?.body).toBeInstanceOf(FormData);
+      return new Response(
+        JSON.stringify({
+          message: 'Evidencia adjuntada correctamente.',
+          evidence: sampleDetail.evidences[0],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
     });
+    vi.stubGlobal('fetch', fetchSpy);
 
     const dummyFile = new File(['image content'], 'evidence.png', { type: 'image/png' });
     const res = await attachEvidence('p-1', 'issue-1', dummyFile, 'Captura');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(res.message).toBe('Evidencia adjuntada correctamente.');
     expect(res.evidence.file_name).toBe('shot.png');
   });

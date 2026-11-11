@@ -1,30 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import {
-  AlertCircle,
-  Brain,
-  Download,
-  FileCode,
-  Film,
-  Image as ImageIcon,
-  Plus,
-  Wrench,
-} from 'lucide-react';
+import { Brain, Download, FileCode, Film, Image as ImageIcon, Plus, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar, Card } from '@/components/ui/demo-ui';
-import { useAuth } from '@/features/auth/AuthContext';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { useToast } from '@/lib/toast/ToastProvider';
 import { attachEvidence, createIssue, getIssueDetail, listIssues } from './api';
 import { AddEvidenceModal } from './components/AddEvidenceModal';
 import { CreateIssueModal } from './components/CreateIssueModal';
 import { ISSUE_MESSAGES } from './messages';
-import type {
-  CreateIssuePayload,
-  Evidence,
-  Issue,
-  IssueDetail,
-} from './types';
+import type { CreateIssuePayload, Issue, IssueDetail } from './types';
 
 const SEVERITY_BADGE_STYLE: Record<string, string> = {
   critical: 'bg-red-500/20 text-red-400 border border-red-500/30',
@@ -74,7 +59,6 @@ export default function ProjectIssuesTab() {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
-  const { user } = useAuth();
 
   // URL Query Params Synchronization
   const filterStatus = searchParams.get('status') || 'all';
@@ -82,11 +66,10 @@ export default function ProjectIssuesTab() {
   const filterType = searchParams.get('type') || 'all';
 
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [selectedIssueDetail, setSelectedIssueDetail] = useState<IssueDetail | null>(null);
@@ -102,74 +85,78 @@ export default function ProjectIssuesTab() {
   const [analyzingEvId, setAnalyzingEvId] = useState<string | null>(null);
   const [aiAnalysisComplete, setAiAnalysisComplete] = useState<Record<string, boolean>>({});
 
-  // Fetch issues list from server
-  const fetchIssues = useCallback(
-    async (cursor?: string) => {
-      if (!projectId) return;
-      if (!cursor) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-      setError(null);
-
+  // Initial and filter-change load from server
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
       try {
         const res = await listIssues(projectId, {
           status: filterStatus !== 'all' ? filterStatus : undefined,
           severity: filterSeverity !== 'all' ? filterSeverity : undefined,
           type: filterType !== 'all' ? filterType : undefined,
-          cursor,
           limit: 25,
         });
-
-        if (cursor) {
-          setIssues((prev) => [...prev, ...res.items]);
-        } else {
-          setIssues(res.items);
-          if (res.items.length > 0 && !selectedIssueId) {
-            setSelectedIssueId(res.items[0].id);
-          }
-        }
+        if (cancelled) return;
+        setIssues(res.items);
         setNextCursor(res.next_cursor || null);
-        setTotalCount(res.total);
+        const firstIssue = res.items[0];
+        if (firstIssue) {
+          setSelectedIssueId((prev) => prev ?? firstIssue.id);
+        }
       } catch (err: unknown) {
+        if (cancelled) return;
         if (err instanceof ApiError && !isTechnicalFailure(err)) {
-          setError(err.message);
           showToast(err.message, 'error');
         } else {
-          setError(ISSUE_MESSAGES.GENERIC_ERROR);
           showToast(ISSUE_MESSAGES.GENERIC_ERROR, 'error');
         }
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (!cancelled) setLoading(false);
       }
-    },
-    [projectId, filterStatus, filterSeverity, filterType, selectedIssueId, showToast],
-  );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, filterStatus, filterSeverity, filterType, refreshKey, showToast]);
 
-  // Initial and parameter change load
-  useEffect(() => {
-    fetchIssues();
-  }, [fetchIssues]);
+  const handleLoadMore = useCallback(async () => {
+    if (!projectId || !nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await listIssues(projectId, {
+        status: filterStatus !== 'all' ? filterStatus : undefined,
+        severity: filterSeverity !== 'all' ? filterSeverity : undefined,
+        type: filterType !== 'all' ? filterType : undefined,
+        cursor: nextCursor,
+        limit: 25,
+      });
+      setIssues((prev) => [...prev, ...res.items]);
+      setNextCursor(res.next_cursor || null);
+    } catch (err: unknown) {
+      if (err instanceof ApiError && !isTechnicalFailure(err)) {
+        showToast(err.message, 'error');
+      } else {
+        showToast(ISSUE_MESSAGES.GENERIC_ERROR, 'error');
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [projectId, nextCursor, loadingMore, filterStatus, filterSeverity, filterType, showToast]);
 
   // Load detail when selected issue changes
   useEffect(() => {
-    if (!projectId || !selectedIssueId) {
-      setSelectedIssueDetail(null);
-      return;
-    }
-
+    if (!projectId || !selectedIssueId) return;
     let isCurrent = true;
-    setLoadingDetail(true);
-
-    getIssueDetail(projectId, selectedIssueId)
-      .then((detail) => {
+    (async () => {
+      setLoadingDetail(true);
+      try {
+        const detail = await getIssueDetail(projectId, selectedIssueId);
         if (isCurrent) {
           setSelectedIssueDetail(detail);
         }
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (isCurrent) {
           if (err instanceof ApiError && !isTechnicalFailure(err)) {
             showToast(err.message, 'error');
@@ -177,15 +164,17 @@ export default function ProjectIssuesTab() {
             showToast(ISSUE_MESSAGES.GENERIC_ERROR, 'error');
           }
         }
-      })
-      .finally(() => {
+      } finally {
         if (isCurrent) setLoadingDetail(false);
-      });
-
+      }
+    })();
     return () => {
       isCurrent = false;
     };
   }, [projectId, selectedIssueId, showToast]);
+
+  const visibleDetail =
+    selectedIssueId && selectedIssueDetail?.id === selectedIssueId ? selectedIssueDetail : null;
 
   // Filter change handlers that update URL query parameters and reset cursor
   const updateFilter = (key: 'status' | 'severity' | 'type', value: string) => {
@@ -198,7 +187,8 @@ export default function ProjectIssuesTab() {
     setSearchParams(nextParams);
   };
 
-  const hasActiveFilters = filterStatus !== 'all' || filterSeverity !== 'all' || filterType !== 'all';
+  const hasActiveFilters =
+    filterStatus !== 'all' || filterSeverity !== 'all' || filterType !== 'all';
 
   // Handle Create Issue
   const handleCreateIssue = async (payload: CreateIssuePayload) => {
@@ -207,10 +197,10 @@ export default function ProjectIssuesTab() {
       const res = await createIssue(projectId, payload);
       showToast(res.message || ISSUE_MESSAGES.ISSUE_CREATED, 'success');
       setCreateModalOpen(false);
-      await fetchIssues();
       if (res.issue?.id) {
         setSelectedIssueId(res.issue.id);
       }
+      setRefreshKey((k) => k + 1);
     } catch (err: unknown) {
       if (err instanceof ApiError && !isTechnicalFailure(err)) {
         showToast(err.message, 'error');
@@ -324,10 +314,7 @@ export default function ProjectIssuesTab() {
           </select>
         </div>
 
-        <Button
-          onClick={() => setCreateModalOpen(true)}
-          className="flex items-center gap-1.5"
-        >
+        <Button onClick={() => setCreateModalOpen(true)} className="flex items-center gap-1.5">
           <Plus size={15} />
           <span>Nuevo fix</span>
         </Button>
@@ -347,9 +334,7 @@ export default function ProjectIssuesTab() {
             <Wrench size={32} />
           </div>
           <h3 className="text-base font-medium text-[#F9FAFB]">
-            {hasActiveFilters
-              ? ISSUE_MESSAGES.NO_FILTERED_ISSUES
-              : ISSUE_MESSAGES.NO_ISSUES_FOUND}
+            {hasActiveFilters ? ISSUE_MESSAGES.NO_FILTERED_ISSUES : ISSUE_MESSAGES.NO_ISSUES_FOUND}
           </h3>
           <p className="mt-1 text-sm text-[#9CA3AF]">
             {hasActiveFilters
@@ -364,16 +349,17 @@ export default function ProjectIssuesTab() {
             {issues.map((iss) => {
               const isSelected = selectedIssueId === iss.id;
               return (
-                <div
+                <button
                   key={iss.id}
+                  type="button"
                   onClick={() => setSelectedIssueId(iss.id)}
-                  className={`cursor-pointer rounded-xl border p-3.5 transition-all ${
+                  className={`w-full cursor-pointer rounded-xl border p-3.5 text-left transition-all ${
                     isSelected
                       ? 'border-blue-500/50 bg-blue-500/5 shadow-sm'
                       : 'border-white/8 bg-[#12131C] hover:border-white/15'
                   }`}
                 >
-                  <div className="mb-2 flex items-start gap-2">
+                  <span className="mb-2 flex items-start gap-2">
                     <span
                       className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold ${
                         SEVERITY_BADGE_STYLE[iss.severity] || ''
@@ -384,11 +370,11 @@ export default function ProjectIssuesTab() {
                     <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 text-xs text-[#9CA3AF]">
                       {TYPE_LABELS[iss.type] || iss.type}
                     </span>
-                    <p className="flex-1 text-sm font-medium leading-snug text-[#F9FAFB]">
+                    <span className="flex-1 text-sm font-medium leading-snug text-[#F9FAFB]">
                       {iss.title}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-[#6B7280]">
+                    </span>
+                  </span>
+                  <span className="flex items-center justify-between text-xs text-[#6B7280]">
                     <span
                       className={`rounded-full px-2 py-0.5 font-medium ${
                         STATUS_BADGE_STYLE[iss.status] || ''
@@ -396,14 +382,12 @@ export default function ProjectIssuesTab() {
                     >
                       {STATUS_LABELS[iss.status] || iss.status}
                     </span>
-                    <div className="flex items-center gap-2">
-                      {iss.evidences_count > 0 && (
-                        <span>{iss.evidences_count} ev.</span>
-                      )}
+                    <span className="flex items-center gap-2">
+                      {iss.evidences_count > 0 && <span>{iss.evidences_count} ev.</span>}
                       <Avatar name={iss.reporter_name} size={20} />
-                    </div>
-                  </div>
-                </div>
+                    </span>
+                  </span>
+                </button>
               );
             })}
 
@@ -413,7 +397,7 @@ export default function ProjectIssuesTab() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => fetchIssues(nextCursor)}
+                  onClick={handleLoadMore}
                   disabled={loadingMore}
                 >
                   {loadingMore ? 'Cargando más…' : 'Cargar más issues'}
@@ -431,38 +415,36 @@ export default function ProjectIssuesTab() {
                   <span>Cargando detalle del issue…</span>
                 </div>
               </Card>
-            ) : selectedIssueDetail ? (
+            ) : visibleDetail ? (
               <Card className="space-y-6 p-6">
                 {/* Header */}
                 <div className="space-y-2 border-b border-white/6 pb-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={`rounded px-2 py-0.5 text-xs font-bold ${
-                        SEVERITY_BADGE_STYLE[selectedIssueDetail.severity] || ''
+                        SEVERITY_BADGE_STYLE[visibleDetail.severity] || ''
                       }`}
                     >
-                      {SEVERITY_LABELS[selectedIssueDetail.severity] ||
-                        selectedIssueDetail.severity.toUpperCase()}
+                      {SEVERITY_LABELS[visibleDetail.severity] ||
+                        visibleDetail.severity.toUpperCase()}
                     </span>
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        STATUS_BADGE_STYLE[selectedIssueDetail.status] || ''
+                        STATUS_BADGE_STYLE[visibleDetail.status] || ''
                       }`}
                     >
-                      {STATUS_LABELS[selectedIssueDetail.status] || selectedIssueDetail.status}
+                      {STATUS_LABELS[visibleDetail.status] || visibleDetail.status}
                     </span>
                     <span className="rounded bg-white/5 px-2 py-0.5 text-xs text-[#9CA3AF]">
-                      Tipo: {TYPE_LABELS[selectedIssueDetail.type] || selectedIssueDetail.type}
+                      Tipo: {TYPE_LABELS[visibleDetail.type] || visibleDetail.type}
                     </span>
                   </div>
 
-                  <h2 className="text-xl font-bold text-[#F9FAFB]">
-                    {selectedIssueDetail.title}
-                  </h2>
+                  <h2 className="text-xl font-bold text-[#F9FAFB]">{visibleDetail.title}</h2>
 
-                  {selectedIssueDetail.description && (
+                  {visibleDetail.description && (
                     <p className="text-sm leading-relaxed text-[#9CA3AF]">
-                      {selectedIssueDetail.description}
+                      {visibleDetail.description}
                     </p>
                   )}
 
@@ -470,35 +452,31 @@ export default function ProjectIssuesTab() {
                     <div className="flex items-center gap-1.5">
                       <span>Reportado por:</span>
                       <span className="font-medium text-[#F9FAFB]">
-                        {selectedIssueDetail.reporter_name}
+                        {visibleDetail.reporter_name}
                       </span>
                     </div>
-                    {selectedIssueDetail.assignee_name && (
+                    {visibleDetail.assignee_name && (
                       <div className="flex items-center gap-1.5">
                         <span>Responsable:</span>
                         <span className="font-medium text-[#F9FAFB]">
-                          {selectedIssueDetail.assignee_name}
+                          {visibleDetail.assignee_name}
                         </span>
                       </div>
                     )}
                     <div>
                       <span>Fecha: </span>
-                      <span>
-                        {new Date(selectedIssueDetail.created_at).toLocaleDateString('es-CO')}
-                      </span>
+                      <span>{new Date(visibleDetail.created_at).toLocaleDateString('es-CO')}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Resolution Note if resolved */}
-                {selectedIssueDetail.resolution_note && (
+                {visibleDetail.resolution_note && (
                   <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
                     <p className="text-xs font-semibold text-emerald-400 mb-1">
                       Nota de resolución
                     </p>
-                    <p className="text-sm text-[#F9FAFB]">
-                      {selectedIssueDetail.resolution_note}
-                    </p>
+                    <p className="text-sm text-[#F9FAFB]">{visibleDetail.resolution_note}</p>
                   </div>
                 )}
 
@@ -506,7 +484,7 @@ export default function ProjectIssuesTab() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wider text-[#9CA3AF]">
-                      Evidencias ({selectedIssueDetail.evidences.length})
+                      Evidencias ({visibleDetail.evidences.length})
                     </p>
                     <Button
                       variant="secondary"
@@ -519,13 +497,13 @@ export default function ProjectIssuesTab() {
                     </Button>
                   </div>
 
-                  {selectedIssueDetail.evidences.length === 0 ? (
+                  {visibleDetail.evidences.length === 0 ? (
                     <p className="text-xs text-[#6B7280] py-2">
                       Sin evidencias. Agrega capturas, logs o videos para documentar el problema.
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {selectedIssueDetail.evidences.map((ev) => {
+                      {visibleDetail.evidences.map((ev) => {
                         const isAnalyzing = analyzingEvId === ev.id;
                         const hasAIProposal = aiAnalysisComplete[ev.id];
 
@@ -591,6 +569,7 @@ export default function ProjectIssuesTab() {
                                   src={ev.download_url}
                                   className="w-full max-h-56 rounded"
                                 >
+                                  <track kind="captions" />
                                   Tu navegador no soporta el elemento de video.
                                 </video>
                               </div>
@@ -601,17 +580,32 @@ export default function ProjectIssuesTab() {
                               <div className="mt-2 rounded-lg border border-violet-500/30 bg-violet-500/10 p-3 text-xs space-y-2">
                                 <div className="flex items-center gap-1.5 font-semibold text-violet-300">
                                   <Brain size={13} />
-                                  <span>Análisis asistido por IA (Propuesta consultiva — Sin mutaciones automáticas)</span>
+                                  <span>
+                                    Análisis asistido por IA (Propuesta consultiva — Sin mutaciones
+                                    automáticas)
+                                  </span>
                                 </div>
                                 <p className="text-[#D1D5DB]">
-                                  <strong>Diagnóstico propuesto:</strong> Se identifican patrones en la evidencia que apuntan a una falla en la capa de datos/servicios. El comportamiento observado requiere validación manual.
+                                  <strong>Diagnóstico propuesto:</strong> Se identifican patrones en
+                                  la evidencia que apuntan a una falla en la capa de
+                                  datos/servicios. El comportamiento observado requiere validación
+                                  manual.
                                 </p>
                                 <div className="text-[#9CA3AF]">
-                                  <p className="font-medium text-[#F9FAFB] mb-1">Pasos sugeridos para el desarrollador:</p>
+                                  <p className="font-medium text-[#F9FAFB] mb-1">
+                                    Pasos sugeridos para el desarrollador:
+                                  </p>
                                   <ol className="list-decimal pl-4 space-y-0.5">
-                                    <li>Verificar los parámetros de entrada y logs de auditoría.</li>
-                                    <li>Comprobar si el estado previo del recurso es consistente.</li>
-                                    <li>Implementar la corrección en código y ejecutar la suite de pruebas.</li>
+                                    <li>
+                                      Verificar los parámetros de entrada y logs de auditoría.
+                                    </li>
+                                    <li>
+                                      Comprobar si el estado previo del recurso es consistente.
+                                    </li>
+                                    <li>
+                                      Implementar la corrección en código y ejecutar la suite de
+                                      pruebas.
+                                    </li>
                                   </ol>
                                 </div>
                               </div>
@@ -633,19 +627,23 @@ export default function ProjectIssuesTab() {
       )}
 
       {/* Modals */}
-      <CreateIssueModal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSubmit={handleCreateIssue}
-        loading={submittingCreate}
-      />
+      {createModalOpen && (
+        <CreateIssueModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSubmit={handleCreateIssue}
+          loading={submittingCreate}
+        />
+      )}
 
-      <AddEvidenceModal
-        isOpen={addEvidenceModalOpen}
-        onClose={() => setAddEvidenceModalOpen(false)}
-        onSubmit={handleAttachEvidence}
-        loading={submittingEvidence}
-      />
+      {addEvidenceModalOpen && (
+        <AddEvidenceModal
+          isOpen={addEvidenceModalOpen}
+          onClose={() => setAddEvidenceModalOpen(false)}
+          onSubmit={handleAttachEvidence}
+          loading={submittingEvidence}
+        />
+      )}
     </div>
   );
 }

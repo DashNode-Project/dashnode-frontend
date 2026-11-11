@@ -6,7 +6,7 @@ import { ToastProvider } from '@/lib/toast/ToastProvider';
 import ProjectIssuesTab from './ProjectIssuesTab';
 import * as issuesApi from './api';
 import { ISSUE_MESSAGES } from './messages';
-import type { Issue, IssueDetail } from './types';
+import type { Evidence, Issue, IssueDetail } from './types';
 import type { Role } from '@/features/auth/types';
 
 vi.mock('./api');
@@ -43,25 +43,27 @@ const sampleIssue: Issue = {
   evidences_count: 1,
 };
 
+const sampleEvidence: Evidence = {
+  id: 'ev-1',
+  fix_id: 'iss-1',
+  title: 'Captura del fallo en Safari',
+  file_name: 'safari_bug.png',
+  file_type: 'image',
+  mime_type: 'image/png',
+  file_size: 2048,
+  download_url:
+    '/api/v1/projects/p-1/issues/iss-1/evidences/ev-1/content?signature=sig123&expires=999999',
+  thumbnail_url:
+    '/api/v1/projects/p-1/issues/iss-1/evidences/ev-1/content?signature=sig123&expires=999999',
+  duration_seconds: null,
+  uploaded_by: 'user-dev-1',
+  uploaded_by_name: 'Developer One',
+  created_at: '2026-11-07T10:05:00Z',
+};
+
 const sampleDetail: IssueDetail = {
   ...sampleIssue,
-  evidences: [
-    {
-      id: 'ev-1',
-      fix_id: 'iss-1',
-      title: 'Captura del fallo en Safari',
-      file_name: 'safari_bug.png',
-      file_type: 'image',
-      mime_type: 'image/png',
-      file_size: 2048,
-      download_url: '/api/v1/projects/p-1/issues/iss-1/evidences/ev-1/content?signature=sig123&expires=999999',
-      thumbnail_url: '/api/v1/projects/p-1/issues/iss-1/evidences/ev-1/content?signature=sig123&expires=999999',
-      duration_seconds: null,
-      uploaded_by: 'user-dev-1',
-      uploaded_by_name: 'Developer One',
-      created_at: '2026-11-07T10:05:00Z',
-    },
-  ],
+  evidences: [sampleEvidence],
   ai_analyses: [],
 };
 
@@ -117,10 +119,12 @@ describe('ProjectIssuesTab', () => {
 
     renderTab();
 
-    expect(await screen.findByText('Error de carga en Dashboard')).toBeInTheDocument();
+    expect(
+      (await screen.findAllByText('Error de carga en Dashboard')).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(await screen.findByText('Captura del fallo en Safari')).toBeInTheDocument();
-    expect(screen.getByText('CRÍTICA')).toBeInTheDocument();
-    expect(screen.getByText('Abierto')).toBeInTheDocument();
+    expect(screen.getAllByText('CRÍTICA').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Abierto').length).toBeGreaterThanOrEqual(1);
   });
 
   it('opens CreateIssueModal and creates an issue', async () => {
@@ -130,6 +134,7 @@ describe('ProjectIssuesTab', () => {
       next_cursor: null,
       total: 0,
     });
+    vi.mocked(issuesApi.getIssueDetail).mockResolvedValue(sampleDetail);
     vi.mocked(issuesApi.createIssue).mockResolvedValueOnce({
       message: ISSUE_MESSAGES.ISSUE_CREATED,
       issue: sampleIssue,
@@ -172,7 +177,7 @@ describe('ProjectIssuesTab', () => {
     vi.mocked(issuesApi.getIssueDetail).mockResolvedValue(sampleDetail);
     vi.mocked(issuesApi.attachEvidence).mockResolvedValueOnce({
       message: ISSUE_MESSAGES.EVIDENCE_ATTACHED,
-      evidence: sampleDetail.evidences[0],
+      evidence: sampleEvidence,
     });
 
     renderTab();

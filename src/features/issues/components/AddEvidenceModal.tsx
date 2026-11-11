@@ -11,12 +11,7 @@ interface AddEvidenceModalProps {
   loading: boolean;
 }
 
-export function AddEvidenceModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  loading,
-}: AddEvidenceModalProps) {
+export function AddEvidenceModal({ isOpen, onClose, onSubmit, loading }: AddEvidenceModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,16 +46,17 @@ export function AddEvidenceModal({
     setError(null);
     setProgress(30);
 
-    try {
-      const interval = setInterval(() => {
-        setProgress((prev) => (prev < 90 ? prev + 20 : prev));
-      }, 100);
+    const interval = setInterval(() => {
+      setProgress((prev) => (prev < 90 ? prev + 20 : prev));
+    }, 100);
 
+    try {
       await onSubmit(file, title.trim() || undefined);
-      clearInterval(interval);
       setProgress(100);
     } catch {
       setProgress(0);
+    } finally {
+      clearInterval(interval);
     }
   };
 
@@ -115,7 +111,8 @@ export function AddEvidenceModal({
             />
             {file && (
               <p className="mt-2 text-xs text-[#9CA3AF]">
-                Seleccionado: <span className="text-[#F9FAFB] font-medium">{file.name}</span> ({(file.size / 1024).toFixed(1)} KB)
+                Seleccionado: <span className="text-[#F9FAFB] font-medium">{file.name}</span> (
+                {(file.size / 1024).toFixed(1)} KB)
               </p>
             )}
           </div>

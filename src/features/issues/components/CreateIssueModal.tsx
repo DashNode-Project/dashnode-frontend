@@ -11,12 +11,7 @@ interface CreateIssueModalProps {
   loading: boolean;
 }
 
-export function CreateIssueModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  loading,
-}: CreateIssueModalProps) {
+export function CreateIssueModal({ isOpen, onClose, onSubmit, loading }: CreateIssueModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState('medium');
