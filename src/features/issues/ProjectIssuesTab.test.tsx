@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { ToastProvider } from '@/lib/toast/ToastProvider';
+import * as projectsApi from '@/features/projects/api';
+import { ApiError } from '@/lib/api/errors';
 import ProjectIssuesTab from './ProjectIssuesTab';
 import * as issuesApi from './api';
 import { ISSUE_MESSAGES } from './messages';
@@ -10,6 +12,7 @@ import type { Evidence, Issue, IssueDetail } from './types';
 import type { Role } from '@/features/auth/types';
 
 vi.mock('./api');
+vi.mock('@/features/projects/api');
 
 const useAuthMock = vi.fn(() => ({
   user: {
@@ -38,6 +41,7 @@ const sampleIssue: Issue = {
   assignee_name: null,
   resolution_note: null,
   resolved_at: null,
+  version: 1,
   created_at: '2026-11-07T10:00:00Z',
   updated_at: '2026-11-07T10:00:00Z',
   evidences_count: 1,
@@ -82,6 +86,30 @@ function renderTab(initialPath = '/proyectos/p-1/issues') {
 describe('ProjectIssuesTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'user-dev-1',
+        name: 'Developer One',
+        email: 'dev@example.com',
+        role: 'developer',
+      },
+    });
+    vi.mocked(projectsApi.listProjectMembers).mockResolvedValue([
+      {
+        user_id: 'user-dev-1',
+        name: 'Developer One',
+        email: 'dev@example.com',
+        role: 'developer',
+        joined_at: '2026-11-01T00:00:00Z',
+      },
+      {
+        user_id: 'user-mgr-1',
+        name: 'Manager One',
+        email: 'mgr@example.com',
+        role: 'manager',
+        joined_at: '2026-11-01T00:00:00Z',
+      },
+    ]);
   });
 
   it('renders empty state when project has no issues', async () => {
@@ -228,6 +256,155 @@ describe('ProjectIssuesTab', () => {
           status: 'open',
         }),
       );
+    });
+  });
+
+  it('disables assignee selector for developers and lets manager assign only active developers', async () => {
+    const user = userEvent.setup();
+    vi.mocked(issuesApi.listIssues).mockResolvedValue({
+      items: [sampleIssue],
+      next_cursor: null,
+      total: 1,
+    });
+    vi.mocked(issuesApi.getIssueDetail).mockResolvedValue(sampleDetail);
+
+    const { unmount } = renderTab();
+    const devSelect = (await screen.findByLabelText(/responsable:/i)) as HTMLSelectElement;
+    expect(devSelect).toBeDisabled();
+    unmount();
+
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'user-mgr-1',
+        name: 'Manager One',
+        email: 'mgr@example.com',
+        role: 'manager',
+      },
+    });
+    vi.mocked(issuesApi.assignIssue).mockResolvedValueOnce({
+      message: ISSUE_MESSAGES.ISSUE_ASSIGNED,
+      issue: {
+        ...sampleIssue,
+        assignee_id: 'user-dev-1',
+        assignee_name: 'Developer One',
+        version: 2,
+      },
+    });
+
+    renderTab();
+    const mgrSelect = (await screen.findByLabelText(/responsable:/i)) as HTMLSelectElement;
+    expect(mgrSelect).not.toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Developer One' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('option', { name: 'Manager One' })).not.toBeInTheDocument();
+
+    await user.selectOptions(mgrSelect, 'user-dev-1');
+    await waitFor(() => {
+      expect(issuesApi.assignIssue).toHaveBeenCalledWith('p-1', 'iss-1', {
+        assignee_id: 'user-dev-1',
+        version: 1,
+      });
+      expect(screen.getByText(ISSUE_MESSAGES.ISSUE_ASSIGNED)).toBeInTheDocument();
+    });
+  });
+
+  it('reloads detail when optimistic concurrency conflict 409 occurs', async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'user-mgr-1',
+        name: 'Manager One',
+        email: 'mgr@example.com',
+        role: 'manager',
+      },
+    });
+    vi.mocked(issuesApi.listIssues).mockResolvedValue({
+      items: [sampleIssue],
+      next_cursor: null,
+      total: 1,
+    });
+    vi.mocked(issuesApi.getIssueDetail).mockResolvedValue(sampleDetail);
+    vi.mocked(issuesApi.assignIssue).mockRejectedValueOnce(
+      new ApiError(409, {
+        code: 'CONFLICT',
+        message: ISSUE_MESSAGES.OPTIMISTIC_LOCK_CONFLICT,
+        fields: {},
+      }),
+    );
+
+    renderTab();
+    const mgrSelect = await screen.findByLabelText(/responsable:/i);
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Developer One' })).toBeInTheDocument();
+    });
+    await user.selectOptions(mgrSelect, 'user-dev-1');
+
+    await waitFor(() => {
+      expect(screen.getByText(ISSUE_MESSAGES.OPTIMISTIC_LOCK_CONFLICT)).toBeInTheDocument();
+      expect(issuesApi.getIssueDetail).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('allows resolving an open issue and lets manager close a resolved issue', async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'user-mgr-1',
+        name: 'Manager One',
+        email: 'mgr@example.com',
+        role: 'manager',
+      },
+    });
+    vi.mocked(issuesApi.listIssues).mockResolvedValue({
+      items: [sampleIssue],
+      next_cursor: null,
+      total: 1,
+    });
+    vi.mocked(issuesApi.getIssueDetail)
+      .mockResolvedValueOnce(sampleDetail)
+      .mockResolvedValueOnce({
+        ...sampleDetail,
+        status: 'resolved',
+        resolution_note: 'Ajustado header CSP',
+        version: 2,
+      })
+      .mockResolvedValueOnce({
+        ...sampleDetail,
+        status: 'closed',
+        resolution_note: 'Ajustado header CSP',
+        version: 3,
+      });
+    vi.mocked(issuesApi.resolveIssue).mockResolvedValueOnce({
+      message: ISSUE_MESSAGES.ISSUE_RESOLVED,
+      issue: { ...sampleIssue, status: 'resolved', version: 2 },
+    });
+    vi.mocked(issuesApi.closeIssue).mockResolvedValueOnce({
+      message: ISSUE_MESSAGES.ISSUE_CLOSED,
+      issue: { ...sampleIssue, status: 'closed', version: 3 },
+    });
+
+    renderTab();
+    await user.click(await screen.findByRole('button', { name: 'Resolver' }));
+    await user.type(screen.getByLabelText(/nota de resolución/i), 'Ajustado header CSP');
+    await user.click(screen.getAllByRole('button', { name: 'Resolver' }).at(-1)!);
+
+    await waitFor(() => {
+      expect(issuesApi.resolveIssue).toHaveBeenCalledWith('p-1', 'iss-1', {
+        resolution_note: 'Ajustado header CSP',
+        task_status: undefined,
+        version: 1,
+      });
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Cerrar issue' }));
+    await user.click(screen.getAllByRole('button', { name: 'Cerrar issue' }).at(-1)!);
+
+    await waitFor(() => {
+      expect(issuesApi.closeIssue).toHaveBeenCalledWith('p-1', 'iss-1', {
+        task_status: undefined,
+        version: 2,
+      });
     });
   });
 });

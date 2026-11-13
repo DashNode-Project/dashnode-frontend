@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, ok } from '@/test/fetchMock';
-import { attachEvidence, createIssue, getIssueDetail, listIssues } from './api';
+import {
+  assignIssue,
+  attachEvidence,
+  closeIssue,
+  createIssue,
+  getIssueDetail,
+  listIssues,
+  reportTaskFix,
+  resolveIssue,
+} from './api';
 import type { Issue, IssueDetail } from './types';
 
 describe('issues api client', () => {
@@ -22,6 +31,7 @@ describe('issues api client', () => {
     assignee_name: null,
     resolution_note: null,
     resolved_at: null,
+    version: 1,
     created_at: '2026-11-07T12:00:00Z',
     updated_at: '2026-11-07T12:00:00Z',
     evidences_count: 1,
@@ -138,5 +148,66 @@ describe('issues api client', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(res.message).toBe('Evidencia adjuntada correctamente.');
     expect(res.evidence.file_name).toBe('shot.png');
+  });
+
+  it('assigns, resolves, closes issue and reports task fix', async () => {
+    mockFetch((call) => {
+      if (call.url.endsWith('/assignee')) {
+        expect(call.method).toBe('PATCH');
+        expect(call.body).toEqual({ assignee_id: 'dev-1', version: 1 });
+        return ok({
+          message: 'Issue asignado correctamente.',
+          issue: { ...sampleIssue, version: 2 },
+        });
+      }
+      if (call.url.endsWith('/resolve')) {
+        expect(call.method).toBe('POST');
+        expect(call.body).toEqual({
+          resolution_note: 'Corregido',
+          task_status: 'TESTING',
+          version: 2,
+        });
+        return ok({
+          message: 'Issue resuelto correctamente.',
+          issue: { ...sampleIssue, status: 'resolved', version: 3 },
+          task_unlinked: true,
+          task_status: 'TESTING',
+        });
+      }
+      if (call.url.endsWith('/close')) {
+        expect(call.method).toBe('POST');
+        return ok({
+          message: 'Issue cerrado correctamente.',
+          issue: { ...sampleIssue, status: 'closed', version: 4 },
+        });
+      }
+      expect(call.url).toContain('/projects/p-1/tasks/task-9/report-fix');
+      expect(call.method).toBe('POST');
+      return ok({
+        message: 'Fix reportado. La tarea pasó a estado Corrección.',
+        issue: { ...sampleIssue, task_id: 'task-9' },
+        task_status: 'CORRECTION',
+      });
+    });
+
+    const a = await assignIssue('p-1', 'issue-1', { assignee_id: 'dev-1', version: 1 });
+    expect(a.issue.version).toBe(2);
+
+    const r = await resolveIssue('p-1', 'issue-1', {
+      resolution_note: 'Corregido',
+      task_status: 'TESTING',
+      version: 2,
+    });
+    expect(r.task_unlinked).toBe(true);
+
+    const c = await closeIssue('p-1', 'issue-1', { version: 3 });
+    expect(c.issue.status).toBe('closed');
+
+    const rf = await reportTaskFix('p-1', 'task-9', {
+      title: 'Fix: Task 9',
+      severity: 'high',
+      type: 'bug',
+    });
+    expect(rf.task_status).toBe('CORRECTION');
   });
 });

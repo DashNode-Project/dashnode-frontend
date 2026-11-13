@@ -1261,3 +1261,12 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 | HU_DN_07_99 | Implementado | Vista dividida listado/detalle, ordenamiento, avatares, contador de evidencias, estado vacío literal. Tests: `ProjectIssuesTab.test.tsx`. |
 | HU_DN_07_100 | Implementado | Renderizado de detalle de issue con previsualización de evidencias mediante URL firmada, sección consultiva de IA. Tests: `ProjectIssuesTab.test.tsx`. |
 | HU_DN_07_101 | Implementado | Barra de filtros por Estado, Severidad y Tipo con sincronización reactiva en URL (`useSearchParams`). Tests: `ProjectIssuesTab.test.tsx`. |
+
+## Estado de implementación — EP-11 Ciclo de vida de issues y vínculo con tareas (HU_DN_07_102 … HU_DN_07_105)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_07_102 | Implementado | Selector `Responsable` en `ProjectIssuesTab` con desarrolladores activos del proyecto (deshabilitado con tooltip para desarrollador), control optimista por `version` (recarga automática ante HTTP 409) y notificación al asignado. Tests: `ProjectIssuesTab.test.tsx`, `api.test.ts`. |
+| HU_DN_07_103 | Implementado | Modal `ResolveIssueModal` para resolver issues con nota obligatoria (máx. 2000 caracteres) y botón `Cerrar issue` exclusivo de Administrador/Gerente para transición `resolved` -> `closed`. Tests: `ResolveIssueModal.test.tsx`, `ProjectIssuesTab.test.tsx`. |
+| HU_DN_07_104 | Implementado | Botón y flujo `Reportar fix` desde Backlog (`TaskWorkModal`) y tablero Kanban (`KanbanCard` / `ProjectKanbanTab`), título prellenado `Fix: ${task.name}`, transición atómica de la tarea a `CORRECTION` e insignia `En corrección`. Tests: `TaskWorkModal.test.tsx`, `ProjectKanbanTab.test.tsx`, `api.test.ts`. |
+| HU_DN_07_105 | Implementado | Selector condicional `Estado de la tarea` en `ResolveIssueModal` prellenado con `task_previous_status` o `IN_PROGRESS`, deshabilitado con advertencia literal cuando `other_open_issues_count > 0` para preservar `CORRECTION` hasta cerrar/resolver el último issue abierto. Tests: `ResolveIssueModal.test.tsx`, `ProjectIssuesTab.test.tsx`. |

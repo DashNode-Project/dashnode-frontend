@@ -1,6 +1,13 @@
+import { useState } from 'react';
+import { Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/demo-ui';
 import { TextField } from '@/components/ui/TextField';
+import { useAuth } from '@/features/auth/AuthContext';
+import { reportTaskFix } from '@/features/issues/api';
+import { CreateIssueModal } from '@/features/issues/components/CreateIssueModal';
+import { ISSUE_MESSAGES } from '@/features/issues/messages';
+import type { CreateIssuePayload } from '@/features/issues/types';
 import { ProjectModal } from '@/features/projects/ProjectModal';
 import type { ProjectMemberRow } from '@/features/projects/api';
 import {
@@ -44,7 +51,28 @@ export function TaskWorkModal({
   notifyError: (error: unknown) => void;
   showToast: (message: string, tone: 'success' | 'error' | 'info') => void;
 }) {
+  const { user } = useAuth();
+  const [reportFixOpen, setReportFixOpen] = useState(false);
   const taskModePoints = story.estimation_mode === 'task';
+  const canReportFix =
+    canWork &&
+    (user?.role === 'admin' ||
+      user?.role === 'manager' ||
+      (Boolean(user?.id) && task.assignee_id === user?.id));
+
+  async function handleReportFix(payload: CreateIssuePayload) {
+    setSubmitting(true);
+    try {
+      const res = await reportTaskFix(projectId, task.id, payload);
+      showToast(res.message || ISSUE_MESSAGES.TASK_FIX_REPORTED, 'success');
+      setReportFixOpen(false);
+      await onSaved();
+    } catch (error) {
+      notifyError(error);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleAssign(assigneeId: string) {
     setSubmitting(true);
@@ -93,145 +121,175 @@ export function TaskWorkModal({
   }
 
   return (
-    <ProjectModal
-      title={task.name}
-      onClose={onClose}
-      footer={
-        <>
-          <Button type="button" onClick={onClose}>
-            Cerrar
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4 text-sm">
-        <p className="text-xs text-[#6B7280]">{task.notes || 'Sin notas adicionales.'}</p>
+    <>
+      <ProjectModal
+        title={task.name}
+        onClose={onClose}
+        footer={
+          <>
+            {canReportFix ? (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={submitting}
+                onClick={() => setReportFixOpen(true)}
+                className="flex items-center gap-1.5 border-orange-500/30 text-orange-300 hover:bg-orange-500/15"
+              >
+                <Wrench size={14} aria-hidden="true" />
+                <span>Reportar fix</span>
+              </Button>
+            ) : null}
+            <Button type="button" onClick={onClose}>
+              Cerrar
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 text-sm">
+          <p className="text-xs text-[#6B7280]">{task.notes || 'Sin notas adicionales.'}</p>
 
-        <label className="block text-xs text-[#9CA3AF]">
-          Responsable
-          <select
-            className={`${fieldClass} mt-1`}
-            value={task.assignee_id ?? ''}
-            disabled={!canWork || submitting}
-            onChange={(e) => void handleAssign(e.target.value)}
-          >
-            <option value="">Sin asignar</option>
-            {members.map((m) => (
-              <option key={m.user_id} value={m.user_id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          {task.assignee_id && memberMap.get(task.assignee_id) ? (
-            <div className="mt-1 flex items-center gap-1.5">
-              <Avatar name={memberMap.get(task.assignee_id)!} size={20} />
-              <span className="text-xs text-[#9CA3AF]">{memberMap.get(task.assignee_id)}</span>
-            </div>
-          ) : null}
-        </label>
-
-        {taskModePoints ? (
           <label className="block text-xs text-[#9CA3AF]">
-            Puntos de sprint (tarea)
+            Responsable
             <select
               className={`${fieldClass} mt-1`}
-              value={task.story_points?.toString() ?? ''}
+              value={task.assignee_id ?? ''}
               disabled={!canWork || submitting}
-              onChange={(e) => void handleTaskPoints(e.target.value)}
+              onChange={(e) => void handleAssign(e.target.value)}
             >
-              {FIBONACCI_OPTIONS.map((o) => (
-                <option key={o.label} value={o.value}>
-                  {o.label}
+              <option value="">Sin asignar</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.name}
                 </option>
               ))}
             </select>
+            {task.assignee_id && memberMap.get(task.assignee_id) ? (
+              <div className="mt-1 flex items-center gap-1.5">
+                <Avatar name={memberMap.get(task.assignee_id)!} size={20} />
+                <span className="text-xs text-[#9CA3AF]">{memberMap.get(task.assignee_id)}</span>
+              </div>
+            ) : null}
           </label>
-        ) : null}
 
-        <div>
-          <TextField
-            label="Horas estimadas"
-            type="number"
-            min={0}
-            step={0.5}
-            defaultValue={task.estimated_hours ?? ''}
-            disabled={!canWork || submitting}
-            onBlur={(e) => {
-              if (!canWork) return;
-              void handleHours(e.target.value);
-            }}
-          />
-        </div>
-
-        {canWork ? (
-          <>
+          {taskModePoints ? (
             <label className="block text-xs text-[#9CA3AF]">
-              Estado
+              Puntos de sprint (tarea)
               <select
                 className={`${fieldClass} mt-1`}
-                value={task.status}
-                disabled={submitting || task.status === 'CORRECTION'}
-                title={task.status === 'CORRECTION' ? BACKLOG_MESSAGES.correctionLocked : undefined}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (next === 'CORRECTION') return;
-                  setSubmitting(true);
-                  void changeTaskStatus(projectId, task.id, next)
-                    .then((result) => {
-                      showToast(result.message, 'success');
-                      return onSaved();
-                    })
-                    .catch((error) => notifyError(error))
-                    .finally(() => setSubmitting(false));
-                }}
+                value={task.story_points?.toString() ?? ''}
+                disabled={!canWork || submitting}
+                onChange={(e) => void handleTaskPoints(e.target.value)}
               >
-                {TASK_STATUS_OPTIONS.map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                    disabled={option.value === 'CORRECTION'}
-                  >
-                    {option.label}
+                {FIBONACCI_OPTIONS.map((o) => (
+                  <option key={o.label} value={o.value}>
+                    {o.label}
                   </option>
                 ))}
               </select>
             </label>
+          ) : null}
 
-            <label className="block text-xs text-[#9CA3AF]">
-              Registrar horas ({task.logged_hours ?? '0'} acumuladas)
-              <div className="mt-1 flex gap-2">
-                <input
-                  type="number"
-                  min={0.01}
-                  max={24}
-                  step={0.01}
-                  className={fieldClass}
-                  id={`task-work-log-${task.id}`}
-                  disabled={submitting}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter') return;
-                    const input = event.currentTarget;
-                    const raw = Number(input.value);
-                    if (!raw || raw <= 0) {
-                      showToast(BACKLOG_MESSAGES.hoursPositive, 'error');
-                      return;
-                    }
+          <div>
+            <TextField
+              label="Horas estimadas"
+              type="number"
+              min={0}
+              step={0.5}
+              defaultValue={task.estimated_hours ?? ''}
+              disabled={!canWork || submitting}
+              onBlur={(e) => {
+                if (!canWork) return;
+                void handleHours(e.target.value);
+              }}
+            />
+          </div>
+
+          {canWork ? (
+            <>
+              <label className="block text-xs text-[#9CA3AF]">
+                Estado
+                <select
+                  className={`${fieldClass} mt-1`}
+                  value={task.status}
+                  disabled={submitting || task.status === 'CORRECTION'}
+                  title={
+                    task.status === 'CORRECTION' ? BACKLOG_MESSAGES.correctionLocked : undefined
+                  }
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (next === 'CORRECTION') return;
                     setSubmitting(true);
-                    void logTaskHours(projectId, task.id, { hours_spent: raw })
+                    void changeTaskStatus(projectId, task.id, next)
                       .then((result) => {
                         showToast(result.message, 'success');
-                        input.value = '';
                         return onSaved();
                       })
                       .catch((error) => notifyError(error))
                       .finally(() => setSubmitting(false));
                   }}
-                />
-              </div>
-            </label>
-          </>
-        ) : null}
-      </div>
-    </ProjectModal>
+                >
+                  {TASK_STATUS_OPTIONS.map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      disabled={option.value === 'CORRECTION'}
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-xs text-[#9CA3AF]">
+                Registrar horas ({task.logged_hours ?? '0'} acumuladas)
+                <div className="mt-1 flex gap-2">
+                  <input
+                    type="number"
+                    min={0.01}
+                    max={24}
+                    step={0.01}
+                    className={fieldClass}
+                    id={`task-work-log-${task.id}`}
+                    disabled={submitting}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return;
+                      const input = event.currentTarget;
+                      const raw = Number(input.value);
+                      if (!raw || raw <= 0) {
+                        showToast(BACKLOG_MESSAGES.hoursPositive, 'error');
+                        return;
+                      }
+                      setSubmitting(true);
+                      void logTaskHours(projectId, task.id, { hours_spent: raw })
+                        .then((result) => {
+                          showToast(result.message, 'success');
+                          input.value = '';
+                          return onSaved();
+                        })
+                        .catch((error) => notifyError(error))
+                        .finally(() => setSubmitting(false));
+                    }}
+                  />
+                </div>
+              </label>
+            </>
+          ) : null}
+        </div>
+      </ProjectModal>
+      {reportFixOpen && (
+        <CreateIssueModal
+          key={`backlog-report-fix-${task.id}`}
+          isOpen={reportFixOpen}
+          onClose={() => setReportFixOpen(false)}
+          onSubmit={handleReportFix}
+          loading={submitting}
+          initialTitle={`Fix: ${task.name}`}
+          modalTitle="Reportar fix"
+          submitLabel="Reportar fix"
+          submittingLabel="Reportando…"
+          subtitle={`Al reportar un fix, la tarea "${task.name}" pasará automáticamente a estado Corrección.`}
+        />
+      )}
+    </>
   );
 }

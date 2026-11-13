@@ -1,13 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import { Brain, Download, FileCode, Film, Image as ImageIcon, Plus, Wrench } from 'lucide-react';
+import {
+  Brain,
+  CheckCircle2,
+  Download,
+  FileCode,
+  Film,
+  Image as ImageIcon,
+  Lock,
+  Plus,
+  Wrench,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar, Card } from '@/components/ui/demo-ui';
+import { useAuth } from '@/features/auth/AuthContext';
+import { listProjectMembers } from '@/features/projects/api';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { useToast } from '@/lib/toast/ToastProvider';
-import { attachEvidence, createIssue, getIssueDetail, listIssues } from './api';
+import {
+  assignIssue,
+  attachEvidence,
+  closeIssue,
+  createIssue,
+  getIssueDetail,
+  listIssues,
+  resolveIssue,
+} from './api';
 import { AddEvidenceModal } from './components/AddEvidenceModal';
 import { CreateIssueModal } from './components/CreateIssueModal';
+import { ResolveIssueModal } from './components/ResolveIssueModal';
 import { ISSUE_MESSAGES } from './messages';
 import type { CreateIssuePayload, Issue, IssueDetail } from './types';
 
@@ -59,6 +80,8 @@ export default function ProjectIssuesTab() {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const canAssignOrClose = user?.role === 'admin' || user?.role === 'manager';
 
   // URL Query Params Synchronization
   const filterStatus = searchParams.get('status') || 'all';
@@ -75,6 +98,11 @@ export default function ProjectIssuesTab() {
   const [selectedIssueDetail, setSelectedIssueDetail] = useState<IssueDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  const [developerMembers, setDeveloperMembers] = useState<{ user_id: string; name: string }[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  const [resolveModalMode, setResolveModalMode] = useState<'resolve' | 'close' | null>(null);
+  const [submittingResolve, setSubmittingResolve] = useState(false);
+
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [addEvidenceModalOpen, setAddEvidenceModalOpen] = useState(false);
@@ -84,6 +112,27 @@ export default function ProjectIssuesTab() {
   // Simulated AI analysis state adhering to DA-08 (Zero automatic mutations)
   const [analyzingEvId, setAnalyzingEvId] = useState<string | null>(null);
   const [aiAnalysisComplete, setAiAnalysisComplete] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const members = await listProjectMembers(projectId);
+        if (cancelled) return;
+        setDeveloperMembers(
+          (Array.isArray(members) ? members : [])
+            .filter((m) => m.role === 'developer')
+            .map((m) => ({ user_id: m.user_id, name: m.name })),
+        );
+      } catch {
+        if (!cancelled) setDeveloperMembers([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   // Initial and filter-change load from server
   useEffect(() => {
@@ -239,6 +288,75 @@ export default function ProjectIssuesTab() {
       throw err;
     } finally {
       setSubmittingEvidence(false);
+    }
+  };
+
+  const syncDetailAndList = useCallback(
+    async (issueId: string) => {
+      const refreshedDetail = await getIssueDetail(projectId, issueId);
+      setSelectedIssueDetail(refreshedDetail);
+      setIssues((prev) => prev.map((iss) => (iss.id === issueId ? refreshedDetail : iss)));
+    },
+    [projectId],
+  );
+
+  const handleLifecycleError = useCallback(
+    (err: unknown) => {
+      if (err instanceof ApiError && !isTechnicalFailure(err)) {
+        showToast(err.message, 'error');
+        if (err.status === 409 && selectedIssueId) {
+          void syncDetailAndList(selectedIssueId).catch(() => {});
+        }
+      } else {
+        showToast(ISSUE_MESSAGES.GENERIC_ERROR, 'error');
+      }
+    },
+    [selectedIssueId, showToast, syncDetailAndList],
+  );
+
+  const handleAssignIssue = async (nextAssigneeId: string | null) => {
+    if (!visibleDetail || !canAssignOrClose) return;
+    setAssigning(true);
+    try {
+      const res = await assignIssue(projectId, visibleDetail.id, {
+        assignee_id: nextAssigneeId,
+        version: visibleDetail.version,
+      });
+      showToast(res.message || ISSUE_MESSAGES.ISSUE_ASSIGNED, 'success');
+      await syncDetailAndList(visibleDetail.id);
+    } catch (err: unknown) {
+      handleLifecycleError(err);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleResolveOrCloseSubmit = async (payload: {
+    resolution_note?: string;
+    task_status?: string | null;
+  }) => {
+    if (!visibleDetail || !resolveModalMode) return;
+    setSubmittingResolve(true);
+    try {
+      const res =
+        resolveModalMode === 'resolve'
+          ? await resolveIssue(projectId, visibleDetail.id, {
+              resolution_note: payload.resolution_note ?? '',
+              task_status: payload.task_status,
+              version: visibleDetail.version,
+            })
+          : await closeIssue(projectId, visibleDetail.id, {
+              task_status: payload.task_status,
+              version: visibleDetail.version,
+            });
+      showToast(res.message, 'success');
+      setResolveModalMode(null);
+      await syncDetailAndList(visibleDetail.id);
+      setRefreshKey((k) => k + 1);
+    } catch (err: unknown) {
+      handleLifecycleError(err);
+    } finally {
+      setSubmittingResolve(false);
     }
   };
 
@@ -418,26 +536,57 @@ export default function ProjectIssuesTab() {
             ) : visibleDetail ? (
               <Card className="space-y-6 p-6">
                 {/* Header */}
-                <div className="space-y-2 border-b border-white/6 pb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs font-bold ${
-                        SEVERITY_BADGE_STYLE[visibleDetail.severity] || ''
-                      }`}
-                    >
-                      {SEVERITY_LABELS[visibleDetail.severity] ||
-                        visibleDetail.severity.toUpperCase()}
-                    </span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        STATUS_BADGE_STYLE[visibleDetail.status] || ''
-                      }`}
-                    >
-                      {STATUS_LABELS[visibleDetail.status] || visibleDetail.status}
-                    </span>
-                    <span className="rounded bg-white/5 px-2 py-0.5 text-xs text-[#9CA3AF]">
-                      Tipo: {TYPE_LABELS[visibleDetail.type] || visibleDetail.type}
-                    </span>
+                <div className="space-y-3 border-b border-white/6 pb-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-bold ${
+                          SEVERITY_BADGE_STYLE[visibleDetail.severity] || ''
+                        }`}
+                      >
+                        {SEVERITY_LABELS[visibleDetail.severity] ||
+                          visibleDetail.severity.toUpperCase()}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          STATUS_BADGE_STYLE[visibleDetail.status] || ''
+                        }`}
+                      >
+                        {STATUS_LABELS[visibleDetail.status] || visibleDetail.status}
+                      </span>
+                      <span className="rounded bg-white/5 px-2 py-0.5 text-xs text-[#9CA3AF]">
+                        Tipo: {TYPE_LABELS[visibleDetail.type] || visibleDetail.type}
+                      </span>
+                      {visibleDetail.task_id && (
+                        <span className="rounded border border-orange-500/30 bg-orange-500/15 px-2 py-0.5 text-xs text-orange-300">
+                          Tarea vinculada: {visibleDetail.task_name || visibleDetail.task_id}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {visibleDetail.status === 'open' && (
+                        <Button
+                          size="sm"
+                          onClick={() => setResolveModalMode('resolve')}
+                          className="flex items-center gap-1"
+                        >
+                          <CheckCircle2 size={14} aria-hidden="true" />
+                          <span>Resolver</span>
+                        </Button>
+                      )}
+                      {visibleDetail.status === 'resolved' && canAssignOrClose && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setResolveModalMode('close')}
+                          className="flex items-center gap-1"
+                        >
+                          <Lock size={14} aria-hidden="true" />
+                          <span>Cerrar issue</span>
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   <h2 className="text-xl font-bold text-[#F9FAFB]">{visibleDetail.title}</h2>
@@ -455,14 +604,36 @@ export default function ProjectIssuesTab() {
                         {visibleDetail.reporter_name}
                       </span>
                     </div>
-                    {visibleDetail.assignee_name && (
-                      <div className="flex items-center gap-1.5">
-                        <span>Responsable:</span>
-                        <span className="font-medium text-[#F9FAFB]">
-                          {visibleDetail.assignee_name}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="issue-assignee-select" className="text-[#6B7280]">
+                        Responsable:
+                      </label>
+                      <select
+                        id="issue-assignee-select"
+                        value={visibleDetail.assignee_id ?? ''}
+                        disabled={!canAssignOrClose || assigning}
+                        title={
+                          !canAssignOrClose ? ISSUE_MESSAGES.ASSIGN_FORBIDDEN_TOOLTIP : undefined
+                        }
+                        onChange={(e) => void handleAssignIssue(e.target.value || null)}
+                        className="rounded-md border border-white/10 bg-[#1E1F2B] px-2.5 py-1 text-xs text-[#F9FAFB] focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="">Sin asignar</option>
+                        {developerMembers.map((member) => (
+                          <option key={member.user_id} value={member.user_id}>
+                            {member.name}
+                          </option>
+                        ))}
+                        {visibleDetail.assignee_id &&
+                          !developerMembers.some(
+                            (m) => m.user_id === visibleDetail.assignee_id,
+                          ) && (
+                            <option value={visibleDetail.assignee_id}>
+                              {visibleDetail.assignee_name || visibleDetail.assignee_id}
+                            </option>
+                          )}
+                      </select>
+                    </div>
                     <div>
                       <span>Fecha: </span>
                       <span>{new Date(visibleDetail.created_at).toLocaleDateString('es-CO')}</span>
@@ -473,9 +644,19 @@ export default function ProjectIssuesTab() {
                 {/* Resolution Note if resolved */}
                 {visibleDetail.resolution_note && (
                   <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
-                    <p className="text-xs font-semibold text-emerald-400 mb-1">
-                      Nota de resolución
-                    </p>
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-emerald-400">Nota de resolución</p>
+                      {(visibleDetail.resolved_by_name || visibleDetail.resolved_at) && (
+                        <p className="text-[11px] text-emerald-300/80">
+                          {visibleDetail.resolved_by_name
+                            ? `Resuelto por ${visibleDetail.resolved_by_name}`
+                            : ''}
+                          {visibleDetail.resolved_at
+                            ? ` · ${new Date(visibleDetail.resolved_at).toLocaleDateString('es-CO')}`
+                            : ''}
+                        </p>
+                      )}
+                    </div>
                     <p className="text-sm text-[#F9FAFB]">{visibleDetail.resolution_note}</p>
                   </div>
                 )}
@@ -642,6 +823,17 @@ export default function ProjectIssuesTab() {
           onClose={() => setAddEvidenceModalOpen(false)}
           onSubmit={handleAttachEvidence}
           loading={submittingEvidence}
+        />
+      )}
+
+      {resolveModalMode && visibleDetail && (
+        <ResolveIssueModal
+          key={`${visibleDetail.id}-${resolveModalMode}`}
+          issue={visibleDetail}
+          mode={resolveModalMode}
+          loading={submittingResolve}
+          onClose={() => setResolveModalMode(null)}
+          onSubmit={handleResolveOrCloseSubmit}
         />
       )}
     </div>

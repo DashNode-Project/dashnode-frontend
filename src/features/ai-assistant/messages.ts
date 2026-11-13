@@ -9,10 +9,8 @@ export const AI_MESSAGES = {
     'No pude interpretar el audio como una consulta sobre DashNode (proyectos, HUs, tareas o sprints). Hable con claridad y formule su pregunta en voz alta.',
   audioTooLong: 'La grabación excede la duración máxima permitida.',
   aiProcessing: 'El asistente no pudo procesar la consulta.',
-  requestTimeout:
-    'La consulta tardó demasiado. Intente de nuevo con una pregunta más concreta.',
-  aiUnavailable:
-    'El servicio de IA no respondió a tiempo. Intente nuevamente en unos momentos.',
+  requestTimeout: 'La consulta tardó demasiado. Intente de nuevo con una pregunta más concreta.',
+  aiUnavailable: 'El servicio de IA no respondió a tiempo. Intente nuevamente en unos momentos.',
   quotaExhausted: 'Se agotó la cuota gratuita del servicio de IA. Intente más tarde.',
   widgetTitle: 'Asistente DashNode',
   openAssistant: 'Abrir asistente de IA',

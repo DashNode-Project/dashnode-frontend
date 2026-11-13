@@ -48,6 +48,17 @@ export function validateCreateIssue(values: CreateIssueFormValues): {
   };
 }
 
+export function validateResolutionNote(note: string | null | undefined): string | null {
+  const cleaned = note?.trim() ?? '';
+  if (!cleaned) {
+    return ISSUE_MESSAGES.RESOLUTION_NOTE_REQUIRED;
+  }
+  if (cleaned.length > 2000) {
+    return ISSUE_MESSAGES.RESOLUTION_NOTE_TOO_LONG;
+  }
+  return null;
+}
+
 export function validateEvidenceFile(file: File | null): string | null {
   if (!file) {
     return 'Debe seleccionar un archivo.';

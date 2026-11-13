@@ -16,7 +16,15 @@ export interface Issue {
   assignee_id?: string | null;
   assignee_name?: string | null;
   resolution_note?: string | null;
+  resolved_by?: string | null;
+  resolved_by_name?: string | null;
   resolved_at?: string | null;
+  task_id?: string | null;
+  task_name?: string | null;
+  task_status?: string | null;
+  task_previous_status?: string | null;
+  other_open_issues_count?: number;
+  version: number;
   created_at: string;
   updated_at: string;
   evidences_count: number;
@@ -62,6 +70,22 @@ export interface CreateIssuePayload {
   idempotency_key?: string;
 }
 
+export interface AssignIssuePayload {
+  assignee_id: string | null;
+  version?: number;
+}
+
+export interface ResolveIssuePayload {
+  resolution_note: string;
+  task_status?: string | null;
+  version?: number;
+}
+
+export interface CloseIssuePayload {
+  task_status?: string | null;
+  version?: number;
+}
+
 export interface IssueListResponse {
   items: Issue[];
   next_cursor?: string | null;
@@ -71,6 +95,10 @@ export interface IssueListResponse {
 export interface IssueOperationResponse {
   message: string;
   issue: Issue;
+  task_unlinked?: boolean;
+  task_id?: string | null;
+  task_status?: string | null;
+  task_message?: string | null;
 }
 
 export interface EvidenceOperationResponse {

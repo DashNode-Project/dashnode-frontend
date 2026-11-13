@@ -1,15 +1,17 @@
-import { Clock, Lock } from 'lucide-react';
+import { Clock, Lock, Wrench } from 'lucide-react';
 import type { KanbanCard as KanbanCardType, KanbanColumnId } from '../types';
 import { KANBAN_COLUMNS_CONFIG } from '../types';
 
 interface KanbanCardProps {
   task: KanbanCardType;
   canMove: boolean;
+  canReportFix?: boolean;
   isDragging: boolean;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: () => void;
   onMoveTask: (task: KanbanCardType, targetColumn: KanbanColumnId) => void;
   onOpenBlockModal: (task: KanbanCardType) => void;
+  onOpenReportFixModal?: (task: KanbanCardType) => void;
 }
 
 const DEFAULT_TYPE_STYLE = {
@@ -43,13 +45,16 @@ function getInitials(name: string): string {
 export function KanbanCard({
   task,
   canMove,
+  canReportFix = false,
   isDragging,
   onDragStart,
   onDragEnd,
   onMoveTask,
   onOpenBlockModal,
+  onOpenReportFixModal,
 }: KanbanCardProps) {
   const typeConfig = TASK_TYPE_STYLES[task.task_type.toLowerCase()] ?? DEFAULT_TYPE_STYLE;
+  const isInCorrection = task.status === 'CORRECTION';
 
   const hasImpediment = task.is_blocked;
   const hasDependency = Boolean(task.blocked_by_task_id);
@@ -75,7 +80,11 @@ export function KanbanCard({
       onDragStart={(e) => onDragStart(e, task.id)}
       onDragEnd={onDragEnd}
       data-testid={`kanban-card-${task.id}`}
-      className={`group relative rounded-xl border border-white/6 bg-[#12131C] p-3 shadow-sm transition-all hover:border-white/20 ${
+      className={`group relative rounded-xl border p-3 shadow-sm transition-all ${
+        isInCorrection
+          ? 'border-orange-500/50 bg-orange-500/10 hover:border-orange-400'
+          : 'border-white/6 bg-[#12131C] hover:border-white/20'
+      } ${
         canMove ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
       } ${isDragging ? 'scale-95 opacity-50 ring-2 ring-blue-500/50' : ''}`}
     >
@@ -185,19 +194,34 @@ export function KanbanCard({
         </div>
       )}
 
-      {/* Quick block button if not blocked */}
-      {!isBlocked && (
-        <div className="mt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenBlockModal(task);
-            }}
-            className="text-[11px] text-[#6B7280] opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-          >
-            Reportar impedimento
-          </button>
+      {/* Quick actions: block & report fix */}
+      {(!isBlocked || (canReportFix && onOpenReportFixModal)) && (
+        <div className="mt-2 flex items-center justify-end gap-3">
+          {!isBlocked && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenBlockModal(task);
+              }}
+              className="text-[11px] text-[#6B7280] opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+            >
+              Reportar impedimento
+            </button>
+          )}
+          {canReportFix && onOpenReportFixModal && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenReportFixModal(task);
+              }}
+              className="flex items-center gap-1 text-[11px] font-medium text-orange-400 transition-colors hover:text-orange-300"
+            >
+              <Wrench size={11} aria-hidden="true" />
+              <span>Reportar fix</span>
+            </button>
+          )}
         </div>
       )}
     </div>

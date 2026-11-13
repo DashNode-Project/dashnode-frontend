@@ -1,18 +1,33 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { ProjectModal } from '@/features/projects/ProjectModal';
-import { validateCreateIssue } from '../validation';
 import type { CreateIssuePayload } from '../types';
+import { validateCreateIssue } from '../validation';
 
 interface CreateIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (payload: CreateIssuePayload) => Promise<void>;
   loading: boolean;
+  initialTitle?: string;
+  modalTitle?: string;
+  submitLabel?: string;
+  submittingLabel?: string;
+  subtitle?: string;
 }
 
-export function CreateIssueModal({ isOpen, onClose, onSubmit, loading }: CreateIssueModalProps) {
-  const [title, setTitle] = useState('');
+export function CreateIssueModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  loading,
+  initialTitle = '',
+  modalTitle = 'Nuevo fix',
+  submitLabel = 'Crear fix',
+  submittingLabel = 'Creando…',
+  subtitle,
+}: CreateIssueModalProps) {
+  const [title, setTitle] = useState(() => initialTitle.slice(0, 100));
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState('medium');
   const [type, setType] = useState('bug');
@@ -50,20 +65,26 @@ export function CreateIssueModal({ isOpen, onClose, onSubmit, loading }: CreateI
 
   return (
     <ProjectModal
-      title="Nuevo fix"
+      title={modalTitle}
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>
+          <Button variant="secondary" type="button" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Creando…' : 'Crear fix'}
+          <Button type="button" onClick={handleSubmit} disabled={loading}>
+            {loading ? submittingLabel : submitLabel}
           </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        {subtitle && (
+          <p className="rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs text-orange-300">
+            {subtitle}
+          </p>
+        )}
+
         {/* Título */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="issue-title" className="text-sm font-medium text-[#F9FAFB]">

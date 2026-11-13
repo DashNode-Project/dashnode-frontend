@@ -23,9 +23,9 @@ export function MyTasksKanbanView({ tasks, busyId, onStatusChange }: Props) {
       map.set(status, []);
     }
     for (const task of tasks) {
-      const key = (COLUMN_ORDER.includes(task.status as KanbanColumnId)
-        ? task.status
-        : 'TODO') as KanbanColumnId;
+      const key = (
+        COLUMN_ORDER.includes(task.status as KanbanColumnId) ? task.status : 'TODO'
+      ) as KanbanColumnId;
       const bucket = map.get(key) ?? [];
       bucket.push(task);
       map.set(key, bucket);
@@ -60,8 +60,7 @@ export function MyTasksKanbanView({ tasks, busyId, onStatusChange }: Props) {
     <div className="flex gap-3 overflow-x-auto pb-2">
       {COLUMN_ORDER.map((status) => {
         const config =
-          KANBAN_COLUMNS_CONFIG.find((col) => col.id === status) ??
-          KANBAN_COLUMNS_CONFIG[0]!;
+          KANBAN_COLUMNS_CONFIG.find((col) => col.id === status) ?? KANBAN_COLUMNS_CONFIG[0]!;
         const label = config.label;
         const columnTasks = byStatus.get(status) ?? [];
         const isOver = dragOverCol === status;
