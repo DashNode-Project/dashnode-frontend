@@ -163,3 +163,22 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - `src/features/kanban/`:
   - `components/KanbanCard.tsx` y `ProjectKanbanTab.tsx`: estilo destacado para tarjetas en `CORRECTION`, acción `Reportar fix` desde tarjeta Kanban y recarga del tablero tras creación atómica
   - `ProjectKanbanTab.test.tsx`: pruebas de flujo `Reportar fix` en Kanban (`HU_DN_07_104`)
+
+## EP-12 — Análisis de IA por imagen y video (HU_DN_07_106 … HU_DN_07_113)
+
+- `src/features/issues/`:
+  - `types.ts`: `AiAnalysisStatus`, `AiValidationStatus`, `AiAnalysisResult`, `RequestAiAnalysisPayload`, `RequestAiAnalysisResponse`, `AiAnalysisStatusResponse`, `AiAnalysisListItem`, `AiAnalysisListResponse`, `ValidateAiAnalysisResponse`, `RejectAiAnalysisResponse`.
+  - `messages.ts`: Literales de EP-12 (`AI_CONFIRMATION_CHECKBOX`, `AI_ANALYSIS_REQUESTED`, `AI_ANALYSIS_REUSED`, `AI_DELETE_CONFIRM_TITLE`, `AI_DELETE_CONFIRM_TEXT`, `AI_DELETE_SUCCESS`, `AI_NO_RESPONSES`, `AI_UNVERIFIED_LABEL`, `AI_INSUFFICIENT_CONTEXT`, `AI_VALIDATE_SUCCESS`, `AI_REJECT_SUCCESS`, `AI_HUMAN_VALIDATION_NOTICE`, etc.) y diccionario de errores `AI_ERROR_CODE_MESSAGES`.
+  - `api.ts`: Métodos de cliente `requestAiAnalysis`, `getAiAnalysisStatus`, `listAiAnalyses`, `deleteAiAnalysis`, `validateAiAnalysis`, `rejectAiAnalysis`.
+  - `api.test.ts`: Pruebas de cliente HTTP para los endpoints de análisis de IA (6 tests).
+  - `components/AiAnalysisSection.tsx`: Sección completa de análisis visual de IA:
+    - Casilla de confirmación obligatoria de privacidad por evidencia visual.
+    - Botón "Analizar con IA" y temporizador de sondeo de estado (polling cada 2s hasta 30s).
+    - Tarjeta de respuesta estructurada en 3 bloques con distintivo visual rojo `'Sugerencia generada por IA no verificada'`.
+    - Historial de análisis guardados con nombre del solicitante, fecha, estado de validación humana y botón de detalle.
+    - Diálogo modal de confirmación con `ProjectModal` para eliminación lógica (soft delete).
+    - Manejo tipado de errores específicos con botón "Reintentar" sin re-subir la evidencia.
+    - Validación y rechazo humano (HU_DN_07_111, HU_DN_07_112) con botones "Validar" y "Rechazar" protegidos por RBAC (Admin/Manager).
+    - Banner de advertencia de validación humana pendiente con icono de alerta y nota informativa con icono de éxito al validarse (HU_DN_07_113).
+  - `components/AiAnalysisSection.test.tsx`: Suite completa de 9 tests de integración de componentes cubriendo exhaustivamente HU_DN_07_106 a HU_DN_07_113.
+  - `ProjectIssuesTab.tsx`: Integración de `AiAnalysisSection` en el panel de detalle de cada issue, transmitiendo `currentUser` completo.

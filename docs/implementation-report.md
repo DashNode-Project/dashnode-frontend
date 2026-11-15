@@ -474,3 +474,27 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 - **Suite completa Vitest (`npx vitest run`):** 50/51 archivos pasando (377/379 tests verdes); las únicas 2 fallas corresponden al archivo preexistente `src/features/underDevelopment.test.tsx` por la ruta `Mis tareas` implementada desde EP-06.
 - **Quality gates sobre EP-11:** `npx prettier` y `npx eslint` sobre los archivos modificados sin errores; `npm run typecheck` (`tsc --noEmit`) limpio; `npm run build` (`vite build`, 2037 módulos) limpio en 1.46s.
 - **Escaneo de secretos:** `node scripts/scan-secrets.mjs` limpio (226 archivos revisados, 0 secretos detectados).
+
+### Implementación EP-12 — Análisis de IA por imagen y video (HU_DN_07_106 … HU_DN_07_113)
+- **Funcionalidad implementada:**
+  - `src/features/issues/components/AiAnalysisSection.tsx`:
+    - **HU_DN_07_106:** Casilla de verificación de privacidad obligatoria (*"Confirmo que la evidencia no contiene contraseñas, tokens ni datos personales."*) que habilita reactivamente el botón *"Analizar con IA"*. Manejo de sondeo de estado (polling no bloqueante cada 2 segundos hasta 30 segundos) con barra de progreso. Soporte de reuso inmediato sin invocar API de pago externa cuando el backend retorna `reused: true`.
+    - **HU_DN_07_107:** Tarjeta estructurada en 3 bloques (`problem_description`, `probable_cause`, `suggested_solution`) con límite <= 150 palabras, distintivo visual rojo en cabecera `'Sugerencia generada por IA no verificada'`, fallback amigable literal `'No hay contexto suficiente para proponer una solución.'` y renderizado seguro en texto plano escapado contra XSS y Prompt Injection indirecto.
+    - **HU_DN_07_108:** Sección *"Historial de análisis de IA"* con nombre del solicitante, fecha formateada (`toLocaleDateString('es-CO')`), distintivo de validación humana (`Pendiente de validación`, `Validada`, `Rechazada`), resumen colapsable/expandible y mensaje de estado vacío literal `'Este issue no tiene respuestas de IA.'`.
+    - **HU_DN_07_109:** Botón de eliminación lógica con diálogo de confirmación `ProjectModal` (*"¿Está seguro de que desea eliminar esta respuesta de IA?"*), validación de roles en cliente (solo visible para Administrador, Gerente o el propio solicitante del análisis), bloqueo durante el estado de procesamiento y remoción reactiva del elemento en la lista.
+    - **HU_DN_07_110:** Mapeo tipado en `AI_ERROR_CODE_MESSAGES` para todos los códigos de falla (`NO_EVIDENCE`, `UNSUPPORTED_FORMAT`, `AI_PROVIDER_ERROR`, `AI_OUTPUT_INVALID`, `AI_TIMEOUT`, `AI_QUOTA_EXHAUSTED`, `DAILY_LIMIT_REACHED`, `EVIDENCE_LOAD_ERROR`) con botón *"Reintentar"* que preserva la evidencia seleccionada y el checkbox marcado.
+    - **HU_DN_07_111:** Botón *"Validar"* (`AI_VALIDATE_BTN`) visible exclusivamente para usuarios con rol Administrador o Gerente cuando la propuesta se encuentra en estado `PENDING_VALIDATION`. Notificación toast `'Respuesta de IA validada correctamente.'` y actualización inmediata del estado a insignia `Validada`.
+    - **HU_DN_07_112:** Botón *"Rechazar"* (`AI_REJECT_BTN`) visible para Administrador o Gerente (habilitado tanto para respuestas pendientes como validadas). Notificación toast `'Respuesta de IA rechazada.'` y transición de estado a insignia `Rechazada`.
+    - **HU_DN_07_113:** Banner de aviso literal `'Esta propuesta de IA no ha sido validada. Requiere validación de un Administrador o Gerente antes de actuar.'` con icono `AlertTriangle` mientras `requires_human_validation` sea `true`. Cuando la propuesta es validada, muestra la nota informativa `'Validada por {name} el {date}.'` con icono `CheckCircle`. Contrato DA-08 Mutación Cero garantizado en cliente (las operaciones de validación/rechazo no tocan datos de incidencias ni tareas).
+  - `src/features/issues/ProjectIssuesTab.tsx`:
+    - Integración de `AiAnalysisSection` en el panel de detalle de cada issue, transmitiendo las evidencias visuales (imágenes y videos) y el contexto completo del usuario actual (`user.name`, `user.role`).
+  - `src/features/issues/api.ts`:
+    - Métodos `requestAiAnalysis`, `getAiAnalysisStatus`, `listAiAnalyses`, `deleteAiAnalysis`, `validateAiAnalysis`, `rejectAiAnalysis` para comunicación con los endpoints del backend.
+- **Quality Gates y Pruebas Frontend:**
+  - `npx vitest run src/features/issues`: 5 suites pasando, **37/37 tests exitosos** (incluyendo `AiAnalysisSection.test.tsx` con 12/12 tests y `api.test.ts` con 7/7 tests cubriendo HU 111, HU 112, HU 113 y suite de estrés contra inyección XSS, fallbacks de contexto insuficiente y transiciones de rechazo de validadas).
+  - `npm run test` (suite completa): **52 archivos pasando, 393 tests verdes (100% PASS)**.
+  - `npm run typecheck` (`tsc --noEmit`): **0 errores de tipos**.
+  - `npm run lint` (`eslint .`): **0 errores, 0 advertencias**.
+  - `npm run format:check` (`prettier --check .`): **Completamente formateado**.
+  - `npm run build` (`vite build`): **Compilación de producción exitosa** (2038 módulos transformados en < 1s).
+  - `node scripts/scan-secrets.mjs`: **Limpio (228 archivos revisados, 0 secretos detectados)**.

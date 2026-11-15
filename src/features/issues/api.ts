@@ -1,5 +1,7 @@
 import { apiFormRequest, apiRequest } from '@/lib/api/client';
 import type {
+  AiAnalysisListResponse,
+  AiAnalysisStatusResponse,
   AssignIssuePayload,
   CloseIssuePayload,
   CreateIssuePayload,
@@ -7,7 +9,11 @@ import type {
   IssueDetail,
   IssueListResponse,
   IssueOperationResponse,
+  RejectAiAnalysisResponse,
+  RequestAiAnalysisPayload,
+  RequestAiAnalysisResponse,
   ResolveIssuePayload,
+  ValidateAiAnalysisResponse,
 } from './types';
 
 export interface ListIssuesFilterParams {
@@ -141,6 +147,94 @@ export async function attachEvidence(
     {
       method: 'POST',
       formData,
+    },
+  );
+}
+
+// --- EP-12 AI visual evidence analysis endpoints (HU_DN_07_106 .. HU_DN_07_110) ---
+
+export async function requestAiAnalysis(
+  projectId: string,
+  issueId: string,
+  payload: RequestAiAnalysisPayload,
+): Promise<RequestAiAnalysisResponse> {
+  return apiRequest<RequestAiAnalysisResponse>(
+    `/projects/${projectId}/issues/${issueId}/ai-analyses`,
+    {
+      method: 'POST',
+      body: {
+        evidence_id: payload.evidence_id,
+        user_confirmed_no_sensitive_data: payload.user_confirmed_no_sensitive_data,
+        force_new: payload.force_new ?? false,
+      },
+    },
+  );
+}
+
+export async function getAiAnalysisStatus(
+  projectId: string,
+  issueId: string,
+  analysisId: string,
+): Promise<AiAnalysisStatusResponse> {
+  return apiRequest<AiAnalysisStatusResponse>(
+    `/projects/${projectId}/issues/${issueId}/ai-analyses/${analysisId}`,
+  );
+}
+
+export async function listAiAnalyses(
+  projectId: string,
+  issueId: string,
+  limit = 20,
+  cursor?: string,
+): Promise<AiAnalysisListResponse> {
+  const query = new URLSearchParams();
+  if (limit) query.set('limit', String(limit));
+  if (cursor) query.set('cursor', cursor);
+  const qs = query.toString();
+  return apiRequest<AiAnalysisListResponse>(
+    `/projects/${projectId}/issues/${issueId}/ai-analyses${qs ? `?${qs}` : ''}`,
+  );
+}
+
+export async function deleteAiAnalysis(
+  projectId: string,
+  issueId: string,
+  analysisId: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/projects/${projectId}/issues/${issueId}/ai-analyses/${analysisId}`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+// --- EP-12 Human validation endpoints (HU_DN_07_111, HU_DN_07_112) ---
+
+export async function validateAiAnalysis(
+  projectId: string,
+  issueId: string,
+  analysisId: string,
+): Promise<ValidateAiAnalysisResponse> {
+  return apiRequest<ValidateAiAnalysisResponse>(
+    `/projects/${projectId}/issues/${issueId}/ai-analyses/${analysisId}/validate`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function rejectAiAnalysis(
+  projectId: string,
+  issueId: string,
+  analysisId: string,
+  reason?: string,
+): Promise<RejectAiAnalysisResponse> {
+  return apiRequest<RejectAiAnalysisResponse>(
+    `/projects/${projectId}/issues/${issueId}/ai-analyses/${analysisId}/reject`,
+    {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
     },
   );
 }

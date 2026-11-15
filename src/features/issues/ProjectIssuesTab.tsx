@@ -27,6 +27,7 @@ import {
   resolveIssue,
 } from './api';
 import { AddEvidenceModal } from './components/AddEvidenceModal';
+import { AiAnalysisSection } from './components/AiAnalysisSection';
 import { CreateIssueModal } from './components/CreateIssueModal';
 import { ResolveIssueModal } from './components/ResolveIssueModal';
 import { ISSUE_MESSAGES } from './messages';
@@ -797,6 +798,14 @@ export default function ProjectIssuesTab() {
                     </div>
                   )}
                 </div>
+
+                {/* EP-12 AI Visual Analysis Section (HU_DN_07_106 .. HU_DN_07_110) */}
+                <AiAnalysisSection
+                  projectId={projectId}
+                  issueId={visibleDetail.id}
+                  evidences={visibleDetail.evidences}
+                  currentUser={user ? { id: user.id, role: user.role, name: user.name } : null}
+                />
               </Card>
             ) : (
               <Card className="flex h-64 items-center justify-center p-6 text-sm text-[#6B7280]">

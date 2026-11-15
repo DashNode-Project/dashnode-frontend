@@ -1270,3 +1270,157 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 | HU_DN_07_103 | Implementado | Modal `ResolveIssueModal` para resolver issues con nota obligatoria (máx. 2000 caracteres) y botón `Cerrar issue` exclusivo de Administrador/Gerente para transición `resolved` -> `closed`. Tests: `ResolveIssueModal.test.tsx`, `ProjectIssuesTab.test.tsx`. |
 | HU_DN_07_104 | Implementado | Botón y flujo `Reportar fix` desde Backlog (`TaskWorkModal`) y tablero Kanban (`KanbanCard` / `ProjectKanbanTab`), título prellenado `Fix: ${task.name}`, transición atómica de la tarea a `CORRECTION` e insignia `En corrección`. Tests: `TaskWorkModal.test.tsx`, `ProjectKanbanTab.test.tsx`, `api.test.ts`. |
 | HU_DN_07_105 | Implementado | Selector condicional `Estado de la tarea` en `ResolveIssueModal` prellenado con `task_previous_status` o `IN_PROGRESS`, deshabilitado con advertencia literal cuando `other_open_issues_count > 0` para preservar `CORRECTION` hasta cerrar/resolver el último issue abierto. Tests: `ResolveIssueModal.test.tsx`, `ProjectIssuesTab.test.tsx`. |
+
+---
+
+# ÉPICA 12: ANÁLISIS DE IA POR IMAGEN Y VIDEO
+
+## HU_DN_07_106 — Solicitar análisis visual de IA sobre la evidencia de un issue
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Solicitar un análisis visual de IA sobre una imagen o video adjunto como evidencia  
+**Para** Obtener una descripción del problema, causa probable y sugerencia de solución  
+
+### Criterios de aceptación:
+1. Dónde: Detalle del issue, sección de respuestas de IA (`AiAnalysisSection`).
+2. Campos: Casilla de verificación de privacidad ("Confirmo que la evidencia no contiene contraseñas, tokens ni datos personales."), botón "Analizar con IA".
+3. Validación: El botón permanece deshabilitado hasta marcar la casilla.
+4. Restricción: Sondeo (polling) no bloqueante con timeout de 30s. Si ya existe un análisis previo con idéntico hash SHA-256 de evidencia y versión de prompt (`reuse_key`), se retorna la respuesta almacenada sin invocar API de pago externa (`reused: True`). Cuotas diarias independientes por usuario y servicio.
+5. Éxito: Mensaje "Análisis solicitado. Procesando…" e indicador de progreso.
+6. Fallo: Mensaje tipado según código de error retornado por backend.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_107 — Visualizar la respuesta estructurada del análisis de IA con advertencia de no verificación
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Ver la respuesta del análisis de IA estructurada en 3 bloques con un aviso visual de que es una sugerencia no verificada  
+**Para** Comprender el problema y evaluar la solución propuesta de forma crítica  
+
+### Criterios de aceptación:
+1. Dónde: Detalle del issue, tarjeta de resultado del análisis.
+2. Campos: `problem_description` (descripción del problema), `probable_cause` (causa probable) y `suggested_solution` (solución sugerida). Máximo 150 palabras en total.
+3. Validación: Distintivo visual rojo `'Sugerencia generada por IA no verificada'`. Si el modelo no puede inferir la solución, fallback literal: `'No hay contexto suficiente para proponer una solución.'`.
+4. Restricción: Renderizado como texto plano escapado, sin interpretación de HTML/Markdown potencialmente malicioso (prevención de XSS y Prompt Injection indirecto).
+5. Éxito: Visualización clara de los 3 bloques y el distintivo de advertencia.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_108 — Consultar las respuestas de IA almacenadas para un issue
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Ver el historial de análisis de IA generados para el issue  
+**Para** Conocer las sugerencias previas sin tener que reejecutar el análisis  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña o sección de historial de análisis en el detalle del issue (`GET /api/v1/projects/{projectId}/issues/{issueId}/ai-analyses`).
+2. Campos: Nombre del solicitante, fecha de solicitud formateada, estado de validación humana (`Pendiente de validación`, `Validada`, `Rechazada`) y resumen del análisis.
+3. Validación: Excluye registros con eliminación lógica (`deleted_at IS NULL`). Solo accesible para miembros activos del proyecto.
+4. Restricción: Estado vacío literal cuando no hay análisis: `'Este issue no tiene respuestas de IA.'`.
+5. Éxito: Listado ordenado cronológicamente descendente de análisis guardados con opción de expandir detalles.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_109 — Eliminar una respuesta de IA almacenada (eliminación lógica)
+**Como** Administrador, Gerente o Desarrollador que solicitó el análisis  
+**Quiero** Eliminar una respuesta de IA que ya no sea relevante o contenga información errónea  
+**Para** Mantener limpio el historial de análisis del issue  
+
+### Criterios de aceptación:
+1. Dónde: Detalle o historial de respuestas de IA en el issue (`DELETE /api/v1/projects/{projectId}/issues/{issueId}/ai-analyses/{analysisId}`).
+2. Campos: Botón de eliminar con diálogo de confirmación: `'¿Está seguro de que desea eliminar esta respuesta de IA?'`.
+3. Validación: Restringido a Administradores, Gerentes o el usuario autor que solicitó el análisis. Bloqueado si el análisis está en estado de procesamiento (`status == 'PROCESSING'`).
+4. Restricción: Eliminación lógica (`deleted_at`, `deleted_by`), registro obligatorio en `audit_logs` con `action = 'ai_analysis.deleted'`. No modifica el estado del issue ni de tareas asociadas.
+5. Éxito: Mensaje literal `'Respuesta de IA eliminada correctamente.'`.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_110 — Manejo de errores específicos en el análisis de IA y reintento
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Recibir mensajes de error comprensibles cuando falle el análisis de IA y poder reintentarlo  
+**Para** Saber qué ocurrió y reintentar sin necesidad de volver a subir la evidencia  
+
+### Criterios de aceptación:
+1. Dónde: Sección de análisis de IA ante fallos de procesamiento o validación.
+2. Campos: Mensaje de error tipado según código de falla y botón "Reintentar".
+3. Mapeo de errores:
+   - `EVIDENCE_LOAD_ERROR`: `'No fue posible cargar la evidencia.'`
+   - `UNSUPPORTED_FORMAT`: `'El formato de la evidencia no es admitido para el análisis.'`
+   - `AI_PROVIDER_ERROR`: `'El servicio de IA no pudo procesar la solicitud.'`
+   - `AI_OUTPUT_INVALID`: `'El servicio de IA no pudo procesar la solicitud.'`
+   - `AI_TIMEOUT`: `'El análisis excedió el tiempo de espera.'`
+   - `AI_QUOTA_EXHAUSTED`: `'Se agotó la cuota gratuita del servicio de IA. Intente más tarde.'`
+   - `NO_EVIDENCE`: `'El issue no tiene evidencia para analizar.'`
+   - `DAILY_LIMIT_REACHED`: `'Alcanzó el límite diario de solicitudes de IA.'`
+4. Validación: El reintento conserva la evidencia y el checkbox marcado, reintentando la llamada sin requerir subida de nuevo archivo.
+5. Éxito: Reintento exitoso o visualización de error amigable.
+
+**Estado:** COMPLETED
+
+---
+
+## Estado de implementación — EP-12 Análisis de IA por imagen y video (HU_DN_07_106 … HU_DN_07_113)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_07_106 | Implementado | Componente `AiAnalysisSection`, casilla de confirmación de privacidad ("Confirmo que la evidencia no contiene contraseñas, tokens ni datos personales."), botón reactivo, sondeo (polling) de estado cada 2 segundos y soporte de reuso inmediato por hash. Tests: `AiAnalysisSection.test.tsx`, `api.test.ts`. |
+| HU_DN_07_107 | Implementado | Tarjeta de resultado estructurada en 3 bloques (`problem_description`, `probable_cause`, `suggested_solution`) con límite <= 150 palabras, distintivo rojo en cabecera `'Sugerencia generada por IA no verificada'`, fallback de contexto insuficiente y texto plano escapado contra XSS. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_108 | Implementado | Sección de historial con solicitante, fecha formateada, insignia de estado de validación humana (`Pendiente de validación`, `Validada`, `Rechazada`), resumen colapsable y mensaje de estado vacío `'Este issue no tiene respuestas de IA.'`. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_109 | Implementado | Modal de confirmación con `ProjectModal` ('¿Está seguro de que desea eliminar esta respuesta de IA?'), control de roles para visualización de botón eliminar, eliminación lógica y actualización reactiva de la lista. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_110 | Implementado | Mapeo tipado en `AI_ERROR_CODE_MESSAGES` con todos los literales exactos y botón "Reintentar" sin re-subir la evidencia. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_111 | Implementado | Botón "Validar" en `AiAnalysisSection` para Administrador y Gerente sobre análisis en estado `PENDING_VALIDATION`, feedback por toast literal `'Respuesta de IA validada correctamente.'`, transición a insignia `Validada`. Tests: `AiAnalysisSection.test.tsx`, `api.test.ts`. |
+| HU_DN_07_112 | Implementado | Botón "Rechazar" en `AiAnalysisSection` para Administrador y Gerente (disponible en pendientes y validadas), feedback por toast literal `'Respuesta de IA rechazada.'`, transición a insignia `Rechazada`. Tests: `AiAnalysisSection.test.tsx`, `api.test.ts`. |
+| HU_DN_07_113 | Implementado | Banner de aviso visible `'Esta propuesta de IA no ha sido validada. Requiere validación de un Administrador o Gerente antes de actuar.'` con icono de advertencia (`AlertTriangle`) cuando `requires_human_validation` es true. Nota de validación `'Validada por {name} el {date}.'` con icono de éxito (`CheckCircle`). Contrato DA-08 Mutación Cero garantizado en UI y estado. Tests: `AiAnalysisSection.test.tsx`. |
+
+---
+
+## HU_DN_07_111 — Validar una respuesta de IA antes de actuar sobre ella
+**Como** Administrador o Gerente  
+**Quiero** Validar formalmente la sugerencia generada por la IA  
+**Para** Dejar constancia de que un humano calificado revisó y aprobó la solución propuesta  
+
+### Criterios de aceptación:
+1. Dónde: Sección de análisis de IA en la vista detallada de la incidencia.
+2. Acción: Botón "Validar". Visible solo para roles Administrador o Gerente; oculto para Desarrolladores.
+3. Validación de estado: Solo se pueden validar análisis en estado `PENDING_VALIDATION`.
+4. Registro de auditoría: Muestra la información de quién validó y fecha/hora.
+5. Éxito: Mensaje literal en toast `'Respuesta de IA validada correctamente.'` y el estado pasa a `Validada`.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_112 — Rechazar una respuesta de IA
+**Como** Administrador o Gerente  
+**Quiero** Rechazar una respuesta generada por la IA que considere incorrecta o inaplicable  
+**Para** Evitar que el equipo actúe basándose en una sugerencia no adecuada  
+
+### Criterios de aceptación:
+1. Dónde: Sección de análisis de IA en la vista detallada de la incidencia.
+2. Acción: Botón "Rechazar". Visible solo para roles Administrador o Gerente; oculto para Desarrolladores.
+3. Validación de estado: No se puede rechazar una respuesta que ya fue rechazada.
+4. Registro de auditoría: Muestra la información de quién rechazó y fecha/hora.
+5. Éxito: Mensaje literal en toast `'Respuesta de IA rechazada.'` y el estado pasa a `Rechazada`.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_113 — Visualizar un aviso de validación humana al generarse una propuesta de IA
+**Como** Desarrollador, Gerente o Administrador  
+**Quiero** Ver claramente una advertencia de que la propuesta de IA no está validada por humanos  
+**Para** Tomar precauciones y no aplicar cambios automáticamente sin la debida revisión técnica  
+
+### Criterios de aceptación:
+1. Dónde: Directamente bajo el encabezado y contenido del análisis de IA.
+2. Aviso: Mensaje literal `'Esta propuesta de IA no ha sido validada. Requiere validación de un Administrador o Gerente antes de actuar.'` acompañado de icono de advertencia (`AlertTriangle`), visible mientras `requires_human_validation` sea `true`.
+3. Estado validado: Cuando un Administrador o Gerente valida la respuesta, el aviso cambia a una nota informativa: `'Validada por {name} el {date}.'` acompañada de icono de confirmación (`CheckCircle`).
+4. DA-08 Mutación Cero: Ni la propuesta ni su validación/rechazo mutan de ninguna forma la incidencia (`fixes`) ni las tareas de usuario (`story_tasks`).
+
+**Estado:** COMPLETED
+
