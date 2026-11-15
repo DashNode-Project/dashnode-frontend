@@ -3,9 +3,8 @@ type WorkspaceRole = 'admin' | 'manager' | 'developer';
 export type ProjectTabSegment =
   | 'resumen'
   | 'equipo'
-  | 'backlog'
+  | 'tareas'
   | 'sprints'
-  | 'kanban'
   | 'reuniones'
   | 'issues'
   | 'conocimiento'
@@ -33,8 +32,8 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     implemented: true,
   },
   {
-    segment: 'backlog',
-    label: 'Backlog',
+    segment: 'tareas',
+    label: 'Tareas',
     roles: ['admin', 'manager', 'developer'],
     implemented: true,
   },
@@ -43,12 +42,6 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     label: 'Sprints',
     roles: ['admin', 'manager', 'developer'],
     implemented: true,
-  },
-  {
-    segment: 'kanban',
-    label: 'Kanban',
-    roles: ['admin', 'manager', 'developer'],
-    implemented: false,
   },
   {
     segment: 'reuniones',
@@ -66,7 +59,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'conocimiento',
     label: 'Conocimiento',
     roles: ['admin', 'manager', 'developer'],
-    implemented: false,
+    implemented: true,
   },
   {
     segment: 'devops',

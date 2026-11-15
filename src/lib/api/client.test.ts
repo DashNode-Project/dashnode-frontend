@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, NetworkError } from './errors';
+import { ApiError, NetworkError, RequestTimeoutError } from './errors';
 import { apiFormRequest, apiRequest } from './client';
 
 describe('api client', () => {
@@ -36,6 +36,22 @@ describe('api client', () => {
     expect(result.saved).toBe(true);
     const init = vi.mocked(fetch).mock.calls[0]?.[1];
     expect(init?.body).toBeInstanceOf(FormData);
+  });
+
+  it('throws RequestTimeoutError when the request is aborted', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, init) => {
+        const signal = init?.signal as AbortSignal | undefined;
+        return await new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+      }),
+    );
+    const promise = apiRequest('/ai/text-generate', { timeoutMs: 5 });
+    await expect(promise).rejects.toBeInstanceOf(RequestTimeoutError);
   });
 
   it('throws NetworkError when fetch fails', async () => {

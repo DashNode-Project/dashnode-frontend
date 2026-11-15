@@ -28,8 +28,17 @@ export class NetworkError extends Error {
   }
 }
 
+/** The client aborted the request (timeout or user cancellation). */
+export class RequestTimeoutError extends NetworkError {
+  constructor(message = 'Request timeout') {
+    super(message);
+    this.name = 'RequestTimeoutError';
+  }
+}
+
 /** True when the failure is technical (service down, timeout, 5xx, unreadable answer). */
 export function isTechnicalFailure(error: unknown): boolean {
+  if (error instanceof RequestTimeoutError) return true;
   if (error instanceof NetworkError) return true;
   if (error instanceof ApiError) return error.status >= 500 || error.code === 'UNEXPECTED_RESPONSE';
   return true;

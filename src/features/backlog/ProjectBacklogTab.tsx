@@ -66,6 +66,7 @@ export default function ProjectBacklogTab() {
   const { project, canManage } = useProjectWorkspace();
   const { showToast } = useToast();
   const [tree, setTree] = useState<BacklogTreeDTO | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
   const [filterQuery, setFilterQuery] = useState('');
@@ -130,26 +131,10 @@ export default function ProjectBacklogTab() {
     [showToast],
   );
 
-  const reloadBacklog = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [backlog, memberRows] = await Promise.all([
-        getProjectBacklog(project.id, {
-          q: filterQuery,
-          priority: filterPriority,
-          assignedTo: filterAssignee,
-        }),
-        listProjectMembers(project.id),
-      ]);
-      setTree(backlog);
-      setMembers(visibleProjectMembers(memberRows));
-      setExpandedEpic((prev) => prev ?? backlog.epics[0]?.epic.id ?? null);
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [project.id, notifyError, filterQuery, filterPriority, filterAssignee]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const reloadBacklog = useCallback(() => {
+    setRefreshKey((key) => key + 1);
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setFilterQuery(filterText.trim()), 300);
@@ -160,21 +145,26 @@ export default function ProjectBacklogTab() {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setLoadFailed(false);
       try {
-        const [backlog, memberRows] = await Promise.all([
-          getProjectBacklog(project.id, {
-            q: filterQuery,
-            priority: filterPriority,
-            assignedTo: filterAssignee,
-          }),
-          listProjectMembers(project.id),
-        ]);
+        const backlog = await getProjectBacklog(project.id, {
+          q: filterQuery,
+          priority: filterPriority,
+          assignedTo: filterAssignee,
+        });
         if (cancelled) return;
         setTree(backlog);
-        setMembers(visibleProjectMembers(memberRows));
         setExpandedEpic((prev) => prev ?? backlog.epics[0]?.epic.id ?? null);
       } catch (error) {
-        if (!cancelled) notifyError(error);
+        if (cancelled) return;
+        setLoadFailed(true);
+        notifyError(error);
+      }
+      try {
+        const memberRows = await listProjectMembers(project.id);
+        if (!cancelled) setMembers(visibleProjectMembers(memberRows));
+      } catch {
+        if (!cancelled) setMembers([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -182,7 +172,7 @@ export default function ProjectBacklogTab() {
     return () => {
       cancelled = true;
     };
-  }, [project.id, notifyError, filterQuery, filterPriority, filterAssignee]);
+  }, [project.id, notifyError, filterQuery, filterPriority, filterAssignee, refreshKey]);
 
   async function handleCreateEpic() {
     const errors = validateEpicForm(epicForm.name);
@@ -198,7 +188,7 @@ export default function ProjectBacklogTab() {
       showToast(res.message, 'success');
       setCreateEpicOpen(false);
       setEpicForm({ name: '', description: '', color: '#3B82F6' });
-      await reloadBacklog();
+      reloadBacklog();
     } catch (error) {
       if (error instanceof ApiError && error.fields?.name) {
         setEpicErrors({ name: error.fields.name });
@@ -224,7 +214,7 @@ export default function ProjectBacklogTab() {
       });
       showToast(res.message, 'success');
       setEditEpicId(null);
-      await reloadBacklog();
+      reloadBacklog();
     } catch (error) {
       notifyError(error);
     } finally {
@@ -271,7 +261,7 @@ export default function ProjectBacklogTab() {
         showToast(res.message, 'success');
         setEditStory(null);
       }
-      await reloadBacklog();
+      reloadBacklog();
     } catch (error) {
       if (error instanceof ApiError && error.fields) {
         setStoryErrors({
@@ -308,7 +298,7 @@ export default function ProjectBacklogTab() {
       showToast(res.message, 'success');
       setTaskModalOpen(false);
       setCreateTaskStoryId(null);
-      await reloadBacklog();
+      reloadBacklog();
     } catch (error) {
       notifyError(error);
     } finally {
@@ -330,12 +320,25 @@ export default function ProjectBacklogTab() {
     setStoryErrors({});
   }
 
-  if (loading && !tree) {
+  if (loading && !tree && !loadFailed) {
     return (
       <div className="space-y-3 animate-pulse" role="status" aria-label="Cargando backlog">
         <div className="h-10 rounded-lg bg-white/5" />
         <div className="h-32 rounded-xl bg-white/5" />
         <div className="h-32 rounded-xl bg-white/5" />
+      </div>
+    );
+  }
+
+  if (loadFailed && !tree) {
+    return (
+      <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-500/10 p-6 text-center">
+        <p className="text-sm text-red-200" role="alert">
+          {MESSAGES.technicalFailure}
+        </p>
+        <Button type="button" size="sm" onClick={reloadBacklog}>
+          Reintentar
+        </Button>
       </div>
     );
   }
@@ -412,7 +415,7 @@ export default function ProjectBacklogTab() {
         </div>
       )}
 
-      {epics.length === 0 ? (
+      {epics.length === 0 && !loadFailed ? (
         <div className="rounded-xl border border-white/6 bg-[#12131C] p-8 text-center">
           <Layers className="mx-auto mb-2 text-[#6B7280]" size={22} aria-hidden />
           <p className="font-medium text-[#F9FAFB]">
@@ -420,7 +423,7 @@ export default function ProjectBacklogTab() {
           </p>
           <p className="text-sm text-[#6B7280]">Crea la primera épica para organizar el backlog.</p>
         </div>
-      ) : (
+      ) : epics.length === 0 ? null : (
         epics.map(({ epic, stories }) => {
           const isExpanded = expandedEpic === epic.id;
           return (
@@ -962,7 +965,7 @@ export default function ProjectBacklogTab() {
                       );
                       showToast(res.message, 'success');
                       setSprintAssignStory(null);
-                      await reloadBacklog();
+                      reloadBacklog();
                     } catch (error) {
                       notifyError(error);
                     } finally {

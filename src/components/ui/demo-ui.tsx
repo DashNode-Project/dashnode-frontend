@@ -43,9 +43,19 @@ const statusMeta: Record<string, { label: string; tone: BadgeTone }> = {
   activo_proyecto: { label: 'Activo', tone: 'green' },
 };
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className = '',
+  ...rest
+}: {
+  children: ReactNode;
+  className?: string;
+} & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`rounded-xl border border-white/6 bg-[#12131C] shadow-sm ${className}`}>
+    <div
+      {...rest}
+      className={`rounded-xl border border-white/6 bg-[#12131C] shadow-sm ${className}`}
+    >
       {children}
     </div>
   );

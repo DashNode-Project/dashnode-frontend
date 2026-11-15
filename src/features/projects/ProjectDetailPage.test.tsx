@@ -154,7 +154,7 @@ describe('HU_DN_02_23-26 — ProjectDetailPage', () => {
     const user = userEvent.setup();
     renderDetail();
     await screen.findByRole('button', { name: 'Editar proyecto' });
-    expect(screen.getByText('Progreso')).toBeInTheDocument();
+    expect(await screen.findByText('Progreso')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Agregar miembro' }));
     const memberSelect = screen.getAllByRole('combobox').at(-1);
     if (!memberSelect) throw new Error('member select missing');
