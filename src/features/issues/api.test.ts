@@ -5,10 +5,16 @@ import {
   attachEvidence,
   closeIssue,
   createIssue,
+  deleteAiAnalysis,
+  getAiAnalysisStatus,
   getIssueDetail,
+  listAiAnalyses,
   listIssues,
+  rejectAiAnalysis,
   reportTaskFix,
+  requestAiAnalysis,
   resolveIssue,
+  validateAiAnalysis,
 } from './api';
 import type { Issue, IssueDetail } from './types';
 
@@ -209,5 +215,100 @@ describe('issues api client', () => {
       type: 'bug',
     });
     expect(rf.task_status).toBe('CORRECTION');
+  });
+
+  it('EP-12: requests, polls, lists, and deletes AI visual analysis', async () => {
+    mockFetch((call) => {
+      if (call.method === 'POST' && call.url.endsWith('/ai-analyses')) {
+        expect(call.body).toEqual({
+          evidence_id: 'ev-1',
+          user_confirmed_no_sensitive_data: true,
+          force_new: false,
+        });
+        return ok({
+          analysis_id: 'ana-1',
+          status: 'PENDING',
+          reused: false,
+          message: 'Análisis solicitado. Procesando…',
+        });
+      }
+      if (call.method === 'GET' && call.url.endsWith('/ai-analyses/ana-1')) {
+        return ok({
+          analysis_id: 'ana-1',
+          status: 'DONE',
+          validation_status: 'PENDING_VALIDATION',
+          requires_human_validation: true,
+          retryable: false,
+          created_at: '2026-11-12T10:00:00Z',
+          result: {
+            problem_description: 'Error en render',
+            probable_cause: 'Causa probable',
+            suggested_solution: 'Solución',
+            context_sufficient: true,
+          },
+        });
+      }
+      if (call.method === 'GET' && call.url.includes('/ai-analyses')) {
+        return ok({
+          items: [
+            {
+              id: 'ana-1',
+              requested_by: { id: 'u-1', name: 'User One' },
+              created_at: '2026-11-12T10:00:00Z',
+              validation_status: 'PENDING_VALIDATION',
+              summary: 'Resumen de prueba',
+              requires_human_validation: true,
+            },
+          ],
+        });
+      }
+      if (call.method === 'DELETE' && call.url.endsWith('/ai-analyses/ana-1')) {
+        return ok({ message: 'Respuesta de IA eliminada correctamente.' });
+      }
+      return ok({});
+    });
+
+    const req = await requestAiAnalysis('p-1', 'issue-1', {
+      evidence_id: 'ev-1',
+      user_confirmed_no_sensitive_data: true,
+    });
+    expect(req.analysis_id).toBe('ana-1');
+
+    const status = await getAiAnalysisStatus('p-1', 'issue-1', 'ana-1');
+    expect(status.status).toBe('DONE');
+    expect(status.result?.problem_description).toBe('Error en render');
+
+    const list = await listAiAnalyses('p-1', 'issue-1');
+    expect(list.items).toHaveLength(1);
+    expect(list.items[0]?.summary).toBe('Resumen de prueba');
+
+    const del = await deleteAiAnalysis('p-1', 'issue-1', 'ana-1');
+    expect(del.message).toBe('Respuesta de IA eliminada correctamente.');
+  });
+
+  it('validates and rejects AI analysis (HU_DN_07_111, HU_DN_07_112)', async () => {
+    mockFetch((call) => {
+      if (call.method === 'POST' && call.url.endsWith('/ai-analyses/ana-1/validate')) {
+        return ok({
+          message: 'Respuesta de IA validada correctamente.',
+          validation_status: 'VALIDATED',
+        });
+      }
+      if (call.method === 'POST' && call.url.endsWith('/ai-analyses/ana-1/reject')) {
+        return ok({
+          message: 'Respuesta de IA rechazada.',
+          validation_status: 'REJECTED',
+        });
+      }
+      return ok({});
+    });
+
+    const val = await validateAiAnalysis('p-1', 'issue-1', 'ana-1');
+    expect(val.message).toBe('Respuesta de IA validada correctamente.');
+    expect(val.validation_status).toBe('VALIDATED');
+
+    const rej = await rejectAiAnalysis('p-1', 'issue-1', 'ana-1', 'Motivo de descarte');
+    expect(rej.message).toBe('Respuesta de IA rechazada.');
+    expect(rej.validation_status).toBe('REJECTED');
   });
 });

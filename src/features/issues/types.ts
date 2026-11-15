@@ -101,6 +101,81 @@ export interface IssueOperationResponse {
   task_message?: string | null;
 }
 
+// --- EP-12 AI visual evidence analysis types (HU_DN_07_106 .. HU_DN_07_110) ---
+
+export type AiAnalysisStatus = 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED';
+export type AiValidationStatus = 'PENDING_VALIDATION' | 'VALIDATED' | 'REJECTED';
+
+export interface AiAnalysisResult {
+  problem_description: string;
+  probable_cause: string;
+  suggested_solution?: string | null;
+  context_sufficient: boolean;
+}
+
+export interface RequestAiAnalysisPayload {
+  evidence_id?: string;
+  user_confirmed_no_sensitive_data: boolean;
+  force_new?: boolean;
+}
+
+export interface RequestAiAnalysisResponse {
+  analysis_id: string;
+  status: AiAnalysisStatus;
+  reused: boolean;
+  message: string;
+}
+
+export interface AiAnalysisStatusResponse {
+  analysis_id: string;
+  status: AiAnalysisStatus;
+  progress_stage?: string | null;
+  validation_status: AiValidationStatus;
+  requires_human_validation: boolean;
+  validated_by_name?: string | null;
+  validated_at?: string | null;
+  rejected_by_name?: string | null;
+  rejected_at?: string | null;
+  result?: AiAnalysisResult | null;
+  error_code?: string | null;
+  message?: string | null;
+  retryable: boolean;
+  created_at: string;
+}
+
+export interface AiAnalysisListItem {
+  id: string;
+  requested_by: {
+    id: string;
+    name: string;
+  };
+  created_at: string;
+  validation_status: AiValidationStatus;
+  summary: string;
+  requires_human_validation: boolean;
+  validated_by_name?: string | null;
+  validated_at?: string | null;
+  rejected_by_name?: string | null;
+  rejected_at?: string | null;
+  result?: AiAnalysisResult | null;
+  evidence_id?: string | null;
+}
+
+export interface ValidateAiAnalysisResponse {
+  message: string;
+  validation_status: AiValidationStatus;
+}
+
+export interface RejectAiAnalysisResponse {
+  message: string;
+  validation_status: AiValidationStatus;
+}
+
+export interface AiAnalysisListResponse {
+  items: AiAnalysisListItem[];
+  next_cursor?: string | null;
+}
+
 export interface EvidenceOperationResponse {
   message: string;
   evidence: Evidence;
