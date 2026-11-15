@@ -423,3 +423,54 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 ### Pruebas
 - `AiAssistantWidget.test.tsx` (jest-axe), `api.test.ts`, `useVoiceCapture.test.ts`.
 - Actualización de `underDevelopment.test.tsx` (panel de chat en lugar de stub).
+
+
+---
+
+## Épica 11: Issues y evidencias (HU_DN_07_97 … HU_DN_07_101)
+
+### Análisis del Orquestador (Modo Lote / Épica)
+- **Fecha:** 2026-11-07
+- **Clasificación del lote:** FULL_STACK
+- **Complejidad:** MODERATE (Score: 84/100)
+- **Project Mode:** EXTEND_EXISTING
+- **Ramas:** `feature/ep-11-issues-evidences` (backend y frontend, derivadas de `origin/feature/ep-10-ai-assistant`)
+- **Alineación con plantilla Figma Make (`demo/`):** Estricta fidelidad visual con `DashNode-Demo/src/pages/ProjectWorkspace.tsx`, respetando paleta de colores (`bg-[#12131C]`, `bg-[#1E1F2B]`), badges de severidad (`critical`, `high`, `medium`, `low`), estados (`open`, `in-progress`, `resolved`, `closed`), disposición en 3 columnas (listado / detalle) y sección de evidencias con previsualización.
+
+### Implementación Frontend
+- **Navegación y rutas:**
+  - `src/features/projects/projectWorkspaceTabs.ts`: Tab `issues` marcado como `implemented: true`.
+  - `src/app/App.tsx`: Incorporación de ruta `/proyectos/:projectId/issues` renderizando `ProjectIssuesTab` con lazy loading y redirección de compatibilidad para `/fixes`.
+- **Módulo de Issues (`src/features/issues/`):**
+  - `types.ts`: Tipos estrictos para `Issue`, `Evidence`, `IssueDetail`, `CreateIssuePayload`, `IssueListResponse` y enumeraciones de dominio.
+  - `messages.ts`: Literales de validación y de negocio idénticos a los criterios de aceptación y al backend.
+  - `validation.ts`: Validación de formularios y comprobación previa de límites de archivos (imágenes <= 5MB, video <= 25MB, logs <= 1MB).
+  - `api.ts`: Clientes para `listIssues`, `createIssue`, `getIssueDetail` y `attachEvidence` (con soporte para `Idempotency-Key` y subida multipart).
+  - `components/CreateIssueModal.tsx`: Formulario modal con validación inline de campos obligatorios (título, severidad, tipo) y descripción opcional.
+  - `components/AddEvidenceModal.tsx`: Subida de archivos con barra de progreso, alertas de límites y soporte de formatos admitidos.
+  - `ProjectIssuesTab.tsx`: Pestaña interactiva con:
+    - Barra de filtros por Estado, Severidad y Tipo con sincronización reactiva en URL (`useSearchParams`).
+    - Botón "Nuevo fix" para abrir modal de registro.
+    - Listado de issues ordenados por defecto (abiertos primero, severidad, fecha más reciente).
+    - Vista detallada del issue seleccionado con estados, descripción, nota de resolución, responsable y lista de evidencias con URLs firmadas (descarga y vista previa).
+    - Sección consultiva de análisis de IA con el principio DA-08 (cero mutaciones automáticas por la IA, recomendaciones orientativas para el desarrollador).
+    - Estados vacíos literales: `'El proyecto no tiene issues.'` y `'No se encontraron issues con los filtros aplicados.'`.
+
+### Pruebas y Quality Gates Frontend
+- **Pruebas unitarias e integración:**
+  - `src/features/issues/validation.test.ts` (7 tests): validación de campos, longitudes máximas y restricciones de formato y peso de archivos.
+  - `src/features/issues/api.test.ts` (4 tests): métodos del cliente API, query strings, cabecera `Idempotency-Key` y subida multipart `FormData`.
+  - `src/features/issues/ProjectIssuesTab.test.tsx` (6 tests): renderizado de estados vacíos, creación de issues, subida de evidencia y sincronización de filtros.
+  - `src/features/projects/ProjectModulePlaceholder.test.tsx` (2 tests): verificación de tabs no implementados (`devops`) y que `issues` no dispara stub.
+- **Checks globales (`typecheck`, `lint`, `build`, `prettier` sobre EP-11):** `tsc --noEmit`, `eslint .` y `vite build` limpios; 26/26 tests verdes en los 5 archivos de issues y workspace de proyecto.
+- **Escaneo de secretos:** `node scripts/scan-secrets.mjs` limpio (223 archivos revisados, 0 secretos detectados).
+
+### Continuación EP-11 — Ciclo de vida de issues y vínculo con tareas (HU_DN_07_102 … HU_DN_07_105)
+- **Funcionalidad implementada:**
+  - `ProjectIssuesTab.tsx`: carga de desarrolladores activos del proyecto (`listProjectMembers` con fallback seguro), selector `Responsable` restringido a Administrador/Gerente (deshabilitado con tooltip para desarrollador), recarga automática ante HTTP 409 (`version`), botones `Resolver` y `Cerrar issue`, badge de tarea vinculada y metadatos de resolución (`resolved_by_name`, `resolved_at`).
+  - `components/ResolveIssueModal.tsx`: modal de resolución/cierre con validación de nota de resolución obligatoria (máx. 2000 caracteres via `validateResolutionNote`), selector condicional `Estado de la tarea` prellenado con `task_previous_status` o respaldo `IN_PROGRESS`, y deshabilitado con advertencia literal `ISSUE_MESSAGES.TASK_OTHER_OPEN_ISSUES` cuando `other_open_issues_count > 0`.
+  - `src/features/backlog/{TaskWorkModal.tsx, UserStoryReaderPage.tsx}` y `src/features/kanban/{components/KanbanCard.tsx, ProjectKanbanTab.tsx}`: flujo `Reportar fix` desde Backlog y tarjetas Kanban usando `CreateIssueModal` con título prellenado `Fix: ${task.name}`, llamada atómica a `reportTaskFix`, insignia `En corrección` y estilo destacado para tarjetas en `CORRECTION`.
+- **Pruebas dirigidas EP-11 (`npx vitest run src/features/issues src/features/backlog src/features/kanban`):** 8 archivos de prueba, **56/56 tests pasando**, incluyendo `validation.test.ts` (7 tests), `api.test.ts` (5 tests), `ProjectIssuesTab.test.tsx` (9 tests), `ResolveIssueModal.test.tsx` (3 tests), `TaskWorkModal.test.tsx` (2 tests), `ProjectKanbanTab.test.tsx` (21 tests), `kanban/api.test.ts` (5 tests) y `backlog/validation.test.ts`.
+- **Suite completa Vitest (`npx vitest run`):** 50/51 archivos pasando (377/379 tests verdes); las únicas 2 fallas corresponden al archivo preexistente `src/features/underDevelopment.test.tsx` por la ruta `Mis tareas` implementada desde EP-06.
+- **Quality gates sobre EP-11:** `npx prettier` y `npx eslint` sobre los archivos modificados sin errores; `npm run typecheck` (`tsc --noEmit`) limpio; `npm run build` (`vite build`, 2037 módulos) limpio en 1.46s.
+- **Escaneo de secretos:** `node scripts/scan-secrets.mjs` limpio (226 archivos revisados, 0 secretos detectados).

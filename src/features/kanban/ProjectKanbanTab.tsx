@@ -8,8 +8,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthContext';
+import { reportTaskFix } from '@/features/issues/api';
+import { CreateIssueModal } from '@/features/issues/components/CreateIssueModal';
+import { ISSUE_MESSAGES } from '@/features/issues/messages';
+import type { CreateIssuePayload } from '@/features/issues/types';
 import { useProjectWorkspace } from '@/features/projects/ProjectWorkspaceContext';
-import { ApiError } from '@/lib/api/errors';
+import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { useToast } from '@/lib/toast/ToastProvider';
 import { changeTaskStatus, getKanbanBoard, updateColumnWipLimit, updateTaskBlock } from './api';
 import { KanbanCard } from './components/KanbanCard';
@@ -48,6 +52,8 @@ export default function ProjectKanbanTab() {
   // Modals state
   const [wipModalCol, setWipModalCol] = useState<KanbanColumn | null>(null);
   const [blockModalTask, setBlockModalTask] = useState<KanbanCardType | null>(null);
+  const [reportFixTask, setReportFixTask] = useState<KanbanCardType | null>(null);
+  const [submittingReportFix, setSubmittingReportFix] = useState(false);
 
   // Filters state
   const [filters, setFilters] = useState<KanbanFilters>({
@@ -203,6 +209,25 @@ export default function ProjectKanbanTab() {
       const message =
         err instanceof ApiError && err.message ? err.message : KANBAN_MESSAGES.LOAD_ERROR;
       showToast(message, 'error');
+    }
+  };
+
+  const handleReportFixSubmit = async (payload: CreateIssuePayload) => {
+    if (!reportFixTask) return;
+    setSubmittingReportFix(true);
+    try {
+      const res = await reportTaskFix(project.id, reportFixTask.id, payload);
+      showToast(res.message || ISSUE_MESSAGES.TASK_FIX_REPORTED, 'success');
+      setReportFixTask(null);
+      await loadBoard();
+    } catch (err: unknown) {
+      if (err instanceof ApiError && !isTechnicalFailure(err)) {
+        showToast(err.message, 'error');
+      } else {
+        showToast(ISSUE_MESSAGES.GENERIC_ERROR, 'error');
+      }
+    } finally {
+      setSubmittingReportFix(false);
     }
   };
 
@@ -450,11 +475,13 @@ export default function ProjectKanbanTab() {
                     key={task.id}
                     task={task}
                     canMove={canMoveTask(task)}
+                    canReportFix={canMoveTask(task)}
                     isDragging={dragTaskId === task.id}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                     onMoveTask={handleMoveTask}
                     onOpenBlockModal={setBlockModalTask}
+                    onOpenReportFixModal={setReportFixTask}
                   />
                 ))}
 
@@ -497,6 +524,22 @@ export default function ProjectKanbanTab() {
           task={blockModalTask}
           allTasks={allCards}
           onSave={handleSaveBlockStatus}
+        />
+      )}
+
+      {/* Report Fix Modal (HU_DN_07_104) */}
+      {reportFixTask && (
+        <CreateIssueModal
+          key={`kanban-report-fix-${reportFixTask.id}`}
+          isOpen={true}
+          onClose={() => setReportFixTask(null)}
+          onSubmit={handleReportFixSubmit}
+          loading={submittingReportFix}
+          initialTitle={`Fix: ${reportFixTask.name}`}
+          modalTitle="Reportar fix"
+          submitLabel="Reportar fix"
+          submittingLabel="Reportando…"
+          subtitle={`Al reportar un fix, la tarea "${reportFixTask.name}" pasará automáticamente a estado Corrección.`}
         />
       )}
     </div>

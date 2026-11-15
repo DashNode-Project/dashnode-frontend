@@ -141,3 +141,25 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `api.ts`: `postVoiceProcess`, `postTextGenerate`
   - `messages.ts`, `types.ts`, `escapeHtml.ts`
   - `AiAssistantWidget.test.tsx`: a11y (jest-axe) y apertura/cierre por teclado
+
+
+## EP-11 — Issues y evidencias (HU_DN_07_97 … HU_DN_07_105)
+
+- Ruta: `/proyectos/:projectId/issues` → `ProjectIssuesTab.tsx` (pestaña Issues activada como `implemented: true` en `projectWorkspaceTabs.ts`).
+- `src/features/issues/`:
+  - `types.ts`: `Issue`, `Evidence`, `IssueSeverity`, `IssueType`, `IssueStatus`, `EvidenceType`, `IssueDetail`, `CreateIssuePayload`, `IssueListResponse`, `AssignIssuePayload`, `ResolveIssuePayload`, `CloseIssuePayload`, `ReportTaskFixPayload`, `IssueOperationResponse`, `RestorableTaskStatus`, `RESTORABLE_TASK_STATUS_OPTIONS`
+  - `messages.ts`: literales de validación, límites de peso, duplicados, estado vacío y textos de asignación, resolución, cierre, conflicto 409 y bloqueo por otros issues abiertos exactamente alineados con backend
+  - `validation.ts`: validación en cliente para creación de issue, archivos de evidencia y nota de resolución (`validateResolutionNote`)
+  - `api.ts`: cliente HTTP (`listIssues`, `createIssue`, `getIssueDetail`, `attachEvidence`, `assignIssue`, `resolveIssue`, `closeIssue`, `reportTaskFix`) con soporte de `Idempotency-Key` y subida multipart
+  - `components/CreateIssueModal.tsx`: modal reutilizable para registro de nuevo fix o reporte desde tarea (`Reportar fix` con título prellenado) con validaciones inline
+  - `components/ResolveIssueModal.tsx`: modal de resolución y cierre (`resolve`/`close`) con nota obligatoria (<=2000 caracteres), selector condicional `Estado de la tarea` y aviso de bloqueo cuando `other_open_issues_count > 0`
+  - `components/AddEvidenceModal.tsx`: modal para adjuntar evidencia (imagen, video, registro) con barra de progreso y validación previa de tamaño
+  - `ProjectIssuesTab.tsx`: pestaña completa con filtros por Estado, Severidad y Tipo (`useSearchParams`), botón "Nuevo fix", vista dividida listado y detalle, selector de `Responsable`, acciones `Resolver` / `Cerrar issue`, badge de tarea vinculada, recarga ante 409, previsualización de evidencias y sección consultiva de IA (DA-08)
+  - `ProjectIssuesTab.test.tsx`, `validation.test.ts`, `api.test.ts`, `components/ResolveIssueModal.test.tsx`: tests unitarios y de integración para HU_DN_07_97 a HU_DN_07_105
+- `src/features/backlog/`:
+  - `TaskWorkModal.tsx`: acción `Reportar fix` desde detalle/edición de tarea en Backlog con apertura de `CreateIssueModal` y transición atómica a `CORRECTION`
+  - `UserStoryReaderPage.tsx`: indicador visual `En corrección` para tareas en estado `CORRECTION`
+  - `TaskWorkModal.test.tsx`: pruebas de integración de `Reportar fix` desde Backlog (`HU_DN_07_104`)
+- `src/features/kanban/`:
+  - `components/KanbanCard.tsx` y `ProjectKanbanTab.tsx`: estilo destacado para tarjetas en `CORRECTION`, acción `Reportar fix` desde tarjeta Kanban y recarga del tablero tras creación atómica
+  - `ProjectKanbanTab.test.tsx`: pruebas de flujo `Reportar fix` en Kanban (`HU_DN_07_104`)

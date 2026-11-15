@@ -23,21 +23,11 @@ import { useMatch } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getProject } from '@/features/projects/api';
-import {
-  ApiError,
-  isTechnicalFailure,
-  NetworkError,
-  RequestTimeoutError,
-} from '@/lib/api/errors';
+import { ApiError, isTechnicalFailure, NetworkError, RequestTimeoutError } from '@/lib/api/errors';
 import { fetchChatHistory, postTextGenerate, postVoiceTranscribe } from './api';
 import { escapeHtml } from './escapeHtml';
 import { AI_MESSAGES } from './messages';
-import type {
-  AssistantState,
-  ChatMessage,
-  PendingRetry,
-  ProcessingMode,
-} from './types';
+import type { AssistantState, ChatMessage, PendingRetry, ProcessingMode } from './types';
 import { mapVoiceCaptureError, useVoiceCapture } from './useVoiceCapture';
 import {
   clampChatPanelSize,
@@ -50,9 +40,7 @@ import {
 const IDLE_AFTER_MS = 2500;
 const SCROLL_BOTTOM_THRESHOLD_PX = 48;
 
-function mapHistoryMessages(
-  payload: Awaited<ReturnType<typeof fetchChatHistory>>,
-): ChatMessage[] {
+function mapHistoryMessages(payload: Awaited<ReturnType<typeof fetchChatHistory>>): ChatMessage[] {
   return payload.messages.map((item) => ({
     id: item.id,
     role: item.role,
@@ -147,9 +135,12 @@ export function AiAssistantWidget() {
   const stickToBottomRef = useRef(true);
   const panelSizeHydratedRef = useRef(false);
   const [panelSize, setPanelSize] = useState<ChatPanelSize>(DEFAULT_CHAT_PANEL_SIZE);
-  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(
-    null,
-  );
+  const resizeRef = useRef<{
+    startX: number;
+    startY: number;
+    startW: number;
+    startH: number;
+  } | null>(null);
   const idleTimerRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
   const voice = useVoiceCapture();
@@ -550,9 +541,7 @@ export function AiAssistantWidget() {
             className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3 [scrollbar-color:rgba(139,92,246,0.45)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-violet-500/40 [&::-webkit-scrollbar]:w-1.5"
             aria-live="polite"
           >
-            {historyLoading ? (
-              <p className="text-xs text-[#9CA3AF]">Cargando historial…</p>
-            ) : null}
+            {historyLoading ? <p className="text-xs text-[#9CA3AF]">Cargando historial…</p> : null}
             {!historyLoading && visibleMessages.length === 0 ? (
               <p className="text-xs leading-relaxed text-[#9CA3AF]">
                 Consulte al asistente por voz o por texto. El historial es personal y se conserva

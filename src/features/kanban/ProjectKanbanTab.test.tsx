@@ -3,12 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectWorkspaceProvider } from '@/features/projects/ProjectWorkspaceContext';
 import { ToastProvider } from '@/lib/toast/ToastProvider';
+import * as issuesApi from '@/features/issues/api';
+import { ISSUE_MESSAGES } from '@/features/issues/messages';
 import ProjectKanbanTab from './ProjectKanbanTab';
 import * as kanbanApi from './api';
 import { KANBAN_MESSAGES } from './messages';
 import type { KanbanBoardResponse } from './types';
 
 vi.mock('./api');
+vi.mock('@/features/issues/api');
 
 let mockUser = {
   id: 'mgr-1',
@@ -566,6 +569,52 @@ describe('EP-08 Tablero Kanban (HU_DN_05_72 .. 76)', () => {
 
       await waitFor(() => {
         expect(screen.getByText(KANBAN_MESSAGES.WIP_LIMIT_FAILED)).toBeInTheDocument();
+      });
+    });
+
+    it('opens Reportar fix modal from KanbanCard and moves task via reload', async () => {
+      vi.mocked(issuesApi.reportTaskFix).mockResolvedValueOnce({
+        message: ISSUE_MESSAGES.TASK_FIX_REPORTED,
+        task_status: 'CORRECTION',
+        issue: {
+          id: 'fix-kb-1',
+          project_id: 'p-1',
+          title: 'Fix: Crear componente login',
+          severity: 'high',
+          type: 'bug',
+          status: 'open',
+          reporter_id: 'mgr-1',
+          reporter_name: 'Manager User',
+          version: 1,
+          created_at: '2026-11-10T10:00:00Z',
+          updated_at: '2026-11-10T10:00:00Z',
+          evidences_count: 0,
+        },
+      });
+      const user = userEvent.setup();
+      renderKanban();
+
+      const card = await screen.findByTestId('kanban-card-t-1');
+      await user.click(within(card).getByRole('button', { name: /reportar fix/i }));
+
+      const titleInput = screen.getByLabelText(/título \*/i) as HTMLInputElement;
+      expect(titleInput.value).toBe('Fix: Crear componente login');
+
+      await user.selectOptions(screen.getByLabelText(/severidad \*/i), 'high');
+      await user.click(screen.getAllByRole('button', { name: 'Reportar fix' }).at(-1)!);
+
+      await waitFor(() => {
+        expect(issuesApi.reportTaskFix).toHaveBeenCalledWith(
+          'p-1',
+          't-1',
+          expect.objectContaining({
+            title: 'Fix: Crear componente login',
+            severity: 'high',
+            type: 'bug',
+          }),
+        );
+        expect(screen.getByText(ISSUE_MESSAGES.TASK_FIX_REPORTED)).toBeInTheDocument();
+        expect(kanbanApi.getKanbanBoard).toHaveBeenCalledTimes(2);
       });
     });
   });

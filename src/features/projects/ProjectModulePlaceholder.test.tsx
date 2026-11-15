@@ -9,15 +9,28 @@ vi.mock('@/lib/underDevelopment', () => ({
 }));
 
 describe('ProjectModulePlaceholder', () => {
-  it('notifies under development for issues tab', () => {
+  it('notifies under development for unimplemented devops tab', () => {
     render(
+      <MemoryRouter initialEntries={['/proyectos/p1/devops']}>
+        <Routes>
+          <Route path="/proyectos/:projectId/:moduleTab" element={<ProjectModulePlaceholder />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/DevOps/)).toBeInTheDocument();
+    expect(underDev.notifyUnderDevelopment).toHaveBeenCalledWith('DevOps');
+  });
+
+  it('renders nothing for implemented issues tab', () => {
+    vi.mocked(underDev.notifyUnderDevelopment).mockClear();
+    const { container } = render(
       <MemoryRouter initialEntries={['/proyectos/p1/issues']}>
         <Routes>
           <Route path="/proyectos/:projectId/:moduleTab" element={<ProjectModulePlaceholder />} />
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByText(/Issues/)).toBeInTheDocument();
-    expect(underDev.notifyUnderDevelopment).toHaveBeenCalledWith('Issues');
+    expect(container.firstChild).toBeNull();
+    expect(underDev.notifyUnderDevelopment).not.toHaveBeenCalled();
   });
 });

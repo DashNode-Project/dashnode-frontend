@@ -151,7 +151,11 @@ export default function MyTasksPage() {
       </Card>
       {message ? <p className="text-sm text-[#9CA3AF]">{message}</p> : null}
       {viewMode === 'kanban' ? (
-        <MyTasksKanbanView tasks={tasks} busyId={busyId} onStatusChange={(task, next) => void onStatus(task, next)} />
+        <MyTasksKanbanView
+          tasks={tasks}
+          busyId={busyId}
+          onStatusChange={(task, next) => void onStatus(task, next)}
+        />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/6">
           <table className="min-w-full text-left text-sm">

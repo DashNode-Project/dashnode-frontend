@@ -269,7 +269,14 @@ export default function UserStoryReaderPage() {
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-[#F9FAFB]">{task.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-[#F9FAFB]">{task.name}</p>
+                      {task.status === 'CORRECTION' && (
+                        <span className="rounded-full border border-orange-500/40 bg-orange-500/15 px-2 py-0.5 text-[11px] font-medium text-orange-300">
+                          En corrección
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-[#6B7280]">
                       {TASK_TYPE_OPTIONS.find((t) => t.value === task.task_type)?.label ??
                         task.task_type}
@@ -326,7 +333,10 @@ export default function UserStoryReaderPage() {
     return (
       <p className="text-sm text-[#9CA3AF]">
         No hay historias para mostrar.{' '}
-        <Link to={projectTabPath(projectId, 'tareas/lista')} className="text-blue-400 hover:underline">
+        <Link
+          to={projectTabPath(projectId, 'tareas/lista')}
+          className="text-blue-400 hover:underline"
+        >
           Volver a tareas
         </Link>
       </p>
