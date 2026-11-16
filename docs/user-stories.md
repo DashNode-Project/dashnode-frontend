@@ -1424,3 +1424,15 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 
 **Estado:** COMPLETED
 
+---
+
+## Estado de implementación — EP-13 Métricas, valoración y registro de IA (HU_DN_08_114 … HU_DN_08_118)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_08_114 | Implementado | `ProjectAiMetricsTab` sección «Registro de interacciones» con filtros (usuario vía query, tipo, estado, fechas, valoración mínima), paginación 25, detalle lateral con texto completo y literales `'No hay interacciones de IA registradas.'` / `'No fue posible cargar la información. Intente nuevamente.'`. Tests: `api.test.ts`, `ProjectAiMetricsTab.test.tsx`. |
+| HU_DN_08_115 | Implementado | Selector de periodo, indicador de ámbito, tarjetas (interacciones, latencia, tokens in/out, audio), hora de corte y botón Actualizar. Ruta `/proyectos/:projectId/metricas-ia`. |
+| HU_DN_08_116 | Implementado | Tabla «Por usuario» con clic que filtra el registro por `user_id` en la URL. |
+| HU_DN_08_117 | Implementado | `AiRatingControl` con etiquetas 1–5, upsert vía `PUT /ai/interactions/{id}/rating`, toasts literales en asistente y `AiAnalysisSection` cuando existe `interaction_id`. Tests: `AiRatingControl.test.tsx`. |
+| HU_DN_08_118 | Implementado (v1) | Campos opcionales en respuesta de `text-generate`; tarjetas compactas y enlace «Ver en panel» en `AiAssistantWidget`. |
+

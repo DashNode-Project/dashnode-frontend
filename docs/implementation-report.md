@@ -498,3 +498,13 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
   - `npm run format:check` (`prettier --check .`): **Completamente formateado**.
   - `npm run build` (`vite build`): **Compilación de producción exitosa** (2038 módulos transformados en < 1s).
   - `node scripts/scan-secrets.mjs`: **Limpio (228 archivos revisados, 0 secretos detectados)**.
+
+## EP-13 — Métricas, valoración y registro de IA (HU_DN_08_114 … HU_DN_08_118)
+
+**Estado:** COMPLETED (frontend v1) | **Rama:** `feature/ep-13-metricas-valoracion-ia`
+
+- `src/features/ai-metrics/`: pestaña `ProjectAiMetricsTab`, API client, mensajes literales del Anexo F y pruebas unitarias.
+- `projectWorkspaceTabs.ts`: `metricas-ia` marcado `implemented: true`.
+- `App.tsx`: ruta dedicada (sustituye placeholder por segmento dinámico).
+- `AiRatingControl` en widget del asistente y análisis de issues (`interaction_id`).
+- HU 118 v1: tarjetas de métricas y «Ver en panel» en respuestas del asistente con `panel_link`.
