@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { AiRatingControl } from '@/features/ai-assistant/AiRatingControl';
 import { ProjectModal } from '@/features/projects/ProjectModal';
 import { useToast } from '@/lib/toast/ToastProvider';
 import {
@@ -280,6 +281,7 @@ export function AiAnalysisSection({
     result: AiAnalysisResult,
     meta?: {
       id?: string;
+      interaction_id?: string | null;
       validation_status?: string;
       requires_human_validation?: boolean;
       validated_by_name?: string | null;
@@ -389,6 +391,10 @@ export function AiAnalysisSection({
             )}
           </div>
         )}
+
+        {meta?.interaction_id ? (
+          <AiRatingControl interactionId={meta.interaction_id} className="mt-3" />
+        ) : null}
       </div>
     );
   };
@@ -489,6 +495,7 @@ export function AiAnalysisSection({
           </p>
           {renderResultCard(pollingStatus.result, {
             id: pollingStatus.analysis_id,
+            interaction_id: pollingStatus.interaction_id,
             validation_status: pollingStatus.validation_status,
             requires_human_validation: pollingStatus.requires_human_validation,
             validated_by_name: pollingStatus.validated_by_name,
@@ -594,6 +601,7 @@ export function AiAnalysisSection({
                     item.result &&
                     renderResultCard(item.result, {
                       id: item.id,
+                      interaction_id: item.interaction_id,
                       validation_status: item.validation_status,
                       requires_human_validation: item.requires_human_validation,
                       validated_by_name: item.validated_by_name,

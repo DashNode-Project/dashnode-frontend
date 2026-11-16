@@ -44,6 +44,7 @@ const ProjectLegacyTabRedirect = lazy(() =>
 );
 const ProjectKnowledgeTab = lazy(() => import('@/features/documentation/ProjectKnowledgeTab'));
 const ProjectIssuesTab = lazy(() => import('@/features/issues/ProjectIssuesTab'));
+const ProjectAiMetricsTab = lazy(() => import('@/features/ai-metrics/ProjectAiMetricsTab'));
 
 function PageLoading() {
   return (
@@ -110,6 +111,7 @@ export function AppRoutes() {
                         />
                         <Route path="conocimiento" element={<ProjectKnowledgeTab />} />
                         <Route path="issues" element={<ProjectIssuesTab />} />
+                        <Route path="metricas-ia" element={<ProjectAiMetricsTab />} />
                         <Route path="fixes" element={<Navigate to="../issues" replace />} />
                         <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
                       </Route>

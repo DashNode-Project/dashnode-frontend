@@ -128,6 +128,7 @@ export interface RequestAiAnalysisResponse {
 
 export interface AiAnalysisStatusResponse {
   analysis_id: string;
+  interaction_id?: string | null;
   status: AiAnalysisStatus;
   progress_stage?: string | null;
   validation_status: AiValidationStatus;
@@ -145,6 +146,7 @@ export interface AiAnalysisStatusResponse {
 
 export interface AiAnalysisListItem {
   id: string;
+  interaction_id?: string | null;
   requested_by: {
     id: string;
     name: string;
