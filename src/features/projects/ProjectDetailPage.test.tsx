@@ -78,18 +78,6 @@ describe('HU_DN_02_23-26 — ProjectDetailPage', () => {
       velocity: 0,
       open_issues: 0,
     });
-    vi.mocked(projectsApi.listActiveUsers).mockResolvedValue([
-      {
-        id: 'dev-2',
-        name: 'Dev Dos',
-        email: 'dev2@test.com',
-        role: 'developer',
-        is_active: true,
-      },
-    ]);
-    vi.mocked(projectsApi.addProjectMember).mockResolvedValue({
-      message: PROJECT_MESSAGES.memberAdded,
-    });
   });
 
   it('shows summary and saves edits', async () => {
@@ -141,26 +129,12 @@ describe('HU_DN_02_23-26 — ProjectDetailPage', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(/No fue posible completar/i);
   });
 
-  it('validates empty member selection', async () => {
-    const user = userEvent.setup();
-    renderDetail();
-    await screen.findByRole('button', { name: 'Agregar miembro' });
-    await user.click(screen.getByRole('button', { name: 'Agregar miembro' }));
-    await user.click(screen.getByRole('button', { name: 'Agregar' }));
-    expect(await screen.findByText(PROJECT_MESSAGES.memberUserRequired)).toBeInTheDocument();
-  });
-
-  it('shows health indicators and adds a member', async () => {
-    const user = userEvent.setup();
+  it('shows health indicators and team summary link', async () => {
     renderDetail();
     await screen.findByRole('button', { name: 'Editar proyecto' });
     expect(await screen.findByText('Progreso')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Agregar miembro' }));
-    const memberSelect = screen.getAllByRole('combobox').at(-1);
-    if (!memberSelect) throw new Error('member select missing');
-    await user.selectOptions(memberSelect, 'dev-2');
-    await user.click(screen.getByRole('button', { name: 'Agregar' }));
-    await waitFor(() => expect(projectsApi.addProjectMember).toHaveBeenCalledWith('p1', 'dev-2'));
+    expect(screen.getByRole('link', { name: 'Ver equipo' })).toHaveAttribute('href', '/proyectos/p1/equipo');
+    expect(screen.queryByRole('button', { name: 'Agregar miembro' })).not.toBeInTheDocument();
   });
 
   it('updates status from selector', async () => {

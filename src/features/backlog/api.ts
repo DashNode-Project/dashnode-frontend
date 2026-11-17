@@ -55,6 +55,8 @@ export interface MyTaskItem {
   name: string;
   project: { id: string; name: string };
   user_story: { id: string; title: string };
+  epic?: { id: string; name: string } | null;
+  sprint?: { id: string; name: string } | null;
   status: string;
   estimated_hours: string | null;
   logged_hours: string;

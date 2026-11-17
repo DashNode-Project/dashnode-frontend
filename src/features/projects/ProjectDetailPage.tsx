@@ -1,18 +1,17 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
-import { useParams } from 'react-router';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { Link, useParams } from 'react-router';
+import { Users } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/demo-ui';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
-import { PATHS } from '@/app/paths';
+import { PATHS, projectTabPath } from '@/app/paths';
 import {
-  addProjectMember,
   deleteProject,
   getProjectHealth,
-  listActiveUsers,
   listProjectMembers,
-  removeProjectMember,
   updateProject,
   updateProjectStatus,
   type ProjectHealth,
@@ -37,6 +36,10 @@ function toForm(project: ProjectSummary): ProjectFormValues {
   };
 }
 
+function formatCount(value: number | undefined): string {
+  return value === undefined ? '—' : String(value);
+}
+
 export default function ProjectDetailPage() {
   const { projectId = '' } = useParams();
   const { user } = useAuth();
@@ -51,12 +54,6 @@ export default function ProjectDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [members, setMembers] = useState<ProjectMemberRow[]>([]);
   const [health, setHealth] = useState<ProjectHealth | null>(null);
-  const [memberOpen, setMemberOpen] = useState(false);
-  const [memberPick, setMemberPick] = useState('');
-  const [memberSearch, setMemberSearch] = useState('');
-  const [memberCandidates, setMemberCandidates] = useState<{ id: string; name: string }[]>([]);
-  const [removeMemberTarget, setRemoveMemberTarget] = useState<ProjectMemberRow | null>(null);
-  const [memberFieldError, setMemberFieldError] = useState('');
 
   const canManage =
     user?.role === 'admin' || (user?.role === 'manager' && project?.manager_id === user.id);
@@ -84,75 +81,19 @@ export default function ProjectDetailPage() {
     };
   }, [projectId]);
 
-  const refreshMembers = async () => {
-    if (!projectId) return;
-    setMembers(await listProjectMembers(projectId));
-  };
-
-  const openAddMember = async () => {
-    setMemberPick('');
-    setMemberSearch('');
-    setMemberFieldError('');
-    setMemberOpen(true);
-    try {
-      const rows = await listActiveUsers();
-      const existingIds = new Set([project?.manager_id, ...members.map((m) => m.user_id)]);
-      const availableCandidates = rows
-        .filter((u) => u.role !== 'admin' && !existingIds.has(u.id))
-        .map((u) => ({ id: u.id, name: u.name }));
-      setMemberCandidates(availableCandidates);
-    } catch {
-      showToast(MESSAGES.loadFailure, 'error');
+  const teamPreview = useMemo(() => {
+    const rows = [...members];
+    if (project.manager_name && !rows.some((m) => m.user_id === project.manager_id)) {
+      rows.unshift({
+        user_id: project.manager_id,
+        name: project.manager_name,
+        email: '',
+        role: 'manager',
+        joined_at: '',
+      });
     }
-  };
-
-  const handleAddMember = async () => {
-    if (!project) return;
-    if (!memberPick) {
-      setMemberFieldError(PROJECT_MESSAGES.memberUserRequired);
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await addProjectMember(project.id, memberPick);
-      await refreshMembers();
-      setMemberOpen(false);
-      showToast(res.message, 'success');
-    } catch (error) {
-      if (error instanceof ApiError && error.fields?.user_id) {
-        setMemberFieldError(error.fields.user_id);
-      } else {
-        showToast(
-          error instanceof ApiError && !isTechnicalFailure(error)
-            ? error.message
-            : MESSAGES.technicalFailure,
-          'error',
-        );
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleRemoveMember = async () => {
-    if (!project || !removeMemberTarget) return;
-    setSubmitting(true);
-    try {
-      const res = await removeProjectMember(project.id, removeMemberTarget.user_id);
-      await refreshMembers();
-      setRemoveMemberTarget(null);
-      showToast(res.message, 'success');
-    } catch (error) {
-      showToast(
-        error instanceof ApiError && !isTechnicalFailure(error)
-          ? error.message
-          : MESSAGES.technicalFailure,
-        'error',
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    return rows.filter((m) => m.role !== 'admin');
+  }, [members, project.manager_id, project.manager_name]);
 
   const handleSaveEdit = async () => {
     if (!form || !project) return;
@@ -222,11 +163,20 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const filteredCandidates = memberCandidates.filter((c) => {
-    const q = memberSearch.trim().toLowerCase();
-    if (!q) return true;
-    return c.name.toLowerCase().includes(q);
-  });
+  const healthCards = [
+    { label: 'Progreso', value: health ? `${health.progress_percent}%` : '—' },
+    { label: 'Velocidad', value: health ? `${health.velocity} pts/sprint` : '—' },
+    { label: 'Issues abiertos', value: health ? String(health.open_issues) : '—' },
+    { label: 'Historias de usuario', value: formatCount(health?.user_stories_count) },
+    { label: 'Tareas', value: formatCount(health?.tasks_count) },
+    {
+      label: 'Puntos de historia',
+      value:
+        health?.total_story_points !== undefined
+          ? `${health.completed_story_points ?? 0} / ${health.total_story_points}`
+          : '—',
+    },
+  ];
 
   return (
     <div>
@@ -252,20 +202,14 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {health ? (
-        <section className="mb-6 grid gap-4 sm:grid-cols-3">
-          {[
-            { label: 'Progreso', value: `${health.progress_percent}%` },
-            { label: 'Velocidad', value: `${health.velocity} pts/sprint` },
-            { label: 'Issues abiertos', value: String(health.open_issues) },
-          ].map((card) => (
-            <div key={card.label} className="rounded-xl border border-white/6 bg-[#12131C] p-4">
-              <p className="text-xs text-[#6B7280]">{card.label}</p>
-              <p className="mt-2 text-2xl font-semibold text-[#F9FAFB]">{card.value}</p>
-            </div>
-          ))}
-        </section>
-      ) : null}
+      <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {healthCards.map((card) => (
+          <div key={card.label} className="rounded-xl border border-white/6 bg-[#12131C] p-4">
+            <p className="text-xs text-[#6B7280]">{card.label}</p>
+            <p className="mt-2 text-2xl font-semibold text-[#F9FAFB]">{card.value}</p>
+          </div>
+        ))}
+      </section>
 
       <section className="rounded-xl border border-white/6 bg-[#12131C] p-6">
         <dl className="grid gap-4 sm:grid-cols-2">
@@ -336,38 +280,47 @@ export default function ProjectDetailPage() {
 
       <section className="mt-6 rounded-xl border border-white/6 bg-[#12131C] p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-[#F9FAFB]">Miembros</h2>
-          {canManage ? (
-            <Button type="button" onClick={() => void openAddMember()}>
-              Agregar miembro
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            <Users size={18} className="text-[#9CA3AF]" aria-hidden="true" />
+            <h2 className="text-lg font-semibold text-[#F9FAFB]">Equipo</h2>
+          </div>
+          <Link
+            to={projectTabPath(project.id, 'equipo')}
+            className="text-sm font-medium text-blue-400 hover:text-blue-300"
+          >
+            Ver equipo
+          </Link>
         </div>
-        {members.length === 0 ? (
+        {teamPreview.length === 0 ? (
           <p className="text-sm text-[#9CA3AF]">No hay miembros registrados.</p>
         ) : (
-          <ul className="divide-y divide-white/6">
-            {members.map((member) => (
-              <li
-                key={member.user_id}
-                className="flex flex-wrap items-center justify-between gap-2 py-3"
-              >
-                <div>
-                  <p className="text-sm font-medium text-[#F9FAFB]">{member.name}</p>
-                  <p className="text-xs text-[#9CA3AF]">{member.email}</p>
+          <>
+            <p className="mb-3 text-sm text-[#9CA3AF]">
+              {teamPreview.length} {teamPreview.length === 1 ? 'miembro' : 'miembros'} en el
+              proyecto
+              {project.manager_name ? (
+                <>
+                  {' '}
+                  · Gerente: <span className="text-[#F9FAFB]">{project.manager_name}</span>
+                </>
+              ) : null}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {teamPreview.slice(0, 8).map((member) => (
+                <div
+                  key={member.user_id}
+                  className="flex items-center gap-2 rounded-lg border border-white/6 bg-[#0A0B0E]/50 px-2 py-1.5"
+                  title={member.name}
+                >
+                  <Avatar name={member.name} size={28} />
+                  <span className="max-w-[120px] truncate text-xs text-[#F9FAFB]">{member.name}</span>
                 </div>
-                {canManage && member.user_id !== project.manager_id ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setRemoveMemberTarget(member)}
-                  >
-                    Retirar
-                  </Button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+              ))}
+              {teamPreview.length > 8 ? (
+                <span className="text-xs text-[#6B7280]">+{teamPreview.length - 8} más</span>
+              ) : null}
+            </div>
+          </>
         )}
       </section>
 
@@ -403,73 +356,6 @@ export default function ProjectDetailPage() {
             managers={[]}
             showManager={false}
           />
-        </ProjectModal>
-      ) : null}
-
-      {memberOpen ? (
-        <ProjectModal
-          title="Agregar miembro"
-          onClose={() => setMemberOpen(false)}
-          footer={
-            <>
-              <Button type="button" variant="secondary" onClick={() => setMemberOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" loading={submitting} onClick={() => void handleAddMember()}>
-                Agregar
-              </Button>
-            </>
-          }
-        >
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-[#F9FAFB]">Usuario</span>
-            <input
-              type="search"
-              value={memberSearch}
-              onChange={(e) => setMemberSearch(e.target.value)}
-              placeholder="Buscar por nombre…"
-              className="mb-2 h-10 rounded-md border border-white/10 bg-[#1E1F2B] px-3 text-sm text-[#F9FAFB] focus:border-blue-500 focus:outline-none"
-            />
-            <select
-              value={memberPick}
-              onChange={(e) => setMemberPick(e.target.value)}
-              className="h-10 rounded-md border border-white/10 bg-[#1E1F2B] px-3 text-sm text-[#F9FAFB] focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">Seleccionar…</option>
-              {filteredCandidates.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            {memberFieldError ? (
-              <span className="text-xs text-red-400">{memberFieldError}</span>
-            ) : null}
-          </label>
-        </ProjectModal>
-      ) : null}
-
-      {removeMemberTarget ? (
-        <ProjectModal
-          title="Retirar miembro"
-          onClose={() => setRemoveMemberTarget(null)}
-          footer={
-            <>
-              <Button type="button" variant="secondary" onClick={() => setRemoveMemberTarget(null)}>
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                variant="danger"
-                loading={submitting}
-                onClick={() => void handleRemoveMember()}
-              >
-                Confirmar
-              </Button>
-            </>
-          }
-        >
-          <p className="text-sm text-[#9CA3AF]">{PROJECT_MESSAGES.memberRemoveConfirm}</p>
         </ProjectModal>
       ) : null}
 

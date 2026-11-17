@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { Avatar, RoleBadge, StatusBadge } from '@/components/ui/demo-ui';
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -55,6 +56,7 @@ export default function UsersPage() {
   const [pendingError, setPendingError] = useState<string | null>(null);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [teamRefresh, setTeamRefresh] = useState(0);
+  const [previewUser, setPreviewUser] = useState<AdminUserSummary | null>(null);
 
   const loadUsers = useCallback(async () => {
     if (!isAdmin) return;
@@ -341,6 +343,7 @@ export default function UsersPage() {
           users={users}
           loading={loading}
           onEdit={openEdit}
+          onPreview={setPreviewUser}
           onDeactivate={(u) => void openDeactivate(u)}
           onReactivate={setReactivateTarget}
           onResetPassword={setResetTarget}
@@ -454,6 +457,57 @@ export default function UsersPage() {
           onCancel={() => setReactivateTarget(null)}
           onConfirm={() => void confirmReactivate()}
         />
+      ) : null}
+
+      {previewUser ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="user-preview-title"
+        >
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#12131C] p-6">
+            <h2 id="user-preview-title" className="mb-4 text-lg font-semibold text-[#F9FAFB]">
+              Vista previa
+            </h2>
+            <div className="mb-4 flex items-center gap-3">
+              <Avatar name={previewUser.name} size={48} />
+              <div>
+                <p className="font-medium text-[#F9FAFB]">{previewUser.name}</p>
+                <p className="text-sm text-[#9CA3AF]">{previewUser.email}</p>
+              </div>
+            </div>
+            <dl className="grid gap-3 text-sm">
+              <div>
+                <dt className="text-xs text-[#6B7280]">Rol</dt>
+                <dd className="mt-1">
+                  <RoleBadge role={previewUser.role} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[#6B7280]">Estado de la cuenta</dt>
+                <dd className="mt-1">
+                  <StatusBadge status={previewUser.is_active ? 'activo' : 'desactivado'} />
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPreviewUser(null)}>
+                Cerrar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const target = previewUser;
+                  setPreviewUser(null);
+                  openEdit(target);
+                }}
+              >
+                Editar usuario
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

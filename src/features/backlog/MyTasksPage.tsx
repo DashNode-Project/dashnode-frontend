@@ -1,24 +1,102 @@
+import { LayoutList, List, Table2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import { Card, SectionHeader } from '@/components/ui/demo-ui';
+import { listProjects } from '@/features/projects/api';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { MESSAGES } from '@/lib/messages';
 import { useToast } from '@/lib/toast/ToastProvider';
 import { changeTaskStatus, listMyTasks, type MyTaskItem } from './api';
 import { MyTasksKanbanView } from './MyTasksKanbanView';
+import {
+  readMyTasksProjectFilter,
+  readMyTasksViewMode,
+  writeMyTasksProjectFilter,
+  writeMyTasksViewMode,
+  type MyTasksViewMode,
+} from './myTasksPreferences';
 import { TASK_STATUS_OPTIONS } from './messages';
 
-type ViewMode = 'list' | 'kanban';
+function TaskStatusSelect({
+  task,
+  busyId,
+  onStatus,
+}: {
+  task: MyTaskItem;
+  busyId: string | null;
+  onStatus: (task: MyTaskItem, next: string) => void;
+}) {
+  return (
+    <select
+      aria-label={`Estado de ${task.name}`}
+      value={task.status}
+      disabled={busyId === task.id || task.status === 'CORRECTION'}
+      title={
+        task.status === 'CORRECTION'
+          ? 'El estado Corrección solo cambia al reportar o resolver un fix.'
+          : 'Cambiar estado de la tarea'
+      }
+      onChange={(event) => onStatus(task, event.target.value)}
+      className="rounded-md border border-white/10 bg-[#1E1F2B] px-2 py-1"
+    >
+      {TASK_STATUS_OPTIONS.map((option) => (
+        <option
+          key={option.value}
+          value={option.value}
+          disabled={option.value === 'CORRECTION'}
+        >
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export default function MyTasksPage() {
   const { showToast } = useToast();
   const [tasks, setTasks] = useState<MyTaskItem[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(() => readMyTasksProjectFilter());
   const [status, setStatus] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<MyTasksViewMode>(() => readMyTasksViewMode());
+  const [projectOptions, setProjectOptions] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const projects = await listProjects();
+        if (!cancelled) {
+          setProjectOptions(projects.map((p) => ({ id: p.id, name: p.name })));
+        }
+      } catch {
+        try {
+          const data = await listMyTasks();
+          if (!cancelled) {
+            const fromTasks = Array.from(
+              new Map(data.tasks.map((t) => [t.project.id, t.project.name])).entries(),
+            ).map(([id, name]) => ({ id, name }));
+            setProjectOptions(fromTasks);
+          }
+        } catch {
+          if (!cancelled) setProjectOptions([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    writeMyTasksProjectFilter(projectId);
+  }, [projectId]);
+
+  useEffect(() => {
+    writeMyTasksViewMode(viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,10 +149,6 @@ export default function MyTasksPage() {
     }
   }
 
-  const projects = Array.from(
-    new Map(tasks.map((task) => [task.project.id, task.project.name])).entries(),
-  );
-
   const viewToggle = (
     <div
       className="inline-flex rounded-lg border border-white/10 bg-[#12131C] p-1"
@@ -84,23 +158,40 @@ export default function MyTasksPage() {
       <button
         type="button"
         role="tab"
+        title="Vista compacta en lista"
         aria-selected={viewMode === 'list'}
-        className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
           viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-[#9CA3AF] hover:text-[#F9FAFB]'
         }`}
         onClick={() => setViewMode('list')}
       >
+        <LayoutList size={14} aria-hidden="true" />
         Lista
       </button>
       <button
         type="button"
         role="tab"
+        title="Vista en tabla con columnas detalladas"
+        aria-selected={viewMode === 'table'}
+        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+          viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-[#9CA3AF] hover:text-[#F9FAFB]'
+        }`}
+        onClick={() => setViewMode('table')}
+      >
+        <Table2 size={14} aria-hidden="true" />
+        Tabla
+      </button>
+      <button
+        type="button"
+        role="tab"
+        title="Vista Kanban por estado"
         aria-selected={viewMode === 'kanban'}
-        className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
           viewMode === 'kanban' ? 'bg-blue-600 text-white' : 'text-[#9CA3AF] hover:text-[#F9FAFB]'
         }`}
         onClick={() => setViewMode('kanban')}
       >
+        <List size={14} aria-hidden="true" />
         Kanban
       </button>
     </div>
@@ -119,12 +210,13 @@ export default function MyTasksPage() {
           <select
             className="mt-1 block rounded-md border border-white/10 bg-[#1E1F2B] px-3 py-2 text-[#F9FAFB]"
             value={projectId}
+            title="Filtrar tareas por proyecto"
             onChange={(event) => setProjectId(event.target.value)}
           >
             <option value="">Todos</option>
-            {projects.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
+            {projectOptions.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
               </option>
             ))}
           </select>
@@ -134,6 +226,7 @@ export default function MyTasksPage() {
           <select
             className="mt-1 block rounded-md border border-white/10 bg-[#1E1F2B] px-3 py-2 text-[#F9FAFB]"
             value={status}
+            title="Filtrar tareas por estado"
             onChange={(event) => setStatus(event.target.value)}
           >
             <option value="">Todos</option>
@@ -156,13 +249,35 @@ export default function MyTasksPage() {
           busyId={busyId}
           onStatusChange={(task, next) => void onStatus(task, next)}
         />
+      ) : viewMode === 'list' ? (
+        <ul className="space-y-2">
+          {tasks.map((task) => (
+            <li
+              key={task.id}
+              className="rounded-xl border border-white/6 bg-[#12131C] p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-[#F9FAFB]">{task.name}</p>
+                  <p className="mt-1 text-xs text-[#9CA3AF]">
+                    {task.project.name} · {task.user_story.title}
+                  </p>
+                </div>
+                <TaskStatusSelect task={task} busyId={busyId} onStatus={(t, n) => void onStatus(t, n)} />
+              </div>
+            </li>
+          ))}
+        </ul>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/6">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-[#12131C] text-[#9CA3AF]">
               <tr>
                 <th className="px-3 py-2">Tarea</th>
-                <th className="px-3 py-2">Historia / Proyecto</th>
+                <th className="px-3 py-2">Proyecto</th>
+                <th className="px-3 py-2">Épica</th>
+                <th className="px-3 py-2">Historia</th>
+                <th className="px-3 py-2">Sprint</th>
                 <th className="px-3 py-2">Estado</th>
                 <th className="px-3 py-2">Horas</th>
               </tr>
@@ -171,32 +286,16 @@ export default function MyTasksPage() {
               {tasks.map((task) => (
                 <tr key={task.id} className="border-t border-white/6">
                   <td className="px-3 py-2 text-[#F9FAFB]">{task.name}</td>
-                  <td className="px-3 py-2 text-[#9CA3AF]">
-                    {task.user_story.title} · {task.project.name}
-                  </td>
+                  <td className="px-3 py-2 text-[#9CA3AF]">{task.project.name}</td>
+                  <td className="px-3 py-2 text-[#9CA3AF]">{task.epic?.name ?? '—'}</td>
+                  <td className="px-3 py-2 text-[#9CA3AF]">{task.user_story.title}</td>
+                  <td className="px-3 py-2 text-[#9CA3AF]">{task.sprint?.name ?? '—'}</td>
                   <td className="px-3 py-2">
-                    <select
-                      aria-label={`Estado de ${task.name}`}
-                      value={task.status}
-                      disabled={busyId === task.id || task.status === 'CORRECTION'}
-                      title={
-                        task.status === 'CORRECTION'
-                          ? 'El estado Corrección solo cambia al reportar o resolver un fix.'
-                          : undefined
-                      }
-                      onChange={(event) => void onStatus(task, event.target.value)}
-                      className="rounded-md border border-white/10 bg-[#1E1F2B] px-2 py-1"
-                    >
-                      {TASK_STATUS_OPTIONS.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                          disabled={option.value === 'CORRECTION'}
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <TaskStatusSelect
+                      task={task}
+                      busyId={busyId}
+                      onStatus={(t, n) => void onStatus(t, n)}
+                    />
                   </td>
                   <td className="px-3 py-2 text-[#9CA3AF]">
                     {task.logged_hours} / {task.estimated_hours ?? '—'}

@@ -1,4 +1,4 @@
-import { Key, Pencil, Search, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Eye, Key, Pencil, Search, Trash2, UserCheck, UserX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { AdminUserSummary } from '@/features/auth/api';
 import { Avatar, RoleBadge, SearchInput, StatusBadge } from '@/components/ui/demo-ui';
@@ -20,6 +20,7 @@ export function AdminUsersPanel({
   onReactivate,
   onResetPassword,
   onDelete,
+  onPreview,
 }: {
   users: AdminUserSummary[];
   loading: boolean;
@@ -28,6 +29,7 @@ export function AdminUsersPanel({
   onReactivate: (u: AdminUserSummary) => void;
   onResetPassword: (u: AdminUserSummary) => void;
   onDelete: (u: AdminUserSummary) => void;
+  onPreview: (u: AdminUserSummary) => void;
 }) {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<RoleTab>('all');
@@ -136,6 +138,12 @@ export function AdminUsersPanel({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
+                      <IconActionButton
+                        icon={Eye}
+                        label="Vista previa del usuario"
+                        tone="neutral"
+                        onClick={() => onPreview(u)}
+                      />
                       <IconActionButton
                         icon={Pencil}
                         label="Editar usuario"
