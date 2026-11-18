@@ -469,3 +469,16 @@ Proxy `/api` → backend. Pestaña `/proyectos/:id/sprints`:
 | Frontend | `npm run typecheck` y `npm run build` | 0 errores TypeScript, build Vite de producción exitoso en < 1s | APROBADO |
 | Frontend | `npm run lint` y `npm run format:check` | 0 errores/warnings ESLint, Prettier verificado | APROBADO |
 | Frontend | `node scripts/scan-secrets.mjs` | 0 secretos detectados (228 archivos) | APROBADO |
+
+## EP-14 — Notificaciones in-app
+
+| Método | Ruta | Auth | Frontend |
+|---|---|---|---|
+| GET | `/api/v1/notifications` | cookie sesión | `listNotifications` (`NotificationList`, límite 25) |
+| GET | `/api/v1/notifications/unread-count` | cookie sesión | `getUnreadCount` / `useNotificationPolling` |
+| POST | `/api/v1/notifications/read` | cookie sesión | `markNotificationsRead` (marcar una) |
+| POST | `/api/v1/notifications/read-all` | cookie sesión | `markAllNotificationsRead` |
+| POST | `/api/v1/notifications/delete-all` | cookie sesión | `deleteAllNotifications` (`confirm: true`) |
+| POST | `/api/v1/notifications/{id}/open` | cookie sesión | `openNotification` + `navigate(route)` si prefijo permitido |
+
+Respuestas: listado `{ items, next_cursor }`, contador `{ count }`, errores `{ error: { code, message, fields } }` con literales del backend (`ENTITY_NOT_AVAILABLE`, `ENTITY_ACCESS_DENIED`, `NOTIFICATION_NOT_FOUND`, `RATE_LIMITED`).

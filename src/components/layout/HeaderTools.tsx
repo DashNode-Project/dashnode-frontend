@@ -1,9 +1,9 @@
-import { Bell, Keyboard, Search } from 'lucide-react';
+import { Keyboard, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
-import { notifyUnderDevelopment } from '@/lib/underDevelopment';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { CommandPalette } from './CommandPalette';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 
@@ -52,16 +52,7 @@ export function HeaderTools() {
         >
           <Keyboard size={16} aria-hidden="true" />
         </button>
-        {user && user.role !== 'admin' ? (
-          <button
-            type="button"
-            aria-label="Notificaciones"
-            onClick={() => notifyUnderDevelopment('notifications')}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-[#9CA3AF] transition-colors hover:bg-white/5 hover:text-[#F9FAFB] active:bg-white/10"
-          >
-            <Bell size={16} aria-hidden="true" />
-          </button>
-        ) : null}
+        {user ? <NotificationBell /> : null}
       </div>
       <CommandPalette open={paletteOpen} onClose={closePalette} />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

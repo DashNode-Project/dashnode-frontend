@@ -1436,3 +1436,17 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 | HU_DN_08_117 | Implementado | `AiRatingControl` con etiquetas 1–5, upsert vía `PUT /ai/interactions/{id}/rating`, toasts literales en asistente y `AiAnalysisSection` cuando existe `interaction_id`. Tests: `AiRatingControl.test.tsx`. |
 | HU_DN_08_118 | Implementado (v1) | Campos opcionales en respuesta de `text-generate`; tarjetas compactas y enlace «Ver en panel» en `AiAssistantWidget`. |
 
+---
+
+## Estado de implementación — EP-14 Notificaciones in-app (HU_DN_09_119 … HU_DN_09_123)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_09_119 | Implementado | Campana global `NotificationBell` con badge (tope `99+`) para Administrador, Gerente y Desarrollador; reemplaza `notifyUnderDevelopment('notifications')`. |
+| HU_DN_09_120 | Implementado | Panel y página listan hasta 25 notificaciones; filtro «Solo no leídas»; vacío literal «No tiene notificaciones.». |
+| HU_DN_09_121 | Implementado | «Marcar todas como leídas», marcar una vía `POST /read`, «Eliminar todas» con modal de confirmación. |
+| HU_DN_09_122 | Implementado | Clic abre `POST /{id}/open` y navega si la ruta pertenece a prefijos permitidos; errores literales del backend en toast. |
+| HU_DN_09_123 | Implementado | Sondeo de contador cada 30 s, refresco al recuperar foco de ventana, pausa cuando `document.hidden`. |
+
+Ruta: `/notificaciones` (`PATHS.notifications`). Código: `src/features/notifications/`.
+
