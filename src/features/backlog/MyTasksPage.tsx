@@ -40,11 +40,7 @@ function TaskStatusSelect({
       className="rounded-md border border-white/10 bg-[#1E1F2B] px-2 py-1"
     >
       {TASK_STATUS_OPTIONS.map((option) => (
-        <option
-          key={option.value}
-          value={option.value}
-          disabled={option.value === 'CORRECTION'}
-        >
+        <option key={option.value} value={option.value} disabled={option.value === 'CORRECTION'}>
           {option.label}
         </option>
       ))}
@@ -257,10 +253,7 @@ export default function MyTasksPage() {
       ) : viewMode === 'list' ? (
         <ul className="space-y-2">
           {tasks.map((task) => (
-            <li
-              key={task.id}
-              className="rounded-xl border border-white/6 bg-[#12131C] p-4"
-            >
+            <li key={task.id} className="rounded-xl border border-white/6 bg-[#12131C] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-medium text-[#F9FAFB]">{task.name}</p>
@@ -268,7 +261,11 @@ export default function MyTasksPage() {
                     {task.project.name} · {task.user_story.title}
                   </p>
                 </div>
-                <TaskStatusSelect task={task} busyId={busyId} onStatus={(t, n) => void onStatus(t, n)} />
+                <TaskStatusSelect
+                  task={task}
+                  busyId={busyId}
+                  onStatus={(t, n) => void onStatus(t, n)}
+                />
               </div>
             </li>
           ))}

@@ -12,11 +12,7 @@ import {
   openNotification,
 } from './api';
 import { DeleteAllNotificationsModal } from './DeleteAllNotificationsModal';
-import {
-  NOTIFICATION_MESSAGES,
-  isAllowedNotificationRoute,
-  formatUnreadBadge,
-} from './messages';
+import { NOTIFICATION_MESSAGES, isAllowedNotificationRoute, formatUnreadBadge } from './messages';
 import type { NotificationItem } from './types';
 
 function formatWhen(iso: string): string {
@@ -120,7 +116,9 @@ export function NotificationList({
       );
     } catch (error) {
       showToast(
-        isTechnicalFailure(error) ? NOTIFICATION_MESSAGES.markReadFailure : (error as Error).message,
+        isTechnicalFailure(error)
+          ? NOTIFICATION_MESSAGES.markReadFailure
+          : (error as Error).message,
         'error',
       );
     } finally {
@@ -136,7 +134,9 @@ export function NotificationList({
       await load();
     } catch (error) {
       showToast(
-        isTechnicalFailure(error) ? NOTIFICATION_MESSAGES.markReadFailure : (error as Error).message,
+        isTechnicalFailure(error)
+          ? NOTIFICATION_MESSAGES.markReadFailure
+          : (error as Error).message,
         'error',
       );
     } finally {
@@ -248,14 +248,18 @@ export function NotificationList({
         </div>
       ) : null}
 
-      <div className={compact ? 'max-h-80 overflow-y-auto' : 'min-h-[12rem] flex-1 overflow-y-auto'}>
+      <div
+        className={compact ? 'max-h-80 overflow-y-auto' : 'min-h-[12rem] flex-1 overflow-y-auto'}
+      >
         {loading ? (
           <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-[#9CA3AF]">
             <Loader2 size={16} className="animate-spin" aria-hidden="true" />
             Cargando…
           </div>
         ) : items.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-[#6B7280]">{NOTIFICATION_MESSAGES.empty}</div>
+          <div className="px-4 py-10 text-center text-sm text-[#6B7280]">
+            {NOTIFICATION_MESSAGES.empty}
+          </div>
         ) : (
           <ul className="divide-y divide-white/4">
             {items.map((item) => {
@@ -277,22 +281,22 @@ export function NotificationList({
                       }
                     }}
                   >
-                    <Bell
-                      size={12}
-                      className="mt-1 shrink-0 text-blue-400"
-                      aria-hidden="true"
-                    />
+                    <Bell size={12} className="mt-1 shrink-0 text-blue-400" aria-hidden="true" />
                     <div className="min-w-0 flex-1">
                       <p
                         className={`text-xs font-medium ${unread ? 'text-[#F9FAFB]' : 'text-[#9CA3AF]'}`}
                       >
                         {item.title}
                       </p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-[#6B7280]">{item.message}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-[#6B7280]">
+                        {item.message}
+                      </p>
                       {item.project ? (
                         <p className="mt-1 text-[10px] text-[#4B5563]">{item.project.name}</p>
                       ) : null}
-                      <p className="mt-1 text-[10px] text-[#4B5563]">{formatWhen(item.created_at)}</p>
+                      <p className="mt-1 text-[10px] text-[#4B5563]">
+                        {formatWhen(item.created_at)}
+                      </p>
                     </div>
                     {unread ? (
                       <button

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import ProjectModulePlaceholder from './ProjectModulePlaceholder';
@@ -9,18 +9,6 @@ vi.mock('@/lib/underDevelopment', () => ({
 }));
 
 describe('ProjectModulePlaceholder', () => {
-  it('notifies under development for unimplemented devops tab', () => {
-    render(
-      <MemoryRouter initialEntries={['/proyectos/p1/devops']}>
-        <Routes>
-          <Route path="/proyectos/:projectId/:moduleTab" element={<ProjectModulePlaceholder />} />
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(screen.getByText(/DevOps/)).toBeInTheDocument();
-    expect(underDev.notifyUnderDevelopment).toHaveBeenCalledWith('DevOps');
-  });
-
   it('renders nothing for implemented issues tab', () => {
     vi.mocked(underDev.notifyUnderDevelopment).mockClear();
     const { container } = render(

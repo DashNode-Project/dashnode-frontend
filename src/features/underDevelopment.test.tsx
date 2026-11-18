@@ -95,19 +95,20 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
   it('search opens the command palette; notifications opens the inbox panel', async () => {
     const info = await authenticated('developer');
     mockFetch((call) => {
+      if (call.url.endsWith('/commands')) {
+        return ok({ catalog_version: 'cmd-v1.0.0', commands: [], projects: [] });
+      }
       if (call.url.endsWith('/notifications/unread-count')) return ok({ count: 0 });
       if (call.url.includes('/notifications?')) return ok({ items: [], next_cursor: null });
       return apiError(404, 'NOT_FOUND', 'Not found');
     });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Buscar/i }));
-    expect(await screen.findByRole('dialog', { name: 'Búsqueda rápida' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Paleta de comandos' })).toBeInTheDocument();
     info.mockClear();
     await user.click(screen.getByRole('button', { name: 'Notificaciones' }));
     expect(info).not.toHaveBeenCalled();
-    expect(
-      await screen.findByRole('dialog', { name: 'Notificaciones' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Notificaciones' })).toBeInTheDocument();
   });
 
   it('the floating AI assistant opens its chat panel (HU_DN_06_90)', async () => {
