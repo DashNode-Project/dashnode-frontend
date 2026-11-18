@@ -242,6 +242,11 @@ export default function MyTasksPage() {
           </select>
         </label>
       </Card>
+      <p className="text-xs text-[#6B7280]">
+        {projectId
+          ? 'Vista de sus tareas asignadas en el proyecto seleccionado. Para ver todo el equipo, use el Kanban del proyecto.'
+          : 'Solo se listan tareas asignadas a su usuario.'}
+      </p>
       {message ? <p className="text-sm text-[#9CA3AF]">{message}</p> : null}
       {viewMode === 'kanban' ? (
         <MyTasksKanbanView
