@@ -5,7 +5,7 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.x-3178C6?logo=typescript&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Cliente web de DashNode (React 19 + Vite + TypeScript). Incluye **EP-01** (autenticación y sesiones) y **EP-02** (administración de usuarios, ciclo de vida de cuenta, matriz de permisos y perfil).
+Cliente web de DashNode (React 19 + Vite + TypeScript). Incluye **EP-01** (autenticación y sesiones), **EP-02** (administración de usuarios), el asistente de IA (EP-10/EP-12), la pestaña **Métricas de IA** (EP-13) y **notificaciones in-app** (EP-14: campana global y `/notificaciones`).
 
 - [Changelog](./CHANGELOG.md)
 - [License](./LICENSE)
@@ -90,8 +90,10 @@ node scripts/e2e-stack.mjs --base http://localhost:8080 --env-file ../dashnode-b
 - `/usuarios` administración de usuarios (Administrador / invitaciones Gerente)
 - `/mi-perfil` perfil y avatar (HU_DN_01_21)
 - `/permisos-y-roles` matriz informativa (HU_DN_01_20)
+- `/notificaciones` bandeja completa de notificaciones (EP-14, todos los roles autenticados)
 
-Otras entradas del menú lateral siguen marcadas como fuera de alcance y muestran
+La campana del encabezado está disponible para cualquier sesión válida (incluido Administrador).
+Otras entradas del menú lateral pueden seguir marcadas como fuera de alcance y muestran
 `Funcionalidad en desarrollo, no disponible`.
 
 ## Documentación FRAMAI

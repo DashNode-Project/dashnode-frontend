@@ -1149,3 +1149,304 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 | HU_DN_06_86 | Implementado | Botón "Reenviar a aprobación" visible al autor en tarjetas rechazadas, visualización de observaciones de rechazo previo en tarjeta y modal, validación de estado `REJECTED`, toast `ENTRY_RESUBMITTED`. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
 | HU_DN_06_87 | Implementado | Botón icono Pin en tarjeta (`title` "Anclar al inicio" / "Desanclar") exclusivo para Admin/Gerente, ordenamiento en cabecera del listado, borde y fondo destacado (`border-amber-500/30 bg-[#161722]`), insignia "Anclado", toasts literales de éxito y fallo técnico. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
 | HU_DN_06_89 | Implementado | Acción directa sin apertura de formulario ni modal, conmutación instantánea a la parte superior y retorno reactivo al desanclar a la posición cronológica original. Tests: `ProjectKnowledgeTab.test.tsx`, `api.test.ts`. |
+
+
+---
+
+# Épica 11: Issues y evidencias (HU_DN_07_97 … HU_DN_07_101)
+
+## HU_DN_07_97 — Crear un issue (Fix) en un proyecto
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Crear un issue (Fix) en un proyecto  
+**Para** registrar un problema del proyecto y darle seguimiento  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña “Issues” del proyecto, botón “Nuevo fix”.
+2. Campos: El formulario contiene:
+   2.1 Título: texto, obligatorio, máximo 100 caracteres. Si está vacío: 'El título es obligatorio.'
+   2.2 Descripción: texto, opcional, máximo 5000 caracteres. Si excede: 'La descripción no puede superar 5000 caracteres.'
+   2.3 Severidad: lista desplegable obligatoria con Baja, Media, Alta y Crítica. Si falta: 'Debe seleccionar la severidad.'
+   2.4 Tipo: lista desplegable obligatoria con Bug, Regresión, Rendimiento, Seguridad y UX. Si falta: 'Debe seleccionar el tipo.'
+   2.5 Botón “Crear fix” y botón “Cancelar”.
+3. Validación: Un issue sin título, severidad o tipo se rechaza.
+4. Restricción: El usuario debe ser miembro activo del proyecto. El estado inicial es Abierto (OPEN). Un reintento con la misma Idempotency-Key devuelve el issue ya creado.
+5. Éxito: 'Issue creado correctamente.'; el issue aparece en la lista del proyecto y se encola el evento de notificación.
+6. Fallo técnico: Ante un error no anticipado se muestra 'No fue posible completar la operación. Intente nuevamente.'
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_98 — Asociar evidencia a un issue
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Asociar evidencia a un issue  
+**Para** respaldar el problema con imágenes, videos o registros  
+
+### Criterios de aceptación:
+1. Dónde: Detalle del issue, botón “Adjuntar evidencia”.
+2. Campos: Archivo (Imagen <= 5MB, Video <= 25MB y 60s, Registro <= 1MB), Título (opcional), Botones Adjuntar/Cancelar con barra de progreso.
+3. Validación: Tamaño, formato real (firma binaria), decodificación y eliminación de metadata EXIF. Detección de duplicados con hash SHA-256.
+4. Restricción: El archivo falso se rechaza (polyglots). Evidencias almacenadas en buckets privados con nombre UUID.
+5. Éxito: 'Evidencia adjuntada correctamente.'
+6. Fallo: Mensajes específicos para formato no admitido, tamaño excesivo, video muy largo o evidencia duplicada.
+7. Fallo técnico: Error 500 estándar. Sin archivos parciales almacenados.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_99 — Consultar la lista de issues de un proyecto
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Consultar la lista de issues de un proyecto  
+**Para** conocer los problemas abiertos y resueltos  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña “Issues” del proyecto.
+2. Campos: Lista de issues mostrando título, severidad, tipo, estado, responsable, fecha de creación y cantidad de evidencias.
+3. Validación: Orden por defecto (abiertos primero, luego severidad, luego fecha). Paginación por cursor de 25 elementos.
+4. Restricción: Solo miembros del proyecto.
+5. Éxito: Muestra la tabla de issues. Si vacío: 'El proyecto no tiene issues.'
+6. Fallo técnico: Mensaje de error estándar.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_100 — Consultar el detalle de un issue con su evidencia, respuestas de IA, responsable y nota de resolución
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Consultar el detalle de un issue con su evidencia, respuestas de IA, responsable y nota de resolución  
+**Para** tener toda la información del problema en un solo lugar  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña “Issues”, al seleccionar un issue.
+2. Campos: Detalles generales (título, descripción, severidad, tipo, estado), evidencias (miniatura, tamaño), resumen respuestas IA y nota de resolución/responsable.
+3. Validación: Muestra los componentes cuando existen.
+4. Restricción: Las URLs de evidencia deben ser URLs firmadas generadas en backend y con vencimiento de 5 min.
+5. Éxito: Renderizado completo del issue.
+6. Fallo técnico: Mensaje de error estándar o 404/403 según permisos.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_101 — Filtrar los issues por estado, severidad y tipo
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Filtrar los issues por estado, severidad y tipo  
+**Para** priorizar los problemas que requieren atención  
+
+### Criterios de aceptación:
+1. Dónde: Barra de filtros de la pestaña “Issues”.
+2. Campos: Desplegables de Estado, Severidad y Tipo.
+3. Validación: Combinables (AND lógico), filtrado aplicado en servidor y URL sincronizada.
+4. Restricción: No modifican datos. Paginación mantenida (pero reseteo de cursor al cambiar).
+5. Éxito: Lista actualizada de issues.
+6. Fallo: Si no hay matches: 'No se encontraron issues con los filtros aplicados.'
+7. Fallo técnico: Error estándar.
+
+**Fecha recepción:** 2026-11-07  
+**Estado:** COMPLETED
+
+---
+
+## Estado de implementación — EP-11 Issues y evidencias (HU_DN_07_97 … HU_DN_07_101)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_07_97 | Implementado | Componente `ProjectIssuesTab`, `CreateIssueModal`, validación en tiempo real y mensajes literales exactos. Tests: `ProjectIssuesTab.test.tsx`, `validation.test.ts`. |
+| HU_DN_07_98 | Implementado | Componente `AddEvidenceModal`, subida multipart con barra de progreso, validación de tipo y peso. Tests: `ProjectIssuesTab.test.tsx`, `api.test.ts`. |
+| HU_DN_07_99 | Implementado | Vista dividida listado/detalle, ordenamiento, avatares, contador de evidencias, estado vacío literal. Tests: `ProjectIssuesTab.test.tsx`. |
+| HU_DN_07_100 | Implementado | Renderizado de detalle de issue con previsualización de evidencias mediante URL firmada, sección consultiva de IA. Tests: `ProjectIssuesTab.test.tsx`. |
+| HU_DN_07_101 | Implementado | Barra de filtros por Estado, Severidad y Tipo con sincronización reactiva en URL (`useSearchParams`). Tests: `ProjectIssuesTab.test.tsx`. |
+
+## Estado de implementación — EP-11 Ciclo de vida de issues y vínculo con tareas (HU_DN_07_102 … HU_DN_07_105)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_07_102 | Implementado | Selector `Responsable` en `ProjectIssuesTab` con desarrolladores activos del proyecto (deshabilitado con tooltip para desarrollador), control optimista por `version` (recarga automática ante HTTP 409) y notificación al asignado. Tests: `ProjectIssuesTab.test.tsx`, `api.test.ts`. |
+| HU_DN_07_103 | Implementado | Modal `ResolveIssueModal` para resolver issues con nota obligatoria (máx. 2000 caracteres) y botón `Cerrar issue` exclusivo de Administrador/Gerente para transición `resolved` -> `closed`. Tests: `ResolveIssueModal.test.tsx`, `ProjectIssuesTab.test.tsx`. |
+| HU_DN_07_104 | Implementado | Botón y flujo `Reportar fix` desde Backlog (`TaskWorkModal`) y tablero Kanban (`KanbanCard` / `ProjectKanbanTab`), título prellenado `Fix: ${task.name}`, transición atómica de la tarea a `CORRECTION` e insignia `En corrección`. Tests: `TaskWorkModal.test.tsx`, `ProjectKanbanTab.test.tsx`, `api.test.ts`. |
+| HU_DN_07_105 | Implementado | Selector condicional `Estado de la tarea` en `ResolveIssueModal` prellenado con `task_previous_status` o `IN_PROGRESS`, deshabilitado con advertencia literal cuando `other_open_issues_count > 0` para preservar `CORRECTION` hasta cerrar/resolver el último issue abierto. Tests: `ResolveIssueModal.test.tsx`, `ProjectIssuesTab.test.tsx`. |
+
+---
+
+# ÉPICA 12: ANÁLISIS DE IA POR IMAGEN Y VIDEO
+
+## HU_DN_07_106 — Solicitar análisis visual de IA sobre la evidencia de un issue
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Solicitar un análisis visual de IA sobre una imagen o video adjunto como evidencia  
+**Para** Obtener una descripción del problema, causa probable y sugerencia de solución  
+
+### Criterios de aceptación:
+1. Dónde: Detalle del issue, sección de respuestas de IA (`AiAnalysisSection`).
+2. Campos: Casilla de verificación de privacidad ("Confirmo que la evidencia no contiene contraseñas, tokens ni datos personales."), botón "Analizar con IA".
+3. Validación: El botón permanece deshabilitado hasta marcar la casilla.
+4. Restricción: Sondeo (polling) no bloqueante con timeout de 30s. Si ya existe un análisis previo con idéntico hash SHA-256 de evidencia y versión de prompt (`reuse_key`), se retorna la respuesta almacenada sin invocar API de pago externa (`reused: True`). Cuotas diarias independientes por usuario y servicio.
+5. Éxito: Mensaje "Análisis solicitado. Procesando…" e indicador de progreso.
+6. Fallo: Mensaje tipado según código de error retornado por backend.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_107 — Visualizar la respuesta estructurada del análisis de IA con advertencia de no verificación
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Ver la respuesta del análisis de IA estructurada en 3 bloques con un aviso visual de que es una sugerencia no verificada  
+**Para** Comprender el problema y evaluar la solución propuesta de forma crítica  
+
+### Criterios de aceptación:
+1. Dónde: Detalle del issue, tarjeta de resultado del análisis.
+2. Campos: `problem_description` (descripción del problema), `probable_cause` (causa probable) y `suggested_solution` (solución sugerida). Máximo 150 palabras en total.
+3. Validación: Distintivo visual rojo `'Sugerencia generada por IA no verificada'`. Si el modelo no puede inferir la solución, fallback literal: `'No hay contexto suficiente para proponer una solución.'`.
+4. Restricción: Renderizado como texto plano escapado, sin interpretación de HTML/Markdown potencialmente malicioso (prevención de XSS y Prompt Injection indirecto).
+5. Éxito: Visualización clara de los 3 bloques y el distintivo de advertencia.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_108 — Consultar las respuestas de IA almacenadas para un issue
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Ver el historial de análisis de IA generados para el issue  
+**Para** Conocer las sugerencias previas sin tener que reejecutar el análisis  
+
+### Criterios de aceptación:
+1. Dónde: Pestaña o sección de historial de análisis en el detalle del issue (`GET /api/v1/projects/{projectId}/issues/{issueId}/ai-analyses`).
+2. Campos: Nombre del solicitante, fecha de solicitud formateada, estado de validación humana (`Pendiente de validación`, `Validada`, `Rechazada`) y resumen del análisis.
+3. Validación: Excluye registros con eliminación lógica (`deleted_at IS NULL`). Solo accesible para miembros activos del proyecto.
+4. Restricción: Estado vacío literal cuando no hay análisis: `'Este issue no tiene respuestas de IA.'`.
+5. Éxito: Listado ordenado cronológicamente descendente de análisis guardados con opción de expandir detalles.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_109 — Eliminar una respuesta de IA almacenada (eliminación lógica)
+**Como** Administrador, Gerente o Desarrollador que solicitó el análisis  
+**Quiero** Eliminar una respuesta de IA que ya no sea relevante o contenga información errónea  
+**Para** Mantener limpio el historial de análisis del issue  
+
+### Criterios de aceptación:
+1. Dónde: Detalle o historial de respuestas de IA en el issue (`DELETE /api/v1/projects/{projectId}/issues/{issueId}/ai-analyses/{analysisId}`).
+2. Campos: Botón de eliminar con diálogo de confirmación: `'¿Está seguro de que desea eliminar esta respuesta de IA?'`.
+3. Validación: Restringido a Administradores, Gerentes o el usuario autor que solicitó el análisis. Bloqueado si el análisis está en estado de procesamiento (`status == 'PROCESSING'`).
+4. Restricción: Eliminación lógica (`deleted_at`, `deleted_by`), registro obligatorio en `audit_logs` con `action = 'ai_analysis.deleted'`. No modifica el estado del issue ni de tareas asociadas.
+5. Éxito: Mensaje literal `'Respuesta de IA eliminada correctamente.'`.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_110 — Manejo de errores específicos en el análisis de IA y reintento
+**Como** Administrador, Gerente o Desarrollador  
+**Quiero** Recibir mensajes de error comprensibles cuando falle el análisis de IA y poder reintentarlo  
+**Para** Saber qué ocurrió y reintentar sin necesidad de volver a subir la evidencia  
+
+### Criterios de aceptación:
+1. Dónde: Sección de análisis de IA ante fallos de procesamiento o validación.
+2. Campos: Mensaje de error tipado según código de falla y botón "Reintentar".
+3. Mapeo de errores:
+   - `EVIDENCE_LOAD_ERROR`: `'No fue posible cargar la evidencia.'`
+   - `UNSUPPORTED_FORMAT`: `'El formato de la evidencia no es admitido para el análisis.'`
+   - `AI_PROVIDER_ERROR`: `'El servicio de IA no pudo procesar la solicitud.'`
+   - `AI_OUTPUT_INVALID`: `'El servicio de IA no pudo procesar la solicitud.'`
+   - `AI_TIMEOUT`: `'El análisis excedió el tiempo de espera.'`
+   - `AI_QUOTA_EXHAUSTED`: `'Se agotó la cuota gratuita del servicio de IA. Intente más tarde.'`
+   - `NO_EVIDENCE`: `'El issue no tiene evidencia para analizar.'`
+   - `DAILY_LIMIT_REACHED`: `'Alcanzó el límite diario de solicitudes de IA.'`
+4. Validación: El reintento conserva la evidencia y el checkbox marcado, reintentando la llamada sin requerir subida de nuevo archivo.
+5. Éxito: Reintento exitoso o visualización de error amigable.
+
+**Estado:** COMPLETED
+
+---
+
+## Estado de implementación — EP-12 Análisis de IA por imagen y video (HU_DN_07_106 … HU_DN_07_113)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_07_106 | Implementado | Componente `AiAnalysisSection`, casilla de confirmación de privacidad ("Confirmo que la evidencia no contiene contraseñas, tokens ni datos personales."), botón reactivo, sondeo (polling) de estado cada 2 segundos y soporte de reuso inmediato por hash. Tests: `AiAnalysisSection.test.tsx`, `api.test.ts`. |
+| HU_DN_07_107 | Implementado | Tarjeta de resultado estructurada en 3 bloques (`problem_description`, `probable_cause`, `suggested_solution`) con límite <= 150 palabras, distintivo rojo en cabecera `'Sugerencia generada por IA no verificada'`, fallback de contexto insuficiente y texto plano escapado contra XSS. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_108 | Implementado | Sección de historial con solicitante, fecha formateada, insignia de estado de validación humana (`Pendiente de validación`, `Validada`, `Rechazada`), resumen colapsable y mensaje de estado vacío `'Este issue no tiene respuestas de IA.'`. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_109 | Implementado | Modal de confirmación con `ProjectModal` ('¿Está seguro de que desea eliminar esta respuesta de IA?'), control de roles para visualización de botón eliminar, eliminación lógica y actualización reactiva de la lista. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_110 | Implementado | Mapeo tipado en `AI_ERROR_CODE_MESSAGES` con todos los literales exactos y botón "Reintentar" sin re-subir la evidencia. Tests: `AiAnalysisSection.test.tsx`. |
+| HU_DN_07_111 | Implementado | Botón "Validar" en `AiAnalysisSection` para Administrador y Gerente sobre análisis en estado `PENDING_VALIDATION`, feedback por toast literal `'Respuesta de IA validada correctamente.'`, transición a insignia `Validada`. Tests: `AiAnalysisSection.test.tsx`, `api.test.ts`. |
+| HU_DN_07_112 | Implementado | Botón "Rechazar" en `AiAnalysisSection` para Administrador y Gerente (disponible en pendientes y validadas), feedback por toast literal `'Respuesta de IA rechazada.'`, transición a insignia `Rechazada`. Tests: `AiAnalysisSection.test.tsx`, `api.test.ts`. |
+| HU_DN_07_113 | Implementado | Banner de aviso visible `'Esta propuesta de IA no ha sido validada. Requiere validación de un Administrador o Gerente antes de actuar.'` con icono de advertencia (`AlertTriangle`) cuando `requires_human_validation` es true. Nota de validación `'Validada por {name} el {date}.'` con icono de éxito (`CheckCircle`). Contrato DA-08 Mutación Cero garantizado en UI y estado. Tests: `AiAnalysisSection.test.tsx`. |
+
+---
+
+## HU_DN_07_111 — Validar una respuesta de IA antes de actuar sobre ella
+**Como** Administrador o Gerente  
+**Quiero** Validar formalmente la sugerencia generada por la IA  
+**Para** Dejar constancia de que un humano calificado revisó y aprobó la solución propuesta  
+
+### Criterios de aceptación:
+1. Dónde: Sección de análisis de IA en la vista detallada de la incidencia.
+2. Acción: Botón "Validar". Visible solo para roles Administrador o Gerente; oculto para Desarrolladores.
+3. Validación de estado: Solo se pueden validar análisis en estado `PENDING_VALIDATION`.
+4. Registro de auditoría: Muestra la información de quién validó y fecha/hora.
+5. Éxito: Mensaje literal en toast `'Respuesta de IA validada correctamente.'` y el estado pasa a `Validada`.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_112 — Rechazar una respuesta de IA
+**Como** Administrador o Gerente  
+**Quiero** Rechazar una respuesta generada por la IA que considere incorrecta o inaplicable  
+**Para** Evitar que el equipo actúe basándose en una sugerencia no adecuada  
+
+### Criterios de aceptación:
+1. Dónde: Sección de análisis de IA en la vista detallada de la incidencia.
+2. Acción: Botón "Rechazar". Visible solo para roles Administrador o Gerente; oculto para Desarrolladores.
+3. Validación de estado: No se puede rechazar una respuesta que ya fue rechazada.
+4. Registro de auditoría: Muestra la información de quién rechazó y fecha/hora.
+5. Éxito: Mensaje literal en toast `'Respuesta de IA rechazada.'` y el estado pasa a `Rechazada`.
+
+**Estado:** COMPLETED
+
+---
+
+## HU_DN_07_113 — Visualizar un aviso de validación humana al generarse una propuesta de IA
+**Como** Desarrollador, Gerente o Administrador  
+**Quiero** Ver claramente una advertencia de que la propuesta de IA no está validada por humanos  
+**Para** Tomar precauciones y no aplicar cambios automáticamente sin la debida revisión técnica  
+
+### Criterios de aceptación:
+1. Dónde: Directamente bajo el encabezado y contenido del análisis de IA.
+2. Aviso: Mensaje literal `'Esta propuesta de IA no ha sido validada. Requiere validación de un Administrador o Gerente antes de actuar.'` acompañado de icono de advertencia (`AlertTriangle`), visible mientras `requires_human_validation` sea `true`.
+3. Estado validado: Cuando un Administrador o Gerente valida la respuesta, el aviso cambia a una nota informativa: `'Validada por {name} el {date}.'` acompañada de icono de confirmación (`CheckCircle`).
+4. DA-08 Mutación Cero: Ni la propuesta ni su validación/rechazo mutan de ninguna forma la incidencia (`fixes`) ni las tareas de usuario (`story_tasks`).
+
+**Estado:** COMPLETED
+
+---
+
+## Estado de implementación — EP-13 Métricas, valoración y registro de IA (HU_DN_08_114 … HU_DN_08_118)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_08_114 | Implementado | `ProjectAiMetricsTab` sección «Registro de interacciones» con filtros (usuario vía query, tipo, estado, fechas, valoración mínima), paginación 25, detalle lateral con texto completo y literales `'No hay interacciones de IA registradas.'` / `'No fue posible cargar la información. Intente nuevamente.'`. Tests: `api.test.ts`, `ProjectAiMetricsTab.test.tsx`. |
+| HU_DN_08_115 | Implementado | Selector de periodo, indicador de ámbito, tarjetas (interacciones, latencia, tokens in/out, audio), hora de corte y botón Actualizar. Ruta `/proyectos/:projectId/metricas-ia`. |
+| HU_DN_08_116 | Implementado | Tabla «Por usuario» con clic que filtra el registro por `user_id` en la URL. |
+| HU_DN_08_117 | Implementado | `AiRatingControl` con etiquetas 1–5, upsert vía `PUT /ai/interactions/{id}/rating`, toasts literales en asistente y `AiAnalysisSection` cuando existe `interaction_id`. Tests: `AiRatingControl.test.tsx`. |
+| HU_DN_08_118 | Implementado (v1) | Campos opcionales en respuesta de `text-generate`; tarjetas compactas y enlace «Ver en panel» en `AiAssistantWidget`. |
+
+---
+
+## Estado de implementación — EP-14 Notificaciones in-app (HU_DN_09_119 … HU_DN_09_123)
+
+| HU | Estado | Evidencia |
+| --- | --- | --- |
+| HU_DN_09_119 | Implementado | Campana global `NotificationBell` con badge (tope `99+`) para Administrador, Gerente y Desarrollador; reemplaza `notifyUnderDevelopment('notifications')`. |
+| HU_DN_09_120 | Implementado | Panel y página listan hasta 25 notificaciones; filtro «Solo no leídas»; vacío literal «No tiene notificaciones.». |
+| HU_DN_09_121 | Implementado | «Marcar todas como leídas», marcar una vía `POST /read`, «Eliminar todas» con modal de confirmación. |
+| HU_DN_09_122 | Implementado | Clic abre `POST /{id}/open` y navega si la ruta pertenece a prefijos permitidos; errores literales del backend en toast. |
+| HU_DN_09_123 | Implementado | Sondeo de contador cada 30 s, refresco al recuperar foco de ventana, pausa cuando `document.hidden`. |
+
+Ruta: `/notificaciones` (`PATHS.notifications`). Código: `src/features/notifications/`.
+

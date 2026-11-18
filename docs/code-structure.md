@@ -141,3 +141,64 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `api.ts`: `postVoiceProcess`, `postTextGenerate`
   - `messages.ts`, `types.ts`, `escapeHtml.ts`
   - `AiAssistantWidget.test.tsx`: a11y (jest-axe) y apertura/cierre por teclado
+
+
+## EP-11 — Issues y evidencias (HU_DN_07_97 … HU_DN_07_105)
+
+- Ruta: `/proyectos/:projectId/issues` → `ProjectIssuesTab.tsx` (pestaña Issues activada como `implemented: true` en `projectWorkspaceTabs.ts`).
+- `src/features/issues/`:
+  - `types.ts`: `Issue`, `Evidence`, `IssueSeverity`, `IssueType`, `IssueStatus`, `EvidenceType`, `IssueDetail`, `CreateIssuePayload`, `IssueListResponse`, `AssignIssuePayload`, `ResolveIssuePayload`, `CloseIssuePayload`, `ReportTaskFixPayload`, `IssueOperationResponse`, `RestorableTaskStatus`, `RESTORABLE_TASK_STATUS_OPTIONS`
+  - `messages.ts`: literales de validación, límites de peso, duplicados, estado vacío y textos de asignación, resolución, cierre, conflicto 409 y bloqueo por otros issues abiertos exactamente alineados con backend
+  - `validation.ts`: validación en cliente para creación de issue, archivos de evidencia y nota de resolución (`validateResolutionNote`)
+  - `api.ts`: cliente HTTP (`listIssues`, `createIssue`, `getIssueDetail`, `attachEvidence`, `assignIssue`, `resolveIssue`, `closeIssue`, `reportTaskFix`) con soporte de `Idempotency-Key` y subida multipart
+  - `components/CreateIssueModal.tsx`: modal reutilizable para registro de nuevo fix o reporte desde tarea (`Reportar fix` con título prellenado) con validaciones inline
+  - `components/ResolveIssueModal.tsx`: modal de resolución y cierre (`resolve`/`close`) con nota obligatoria (<=2000 caracteres), selector condicional `Estado de la tarea` y aviso de bloqueo cuando `other_open_issues_count > 0`
+  - `components/AddEvidenceModal.tsx`: modal para adjuntar evidencia (imagen, video, registro) con barra de progreso y validación previa de tamaño
+  - `ProjectIssuesTab.tsx`: pestaña completa con filtros por Estado, Severidad y Tipo (`useSearchParams`), botón "Nuevo fix", vista dividida listado y detalle, selector de `Responsable`, acciones `Resolver` / `Cerrar issue`, badge de tarea vinculada, recarga ante 409, previsualización de evidencias y sección consultiva de IA (DA-08)
+  - `ProjectIssuesTab.test.tsx`, `validation.test.ts`, `api.test.ts`, `components/ResolveIssueModal.test.tsx`: tests unitarios y de integración para HU_DN_07_97 a HU_DN_07_105
+- `src/features/backlog/`:
+  - `TaskWorkModal.tsx`: acción `Reportar fix` desde detalle/edición de tarea en Backlog con apertura de `CreateIssueModal` y transición atómica a `CORRECTION`
+  - `UserStoryReaderPage.tsx`: indicador visual `En corrección` para tareas en estado `CORRECTION`
+  - `TaskWorkModal.test.tsx`: pruebas de integración de `Reportar fix` desde Backlog (`HU_DN_07_104`)
+- `src/features/kanban/`:
+  - `components/KanbanCard.tsx` y `ProjectKanbanTab.tsx`: estilo destacado para tarjetas en `CORRECTION`, acción `Reportar fix` desde tarjeta Kanban y recarga del tablero tras creación atómica
+  - `ProjectKanbanTab.test.tsx`: pruebas de flujo `Reportar fix` en Kanban (`HU_DN_07_104`)
+
+## EP-12 — Análisis de IA por imagen y video (HU_DN_07_106 … HU_DN_07_113)
+
+- `src/features/issues/`:
+  - `types.ts`: `AiAnalysisStatus`, `AiValidationStatus`, `AiAnalysisResult`, `RequestAiAnalysisPayload`, `RequestAiAnalysisResponse`, `AiAnalysisStatusResponse`, `AiAnalysisListItem`, `AiAnalysisListResponse`, `ValidateAiAnalysisResponse`, `RejectAiAnalysisResponse`.
+  - `messages.ts`: Literales de EP-12 (`AI_CONFIRMATION_CHECKBOX`, `AI_ANALYSIS_REQUESTED`, `AI_ANALYSIS_REUSED`, `AI_DELETE_CONFIRM_TITLE`, `AI_DELETE_CONFIRM_TEXT`, `AI_DELETE_SUCCESS`, `AI_NO_RESPONSES`, `AI_UNVERIFIED_LABEL`, `AI_INSUFFICIENT_CONTEXT`, `AI_VALIDATE_SUCCESS`, `AI_REJECT_SUCCESS`, `AI_HUMAN_VALIDATION_NOTICE`, etc.) y diccionario de errores `AI_ERROR_CODE_MESSAGES`.
+  - `api.ts`: Métodos de cliente `requestAiAnalysis`, `getAiAnalysisStatus`, `listAiAnalyses`, `deleteAiAnalysis`, `validateAiAnalysis`, `rejectAiAnalysis`.
+  - `api.test.ts`: Pruebas de cliente HTTP para los endpoints de análisis de IA (6 tests).
+  - `components/AiAnalysisSection.tsx`: Sección completa de análisis visual de IA:
+    - Casilla de confirmación obligatoria de privacidad por evidencia visual.
+    - Botón "Analizar con IA" y temporizador de sondeo de estado (polling cada 2s hasta 30s).
+    - Tarjeta de respuesta estructurada en 3 bloques con distintivo visual rojo `'Sugerencia generada por IA no verificada'`.
+    - Historial de análisis guardados con nombre del solicitante, fecha, estado de validación humana y botón de detalle.
+    - Diálogo modal de confirmación con `ProjectModal` para eliminación lógica (soft delete).
+    - Manejo tipado de errores específicos con botón "Reintentar" sin re-subir la evidencia.
+    - Validación y rechazo humano (HU_DN_07_111, HU_DN_07_112) con botones "Validar" y "Rechazar" protegidos por RBAC (Admin/Manager).
+    - Banner de advertencia de validación humana pendiente con icono de alerta y nota informativa con icono de éxito al validarse (HU_DN_07_113).
+  - `components/AiAnalysisSection.test.tsx`: Suite completa de 9 tests de integración de componentes cubriendo exhaustivamente HU_DN_07_106 a HU_DN_07_113.
+  - `ProjectIssuesTab.tsx`: Integración de `AiAnalysisSection` en el panel de detalle de cada issue, transmitiendo `currentUser` completo.
+
+## EP-13 — Métricas, valoración y registro de IA (HU_DN_08_114 … HU_DN_08_118)
+
+- Ruta: `/proyectos/:projectId/metricas-ia` → `ProjectAiMetricsTab.tsx` (pestaña activa en `projectWorkspaceTabs.ts`, roles admin/manager).
+- `src/features/ai-metrics/`:
+  - `messages.ts`, `types.ts`, `api.ts`: cliente HTTP hacia `/ai/metrics/*` y `PUT /ai/interactions/{id}/rating`.
+  - `ProjectAiMetricsTab.tsx`: panel (HU 115), registro (HU 114), por usuario (HU 116).
+  - `api.test.ts`, `ProjectAiMetricsTab.test.tsx`.
+- `src/features/ai-assistant/AiRatingControl.tsx` (HU 117) integrado en `AiAssistantWidget.tsx` y `AiAnalysisSection.tsx`.
+- `types.ts` del asistente: campos opcionales `interaction_id`, `intent`, `data`, `panel_link` (HU 118 v1).
+
+## EP-14 — Notificaciones in-app (HU_DN_09_119 … HU_DN_09_123)
+
+- Ruta: `/notificaciones` → `NotificationsPage.tsx` (`PATHS.notifications`, `RequireAuth`, todos los roles).
+- `HeaderTools.tsx`: `NotificationBell` sustituye el stub de «en desarrollo» para cualquier usuario autenticado.
+- `src/features/notifications/`:
+  - `api.ts`: `GET /notifications`, `GET /notifications/unread-count`, `POST /read`, `read-all`, `delete-all`, `/{id}/open`.
+  - `useNotificationPolling.ts`: sondeo cada 30 s, refresco al recuperar foco, pausa con `document.hidden`.
+  - `NotificationBell.tsx`, `NotificationList.tsx`, `NotificationsPage.tsx`, `messages.ts`, `types.ts`.
+  - `formatUnreadBadge.test.ts`, `api.test.ts`.

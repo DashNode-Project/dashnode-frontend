@@ -10,13 +10,13 @@ import {
 } from '@/lib/underDevelopment';
 import { currentPath, renderApp, signIn } from '@/test/app';
 import { makeSession } from '@/test/factories';
-import { mockApi, ok } from '@/test/fetchMock';
+import { apiError, mockApi, mockFetch, ok } from '@/test/fetchMock';
 import type { Role } from '@/features/auth/types';
 
 const EXPECTED_NAV: Record<Role, string[]> = {
   admin: [],
-  manager: ['Mis tareas'],
-  developer: ['Mis tareas'],
+  manager: [],
+  developer: [],
 };
 
 async function authenticated(role: Role) {
@@ -92,15 +92,22 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     expect(home).toHaveAttribute('aria-current', 'page');
   });
 
-  it('search opens the command palette; notifications log the notice', async () => {
+  it('search opens the command palette; notifications opens the inbox panel', async () => {
     const info = await authenticated('developer');
+    mockFetch((call) => {
+      if (call.url.endsWith('/notifications/unread-count')) return ok({ count: 0 });
+      if (call.url.includes('/notifications?')) return ok({ items: [], next_cursor: null });
+      return apiError(404, 'NOT_FOUND', 'Not found');
+    });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Buscar/i }));
     expect(await screen.findByRole('dialog', { name: 'Búsqueda rápida' })).toBeInTheDocument();
     info.mockClear();
     await user.click(screen.getByRole('button', { name: 'Notificaciones' }));
-    expect(info).toHaveBeenCalledTimes(1);
-    expect(info.mock.calls[0]?.[0]).toBe(UNDER_DEVELOPMENT_MESSAGE);
+    expect(info).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole('dialog', { name: 'Notificaciones' }),
+    ).toBeInTheDocument();
   });
 
   it('the floating AI assistant opens its chat panel (HU_DN_06_90)', async () => {
@@ -113,9 +120,9 @@ describe('features outside EP-01 log "Funcionalidad en desarrollo, no disponible
     ).toBeInTheDocument();
   });
 
-  it('the administrator has no notifications control', async () => {
+  it('the administrator sees the notifications control', async () => {
     await authenticated('admin');
-    expect(screen.queryByRole('button', { name: 'Notificaciones' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Notificaciones' })).toBeInTheDocument();
   });
 
   it("'¿Olvidó su contraseña?' navigates to the reset request screen (HU_DN_01_06)", async () => {

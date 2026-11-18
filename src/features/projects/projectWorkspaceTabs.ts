@@ -53,7 +53,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'issues',
     label: 'Issues',
     roles: ['admin', 'manager', 'developer'],
-    implemented: false,
+    implemented: true,
   },
   {
     segment: 'conocimiento',
@@ -71,7 +71,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'metricas-ia',
     label: 'Métricas de IA',
     roles: ['admin', 'manager'],
-    implemented: false,
+    implemented: true,
   },
 ];
 

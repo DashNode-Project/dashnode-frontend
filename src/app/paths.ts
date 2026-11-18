@@ -19,6 +19,7 @@ export const PATHS = {
   invitation: '/invitacion',
   calendar: '/calendario',
   userManual: '/manual-usuario',
+  notifications: '/notificaciones',
 } as const;
 
 export function projectTabPath(projectId: string, tab: string): string {

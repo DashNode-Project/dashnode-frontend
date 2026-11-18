@@ -95,6 +95,10 @@ export interface ProjectHealth {
   progress_percent: number;
   velocity: number;
   open_issues: number;
+  user_stories_count?: number;
+  tasks_count?: number;
+  completed_story_points?: number;
+  total_story_points?: number;
 }
 
 export async function listProjectMembers(projectId: string): Promise<ProjectMemberRow[]> {

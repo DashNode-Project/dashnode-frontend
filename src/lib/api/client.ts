@@ -6,6 +6,7 @@ interface RequestOptions {
   body?: unknown;
   signal?: AbortSignal;
   timeoutMs?: number;
+  headers?: Record<string, string>;
 }
 
 interface FormRequestOptions {
@@ -26,7 +27,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort);
 
-  const headers: Record<string, string> = { Accept: 'application/json' };
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...(options.headers || {}),
+  };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
   let response: Response;

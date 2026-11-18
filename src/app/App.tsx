@@ -43,6 +43,9 @@ const ProjectLegacyTabRedirect = lazy(() =>
   })),
 );
 const ProjectKnowledgeTab = lazy(() => import('@/features/documentation/ProjectKnowledgeTab'));
+const ProjectIssuesTab = lazy(() => import('@/features/issues/ProjectIssuesTab'));
+const ProjectAiMetricsTab = lazy(() => import('@/features/ai-metrics/ProjectAiMetricsTab'));
+const NotificationsPage = lazy(() => import('@/features/notifications/NotificationsPage'));
 
 function PageLoading() {
   return (
@@ -78,6 +81,7 @@ export function AppRoutes() {
                     <Route path={PATHS.permissions} element={<PermissionsPage />} />
                     <Route path={PATHS.userManual} element={<UserManualPage />} />
                     <Route path={PATHS.myTasks} element={<MyTasksPage />} />
+                    <Route path={PATHS.notifications} element={<NotificationsPage />} />
                     <Route element={<RequireRole allow={['manager', 'developer']} />}>
                       <Route path={PATHS.projects} element={<ProjectsPage />} />
                       <Route path={PATHS.availability} element={<AvailabilityPage />} />
@@ -108,6 +112,9 @@ export function AppRoutes() {
                           element={<ProjectLegacyTabRedirect target="tareas/kanban" />}
                         />
                         <Route path="conocimiento" element={<ProjectKnowledgeTab />} />
+                        <Route path="issues" element={<ProjectIssuesTab />} />
+                        <Route path="metricas-ia" element={<ProjectAiMetricsTab />} />
+                        <Route path="fixes" element={<Navigate to="../issues" replace />} />
                         <Route path=":moduleTab" element={<ProjectModulePlaceholder />} />
                       </Route>
                     </Route>

@@ -1,10 +1,9 @@
 import type { MeetingDTO } from '@/features/availability/types';
+import { projectLocalHm, projectLocalYmd } from '@/lib/projectLocalTime';
 
 export function nowDateAndTime(): { today: string; time: string } {
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const time = now.toTimeString().slice(0, 5);
-  return { today, time };
+  return { today: projectLocalYmd(now), time: projectLocalHm(now) };
 }
 
 /** True when the meeting slot has ended (or was marked completed/cancelled). */

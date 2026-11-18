@@ -20,4 +20,11 @@ describe('projectWorkspaceTabs', () => {
     expect(tab).toBeDefined();
     expect(tab?.implemented).toBe(true);
   });
+
+  it('marks metricas-ia tab as implemented for managers', () => {
+    const tab = PROJECT_WORKSPACE_TABS.find((t) => t.segment === 'metricas-ia');
+    expect(tab).toBeDefined();
+    expect(tab?.implemented).toBe(true);
+    expect(visibleProjectTabs('manager').some((t) => t.segment === 'metricas-ia')).toBe(true);
+  });
 });

@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — EP-14 Notificaciones in-app
+
+### Added
+
+- Módulo `src/features/notifications/`: API, campana con contador (tope `99+`), panel desplegable, página `/notificaciones`, sondeo cada 30 s y apertura con navegación a ruta permitida.
+
+## [Unreleased] — EP-13 Métricas, valoración y registro de IA
+
+### Added
+
+- Pestaña `metricas-ia` (`ProjectAiMetricsTab`): resumen, registro paginado y métricas por usuario (HU_DN_08_114–116).
+- Cliente `src/features/ai-metrics/` y valoración `AiRatingControl` (HU_DN_08_117) en asistente y análisis de issues.
+- Respuesta del asistente con tarjetas de métricas y enlace «Ver en panel» (HU_DN_08_118 v1).
+
 ## [0.2.0] - 2026-10-12
 
 ### Added
