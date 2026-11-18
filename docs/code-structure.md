@@ -182,3 +182,13 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
     - Banner de advertencia de validación humana pendiente con icono de alerta y nota informativa con icono de éxito al validarse (HU_DN_07_113).
   - `components/AiAnalysisSection.test.tsx`: Suite completa de 9 tests de integración de componentes cubriendo exhaustivamente HU_DN_07_106 a HU_DN_07_113.
   - `ProjectIssuesTab.tsx`: Integración de `AiAnalysisSection` en el panel de detalle de cada issue, transmitiendo `currentUser` completo.
+
+## EP-13 — Métricas, valoración y registro de IA (HU_DN_08_114 … HU_DN_08_118)
+
+- Ruta: `/proyectos/:projectId/metricas-ia` → `ProjectAiMetricsTab.tsx` (pestaña activa en `projectWorkspaceTabs.ts`, roles admin/manager).
+- `src/features/ai-metrics/`:
+  - `messages.ts`, `types.ts`, `api.ts`: cliente HTTP hacia `/ai/metrics/*` y `PUT /ai/interactions/{id}/rating`.
+  - `ProjectAiMetricsTab.tsx`: panel (HU 115), registro (HU 114), por usuario (HU 116).
+  - `api.test.ts`, `ProjectAiMetricsTab.test.tsx`.
+- `src/features/ai-assistant/AiRatingControl.tsx` (HU 117) integrado en `AiAssistantWidget.tsx` y `AiAnalysisSection.tsx`.
+- `types.ts` del asistente: campos opcionales `interaction_id`, `intent`, `data`, `panel_link` (HU 118 v1).

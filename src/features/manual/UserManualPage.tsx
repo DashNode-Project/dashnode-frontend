@@ -2,17 +2,8 @@ import { Shield } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Card, SectionHeader } from '@/components/ui/demo-ui';
 import { PERMISSIONS_MATRIX } from '@/features/permissions/permissionsMatrix';
-
-const shortcuts = [
-  { keys: 'Ctrl + K', action: 'Abrir búsqueda rápida (paleta de comandos)' },
-  { keys: 'Ctrl + /', action: 'Enfocar búsqueda rápida cuando la paleta está abierta' },
-  { keys: 'Esc', action: 'Cerrar paleta, menús desplegables o diálogos modales' },
-  { keys: 'Tab', action: 'Avanzar entre controles interactivos visibles' },
-  { keys: 'Shift + Tab', action: 'Retroceder entre controles interactivos' },
-  { keys: 'Enter', action: 'Activar botón o enlace enfocado' },
-  { keys: 'Inicio', action: 'Ir al panel principal de su rol (desde la barra lateral)' },
-  { keys: 'Ctrl + Shift + M', action: 'Abrir Mis tareas' },
-];
+import { KEYBOARD_SHORTCUTS } from '@/lib/keyboardShortcuts';
+import { SystemKnowledgePanel } from './SystemKnowledgePanel';
 
 function cell(value: boolean): string {
   return value ? 'Sí' : 'No';
@@ -25,6 +16,8 @@ export default function UserManualPage() {
         title="Manual de usuario"
         subtitle="Atajos de teclado, accesibilidad y permisos por rol"
       />
+
+      <SystemKnowledgePanel />
 
       <Card className="mb-6 p-6">
         <h2 className="mb-3 text-lg font-semibold text-[#F9FAFB]">Invitación de desarrollador</h2>
@@ -39,7 +32,7 @@ export default function UserManualPage() {
           <span className="text-[#F9FAFB]">Cmd</span> en lugar de Ctrl cuando aplique.
         </p>
         <ul className="divide-y divide-white/6">
-          {shortcuts.map((s) => (
+          {KEYBOARD_SHORTCUTS.map((s) => (
             <li key={s.keys} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <kbd className="rounded-md border border-white/15 bg-[#0A0B0E] px-2 py-1 text-xs font-semibold text-[#F9FAFB]">
                 {s.keys}

@@ -71,7 +71,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'metricas-ia',
     label: 'Métricas de IA',
     roles: ['admin', 'manager'],
-    implemented: false,
+    implemented: true,
   },
 ];
 

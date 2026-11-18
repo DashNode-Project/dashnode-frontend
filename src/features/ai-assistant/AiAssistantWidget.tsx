@@ -19,15 +19,24 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { useMatch } from 'react-router';
+import { Link, useMatch } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { useAuth } from '@/features/auth/AuthContext';
+import { AI_METRICS_ASSISTANT_MESSAGES } from '@/features/ai-metrics/messages';
 import { getProject } from '@/features/projects/api';
 import { ApiError, isTechnicalFailure, NetworkError, RequestTimeoutError } from '@/lib/api/errors';
 import { fetchChatHistory, postTextGenerate, postVoiceTranscribe } from './api';
+import { AiRatingControl } from './AiRatingControl';
 import { escapeHtml } from './escapeHtml';
 import { AI_MESSAGES } from './messages';
-import type { AssistantState, ChatMessage, PendingRetry, ProcessingMode } from './types';
+import type {
+  AssistantState,
+  ChatMessage,
+  MetricsAssistantPayload,
+  PendingRetry,
+  ProcessingMode,
+  VoiceProcessResult,
+} from './types';
 import { mapVoiceCaptureError, useVoiceCapture } from './useVoiceCapture';
 import {
   clampChatPanelSize,
@@ -47,6 +56,97 @@ function mapHistoryMessages(payload: Awaited<ReturnType<typeof fetchChatHistory>
     text: item.text,
     inputSource: item.input_source ?? undefined,
   }));
+}
+
+function metricsPayloadFromResult(result: VoiceProcessResult): MetricsAssistantPayload | null {
+  if (!result.intent?.startsWith('METRICS') && !result.data && !result.panel_link) return null;
+  return {
+    intent: result.intent,
+    period: result.period,
+    scope: result.scope,
+    data: result.data,
+    panel_link: result.panel_link,
+    computed_at: result.computed_at,
+    clarification: result.clarification,
+  };
+}
+
+function enrichMessagesWithResult(messages: ChatMessage[], result: VoiceProcessResult): ChatMessage[] {
+  const hasMeta = Boolean(
+    result.interaction_id || result.intent?.startsWith('METRICS') || result.data || result.panel_link,
+  );
+  if (!hasMeta) return messages;
+  const lastAssistantIndex = [...messages]
+    .map((m, index) => ({ m, index }))
+    .reverse()
+    .find(({ m }) => m.role === 'assistant')?.index;
+  if (lastAssistantIndex === undefined) return messages;
+  const metricsData = metricsPayloadFromResult(result);
+  return messages.map((m, index) =>
+    index === lastAssistantIndex
+      ? {
+          ...m,
+          interactionId: result.interaction_id ?? m.interactionId,
+          metricsData: metricsData ?? m.metricsData,
+        }
+      : m,
+  );
+}
+
+function resolvePanelHref(panelLink: string | null | undefined, projectId: string | null): string | null {
+  if (!panelLink) return null;
+  try {
+    const url = new URL(panelLink, 'http://dashnode.local');
+    const period = url.searchParams.get('period') ?? '7d';
+    const scopedProject = url.searchParams.get('project') ?? projectId;
+    if (!scopedProject) return null;
+    return `${PATHS.projects}/${scopedProject}/metricas-ia?period=${encodeURIComponent(period)}`;
+  } catch {
+    return projectId ? `${PATHS.projects}/${projectId}/metricas-ia` : null;
+  }
+}
+
+function AssistantMetricsCards({
+  data,
+  panelLink,
+  projectId,
+}: {
+  data: Record<string, number>;
+  panelLink?: string | null;
+  projectId: string | null;
+}) {
+  const href = resolvePanelHref(panelLink, projectId);
+  const cards = [
+    { label: 'Interacciones', key: 'total_interactions' },
+    { label: 'Latencia prom. (ms)', key: 'avg_latency_ms' },
+    { label: 'Tokens entrada', key: 'tokens_input' },
+    { label: 'Tokens salida', key: 'tokens_output' },
+  ].filter((c) => data[c.key] !== undefined);
+
+  if (cards.length === 0 && !href) return null;
+
+  return (
+    <div className="mt-2 space-y-2 border-t border-white/10 pt-2">
+      {cards.length > 0 ? (
+        <div className="grid grid-cols-2 gap-1.5">
+          {cards.map((card) => (
+            <div
+              key={card.key}
+              className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[10px]"
+            >
+              <p className="text-[#9CA3AF]">{card.label}</p>
+              <p className="font-semibold text-violet-200">{data[card.key]}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {href ? (
+        <Link to={href} className="text-[11px] font-medium text-violet-300 underline hover:text-violet-200">
+          {AI_METRICS_ASSISTANT_MESSAGES.viewInPanel}
+        </Link>
+      ) : null}
+    </div>
+  );
 }
 
 function isVoiceNotUnderstood(error: unknown): boolean {
@@ -279,18 +379,23 @@ export function AiAssistantWidget() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open]);
 
-  const reloadHistory = useCallback(async () => {
-    setHistoryLoading(true);
-    try {
-      const payload = await fetchChatHistory();
-      setMessages(mapHistoryMessages(payload));
-      scrollToLatest(true);
-    } catch {
-      setMessages([]);
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, [scrollToLatest]);
+  const reloadHistory = useCallback(
+    async (enrich?: VoiceProcessResult) => {
+      setHistoryLoading(true);
+      try {
+        const payload = await fetchChatHistory();
+        let mapped = mapHistoryMessages(payload);
+        if (enrich) mapped = enrichMessagesWithResult(mapped, enrich);
+        setMessages(mapped);
+        scrollToLatest(true);
+      } catch {
+        setMessages([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    },
+    [scrollToLatest],
+  );
 
   const visibleMessages = user?.id ? messages : [];
 
@@ -325,7 +430,7 @@ export function AiAssistantWidget() {
           setBannerError(result.error ?? AI_MESSAGES.aiProcessing);
           setPendingRetry({ kind: 'text', text: trimmed });
         }
-        void reloadHistory();
+        await reloadHistory(result);
       } catch (error) {
         if (!mountedRef.current) return;
         setAssistantState('ERROR');
@@ -397,7 +502,7 @@ export function AiAssistantWidget() {
             voiceTranscribed: true,
           });
         }
-        void reloadHistory();
+        await reloadHistory(result);
       } catch (error) {
         if (!mountedRef.current) return;
         setAssistantState('ERROR');
@@ -568,6 +673,16 @@ export function AiAssistantWidget() {
                     </p>
                   ) : null}
                   <span dangerouslySetInnerHTML={{ __html: escapeHtml(message.text) }} />
+                  {message.role === 'assistant' && message.metricsData?.data ? (
+                    <AssistantMetricsCards
+                      data={message.metricsData.data}
+                      panelLink={message.metricsData.panel_link}
+                      projectId={projectId}
+                    />
+                  ) : null}
+                  {message.role === 'assistant' && message.interactionId ? (
+                    <AiRatingControl interactionId={message.interactionId} />
+                  ) : null}
                 </div>
               </div>
             ))}

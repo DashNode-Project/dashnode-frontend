@@ -411,6 +411,24 @@ Proxy `/api` → backend. Pestaña `/proyectos/:id/sprints`:
 
 ---
 
+## Épica 13: Métricas, valoración y registro de IA (HU_DN_08_114 … HU_DN_08_118)
+
+| Método | Endpoint | Rol | Uso en frontend |
+|---|---|---|---|
+| `GET` | `/api/v1/ai/metrics/summary` | Admin, Gerente | Tarjetas KPI y ámbito en `ProjectAiMetricsTab` |
+| `GET` | `/api/v1/ai/metrics/by-user` | Admin, Gerente | Sección por usuario |
+| `GET` | `/api/v1/ai/metrics/interactions` | Admin, Gerente | Registro paginado (25) con filtros en URL |
+| `GET` | `/api/v1/ai/metrics/interactions/{id}` | Admin, Gerente | Panel lateral de detalle |
+| `PUT` | `/api/v1/ai/interactions/{id}/rating` | Solicitante | `AiRatingControl` |
+
+| Historia | Frontend | Mensajes / reglas |
+|---|---|---|
+| HU_DN_08_114 | Registro + detalle | `'No hay interacciones de IA registradas.'`, truncado en tabla, 403 con texto literal del Anexo F |
+| HU_DN_08_115 | Resumen + periodo | `'No fue posible cargar la información. Intente nuevamente.'`, hora de corte |
+| HU_DN_08_116 | Tabla por usuario | Clic → `user_id` en query del registro |
+| HU_DN_08_117 | Valoración 1–5 | `'Gracias por su valoración.'`, `'La valoración debe estar entre 1 y 5.'` |
+| HU_DN_08_118 | Widget asistente | `panel_link`, mini tarjetas, «Ver en panel» |
+
 ## Épica 12: Análisis de IA por imagen y video (HU_DN_07_106 … HU_DN_07_110)
 
 ### Contrato Compartido de API y Respuestas
