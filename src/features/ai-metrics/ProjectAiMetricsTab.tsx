@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/demo-ui';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { useToast } from '@/lib/toast/ToastProvider';
+import { useProjectWorkspace } from '@/features/projects/ProjectWorkspaceContext';
 import {
   getInteractionDetail,
   getMetricsByUser,
@@ -67,6 +68,7 @@ function scopeLabel(summary: MetricsSummary | null, projectName?: string): strin
 
 export default function ProjectAiMetricsTab() {
   const { projectId = '' } = useParams<{ projectId: string }>();
+  const { project } = useProjectWorkspace();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
@@ -279,7 +281,7 @@ export default function ProjectAiMetricsTab() {
             <Activity size={18} className="text-violet-400" />
             {AI_METRICS_MESSAGES.sectionSummary}
           </h2>
-          <p className="mt-1 text-xs text-[#9CA3AF]">{scopeLabel(summary)}</p>
+          <p className="mt-1 text-xs text-[#9CA3AF]">{scopeLabel(summary, project.name)}</p>
           {summary?.computed_at ? (
             <p className="text-[11px] text-[#6B7280]">
               {AI_METRICS_MESSAGES.computedAt(formatComputedAt(summary.computed_at))}

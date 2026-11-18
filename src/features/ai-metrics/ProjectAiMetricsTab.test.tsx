@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { ToastProvider } from '@/lib/toast/ToastProvider';
+import { ProjectWorkspaceProvider } from '@/features/projects/ProjectWorkspaceContext';
 import ProjectAiMetricsTab from './ProjectAiMetricsTab';
 import * as api from './api';
 import { AI_METRICS_MESSAGES } from './messages';
@@ -39,11 +40,32 @@ describe('ProjectAiMetricsTab', () => {
   it('renders KPI summary and sections', async () => {
     render(
       <ToastProvider>
-        <MemoryRouter initialEntries={['/proyectos/p-1/metricas-ia']}>
-          <Routes>
-            <Route path="/proyectos/:projectId/metricas-ia" element={<ProjectAiMetricsTab />} />
-          </Routes>
-        </MemoryRouter>
+        <ProjectWorkspaceProvider
+          value={{
+            project: {
+              id: 'p-1',
+              name: 'DashNode',
+              description: '',
+              status: 'activo',
+              priority: 'media',
+              tech_stack: [],
+              meeting_link: null,
+              manager_id: 'm-1',
+              owner_id: 'o-1',
+              created_at: '2026-01-01T00:00:00Z',
+              updated_at: '2026-01-01T00:00:00Z',
+            },
+            reload: vi.fn(),
+            canManage: true,
+            isAdmin: false,
+          }}
+        >
+          <MemoryRouter initialEntries={['/proyectos/p-1/metricas-ia']}>
+            <Routes>
+              <Route path="/proyectos/:projectId/metricas-ia" element={<ProjectAiMetricsTab />} />
+            </Routes>
+          </MemoryRouter>
+        </ProjectWorkspaceProvider>
       </ToastProvider>,
     );
 

@@ -28,7 +28,12 @@ type RawSummaryPayload = {
     total_interactions?: number;
     average_latency_ms?: number;
     total_tokens?: number;
+    input_tokens?: number;
+    output_tokens?: number;
+    audio_duration_ms?: number;
   };
+  managed_project_count?: number;
+  scope_name?: string;
   total_interactions?: number;
   avg_latency_ms?: number;
   tokens?: { input: number; output: number };
@@ -43,12 +48,23 @@ function mapSummaryResponse(body: RawSummaryPayload, projectId?: string): Metric
   const nested = body.summary ?? {};
   const period = body.period ?? { from: '', to: '' };
   const totalTokens = nested.total_tokens ?? 0;
+  const inputTokens = nested.input_tokens ?? totalTokens;
+  const outputTokens = nested.output_tokens ?? 0;
+  const audioSeconds = Math.round((nested.audio_duration_ms ?? 0) / 1000);
   const scope =
     typeof body.scope === 'object' && body.scope?.type
       ? (body.scope as MetricsSummary['scope'])
       : projectId
-        ? { type: 'PROJECT' as const, project_id: projectId }
-        : { type: 'PROJECTS' as const, name: String(body.scope ?? 'Proyectos gestionados') };
+        ? {
+            type: 'PROJECT' as const,
+            project_id: projectId,
+            name: body.scope_name,
+          }
+        : {
+            type: 'PROJECTS' as const,
+            name: String(body.scope ?? 'Proyectos gestionados'),
+            project_count: body.managed_project_count,
+          };
   return {
     period: {
       from: period.from,
@@ -58,8 +74,8 @@ function mapSummaryResponse(body: RawSummaryPayload, projectId?: string): Metric
     scope,
     total_interactions: nested.total_interactions ?? body.total_interactions ?? 0,
     avg_latency_ms: nested.average_latency_ms ?? body.avg_latency_ms ?? 0,
-    tokens: body.tokens ?? { input: totalTokens, output: 0 },
-    audio_seconds: body.audio_seconds ?? 0,
+    tokens: body.tokens ?? { input: inputTokens, output: outputTokens },
+    audio_seconds: body.audio_seconds ?? audioSeconds,
     computed_at: body.computed_at ?? new Date().toISOString(),
   };
 }
@@ -105,7 +121,7 @@ type RawInteractionRow = Record<string, unknown>;
 
 function mapInteractionRow(row: RawInteractionRow): InteractionListItem {
   if (row.user && typeof row.requested_at === 'string') {
-    return row as InteractionListItem;
+    return row as unknown as InteractionListItem;
   }
   const userId = String(row.user_id ?? '');
   const requestText = String(row.request_text ?? '');
@@ -142,7 +158,7 @@ function mapInteractionsResponse(body: {
 
 function mapInteractionDetail(body: Record<string, unknown>): InteractionDetail {
   if (body.query_text && body.user) {
-    return body as InteractionDetail;
+    return body as unknown as InteractionDetail;
   }
   const nested = (body.interaction ?? body) as Record<string, unknown>;
   const audioMs = Number(nested.audio_duration_ms ?? 0);
