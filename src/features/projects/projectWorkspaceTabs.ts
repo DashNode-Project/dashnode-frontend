@@ -65,7 +65,7 @@ export const PROJECT_WORKSPACE_TABS: ProjectWorkspaceTab[] = [
     segment: 'devops',
     label: 'DevOps',
     roles: ['admin', 'manager', 'developer'],
-    implemented: false,
+    implemented: true,
   },
   {
     segment: 'metricas-ia',
