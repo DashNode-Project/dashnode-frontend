@@ -71,9 +71,15 @@ function metricsPayloadFromResult(result: VoiceProcessResult): MetricsAssistantP
   };
 }
 
-function enrichMessagesWithResult(messages: ChatMessage[], result: VoiceProcessResult): ChatMessage[] {
+function enrichMessagesWithResult(
+  messages: ChatMessage[],
+  result: VoiceProcessResult,
+): ChatMessage[] {
   const hasMeta = Boolean(
-    result.interaction_id || result.intent?.startsWith('METRICS') || result.data || result.panel_link,
+    result.interaction_id ||
+    result.intent?.startsWith('METRICS') ||
+    result.data ||
+    result.panel_link,
   );
   if (!hasMeta) return messages;
   const lastAssistantIndex = [...messages]
@@ -93,7 +99,10 @@ function enrichMessagesWithResult(messages: ChatMessage[], result: VoiceProcessR
   );
 }
 
-function resolvePanelHref(panelLink: string | null | undefined, projectId: string | null): string | null {
+function resolvePanelHref(
+  panelLink: string | null | undefined,
+  projectId: string | null,
+): string | null {
   if (!panelLink) return null;
   try {
     const url = new URL(panelLink, 'http://dashnode.local');
@@ -141,7 +150,10 @@ function AssistantMetricsCards({
         </div>
       ) : null}
       {href ? (
-        <Link to={href} className="text-[11px] font-medium text-violet-300 underline hover:text-violet-200">
+        <Link
+          to={href}
+          className="text-[11px] font-medium text-violet-300 underline hover:text-violet-200"
+        >
           {AI_METRICS_ASSISTANT_MESSAGES.viewInPanel}
         </Link>
       ) : null}
@@ -219,6 +231,13 @@ export function AiAssistantWidget() {
   const projectId = projectMatch?.params.projectId ?? null;
   const panelId = useId();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const onOpenAssistant = () => setOpen(true);
+    window.addEventListener('dashnode:open-assistant', onOpenAssistant);
+    return () => window.removeEventListener('dashnode:open-assistant', onOpenAssistant);
+  }, []);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [assistantState, setAssistantState] = useState<AssistantState>('INACTIVE');
