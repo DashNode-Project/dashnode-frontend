@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandItem } from './api';
-import { buildIndex, normalizeText, searchCommands } from './commandSearch';
+import { buildIndex, commandTypeLabel, normalizeText, searchCommands } from './commandSearch';
 
 const sample: CommandItem[] = [
   {
@@ -37,5 +37,32 @@ describe('commandSearch', () => {
     const index = buildIndex(sample);
     const results = searchCommands(index, 'issues', 'p1');
     expect(results[0]?.item.id).toBe('b');
+  });
+
+  it('returns up to eight matches for an empty query', () => {
+    const many: CommandItem[] = Array.from({ length: 12 }, (_, i): CommandItem => ({
+      id: `c-${i}`,
+      label: `Página ${i}`,
+      type: 'PAGE',
+      scope: 'GLOBAL',
+      route: `/pagina-${i}`,
+      route_template: null,
+      action: null,
+      keywords: [],
+      project: null,
+    }));
+    const index = buildIndex(many);
+    expect(searchCommands(index, '', null)).toHaveLength(8);
+  });
+
+  it('scores keyword and label matches', () => {
+    const index = buildIndex(sample);
+    expect(searchCommands(index, 'pend', null)[0]?.item.id).toBe('a');
+    expect(searchCommands(index, 'tar', null)[0]?.item.id).toBe('a');
+  });
+
+  it('labels command types in Spanish', () => {
+    expect(commandTypeLabel('PAGE')).toBe('Página');
+    expect(commandTypeLabel('ACTION')).toBe('Acción');
   });
 });

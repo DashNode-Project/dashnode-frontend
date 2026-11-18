@@ -1450,3 +1450,19 @@ Pantallas: registro de horas y estado en el backlog, filtros, Mis tareas (`/mis-
 
 Ruta: `/notificaciones` (`PATHS.notifications`). Código: `src/features/notifications/`.
 
+---
+
+## EP-15 — Paleta de comandos (HU_DN_09_124 … HU_DN_09_126)
+
+| HU | Estado | Evidencia |
+|---|---|---|
+| HU_DN_09_124 | Implementado | `CommandPalette.tsx`, `HeaderTools.tsx` (Ctrl/Cmd+K, Escape) |
+| HU_DN_09_125 | Implementado | `commandSearch.ts`, prueba `commandSearch.test.ts` |
+| HU_DN_09_126 | Implementado | Catálogo desde `GET /commands`, caché por sesión |
+
+## EP-16 — DevOps (HU_DN_09_128)
+
+| HU | Estado | Evidencia |
+|---|---|---|
+| HU_DN_09_128 | Implementado | `ProjectDevOpsTab.tsx`, distintivo Simulado, polling 5 s |
+
