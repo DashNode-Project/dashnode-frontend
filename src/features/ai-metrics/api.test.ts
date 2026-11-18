@@ -33,6 +33,20 @@ describe('ai-metrics api client', () => {
     expect(res.total_interactions).toBe(2);
   });
 
+  it('maps nested legacy summary payload from backend', async () => {
+    mockFetch(() =>
+      ok({
+        scope: 'managed_projects',
+        period: { key: '7d', from: '2026-11-11T00:00:00Z', to: '2026-11-18T00:00:00Z' },
+        summary: { total_interactions: 3, average_latency_ms: 250, total_tokens: 90 },
+      }),
+    );
+    const res = await getMetricsSummary({ period: '7d', project_id: 'p-1' });
+    expect(res.total_interactions).toBe(3);
+    expect(res.avg_latency_ms).toBe(250);
+    expect(res.scope.type).toBe('PROJECT');
+  });
+
   it('lists interactions with filters and limit 25', async () => {
     mockFetch((call) => {
       expect(call.url).toContain('/ai/metrics/interactions');

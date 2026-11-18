@@ -70,7 +70,7 @@ export async function listMyTasks(query: { projectId?: string; status?: string }
   if (query.projectId) params.set('projectId', query.projectId);
   if (query.status) params.set('status', query.status);
   const suffix = params.size ? `?${params.toString()}` : '';
-  return apiRequest(`/users/me/tasks${suffix}`);
+  return apiRequest(`/users/me/tasks${suffix}`, { timeoutMs: 30_000 });
 }
 
 export async function createEpic(

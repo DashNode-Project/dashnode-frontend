@@ -3,6 +3,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Card, SectionHeader } from '@/components/ui/demo-ui';
 import { PERMISSIONS_MATRIX } from '@/features/permissions/permissionsMatrix';
 import { KEYBOARD_SHORTCUTS } from '@/lib/keyboardShortcuts';
+import { SystemKnowledgePanel } from './SystemKnowledgePanel';
 
 function cell(value: boolean): string {
   return value ? 'Sí' : 'No';
@@ -15,6 +16,8 @@ export default function UserManualPage() {
         title="Manual de usuario"
         subtitle="Atajos de teclado, accesibilidad y permisos por rol"
       />
+
+      <SystemKnowledgePanel />
 
       <Card className="mb-6 p-6">
         <h2 className="mb-3 text-lg font-semibold text-[#F9FAFB]">Invitación de desarrollador</h2>
