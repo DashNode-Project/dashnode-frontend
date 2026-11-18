@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — EP-14 Notificaciones in-app
+
+### Added
+
+- Módulo `src/features/notifications/`: API, campana con contador (tope `99+`), panel desplegable, página `/notificaciones`, sondeo cada 30 s y apertura con navegación a ruta permitida.
+
 ## [Unreleased] — EP-13 Métricas, valoración y registro de IA
 
 ### Added

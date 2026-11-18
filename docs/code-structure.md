@@ -192,3 +192,13 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
   - `api.test.ts`, `ProjectAiMetricsTab.test.tsx`.
 - `src/features/ai-assistant/AiRatingControl.tsx` (HU 117) integrado en `AiAssistantWidget.tsx` y `AiAnalysisSection.tsx`.
 - `types.ts` del asistente: campos opcionales `interaction_id`, `intent`, `data`, `panel_link` (HU 118 v1).
+
+## EP-14 — Notificaciones in-app (HU_DN_09_119 … HU_DN_09_123)
+
+- Ruta: `/notificaciones` → `NotificationsPage.tsx` (`PATHS.notifications`, `RequireAuth`, todos los roles).
+- `HeaderTools.tsx`: `NotificationBell` sustituye el stub de «en desarrollo» para cualquier usuario autenticado.
+- `src/features/notifications/`:
+  - `api.ts`: `GET /notifications`, `GET /notifications/unread-count`, `POST /read`, `read-all`, `delete-all`, `/{id}/open`.
+  - `useNotificationPolling.ts`: sondeo cada 30 s, refresco al recuperar foco, pausa con `document.hidden`.
+  - `NotificationBell.tsx`, `NotificationList.tsx`, `NotificationsPage.tsx`, `messages.ts`, `types.ts`.
+  - `formatUnreadBadge.test.ts`, `api.test.ts`.

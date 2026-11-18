@@ -64,7 +64,8 @@ Modo de proyecto: `MOCKUP_PRODUCTIONIZATION`.
 | Pieza | Clasificación | Acción |
 |---|---|---|
 | Landing, login, registro, home por rol, menú usuario | ALCANCE | Implementado contra API real |
-| Proyectos, tareas, reuniones, docs, issues, usuarios, IA, búsqueda, notificaciones, recuperar contraseña | FUERA_DE_ALCANCE | `notifyUnderDevelopment` |
+| Proyectos, tareas, reuniones, docs, issues, usuarios, IA, búsqueda, recuperar contraseña | ALCANCE / parcial | Implementado contra API (notificaciones: EP-14) |
+| Notificaciones in-app (EP-14) | ALCANCE | `NotificationBell`, `NotificationsPage`, `features/notifications/*` |
 | Datos sintéticos / credenciales de demo / persistencia localStorage | SINTÉTICO | Eliminado |
 | Artefactos Figma Make (plugins, estado simulado) | ARTEFACTO | Eliminado; `docs/` conservado |
 
@@ -508,3 +509,17 @@ Backlog con filtros, registro de horas y cambio de estado. Vista Mis tareas. Inv
 - `App.tsx`: ruta dedicada (sustituye placeholder por segmento dinámico).
 - `AiRatingControl` en widget del asistente y análisis de issues (`interaction_id`).
 - HU 118 v1: tarjetas de métricas y «Ver en panel» en respuestas del asistente con `panel_link`.
+
+## EP-14 — Notificaciones in-app (HU_DN_09_119 … HU_DN_09_123)
+
+**Estado:** COMPLETED (frontend) | **Rama:** `feature/ep-14-notificaciones`
+
+| HU | UI | Tests |
+|---|---|---|
+| HU_DN_09_119 | `NotificationBell` en `HeaderTools` (todos los roles autenticados), contador con tope `99+`, panel desplegable | `formatUnreadBadge.test.ts`, `underDevelopment.test.tsx` |
+| HU_DN_09_120 | `NotificationList` / `GET /notifications` (25 ítems), filtros «Todas» / «Solo no leídas» | `api.test.ts` |
+| HU_DN_09_121 | `POST /read`, `POST /read-all`, diálogo confirmación `delete-all` | `api.test.ts` |
+| HU_DN_09_122 | `POST /{id}/open` + navegación a rutas permitidas (`/proyectos/`, `/mis-tareas`, `/notificaciones`) | `messages.ts` (`isAllowedNotificationRoute`) |
+| HU_DN_09_123 | `useNotificationPolling` (30 s, foco, pausa en pestaña oculta) | Manual + hook en campana y página |
+
+- Ruta completa: `/notificaciones` → `NotificationsPage.tsx`.
