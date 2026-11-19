@@ -1,68 +1,70 @@
-import { AlertCircle, CheckCircle2, CircleDashed, Loader2, MinusCircle, Play } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { ClipboardCopy, ExternalLink, History, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { useAuth } from '@/features/auth/AuthContext';
-import { fetchLatestPipeline, triggerPipelineRun, type LatestPipelineResponse } from './api';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/lib/toast/ToastProvider';
+import { fetchDevOpsProfile, listDevOpsRevisions, upsertDevOpsProfile } from './api';
+import { DEVOPS_MESSAGES } from './messages';
+import type {
+  DevOpsEnvironment,
+  DevOpsProfile,
+  DevOpsRevision,
+  PipelineStage,
+  UpsertDevOpsPayload,
+} from './types';
 
-const LOAD_FAILURE = 'No fue posible cargar la información. Intente nuevamente.';
-const EMPTY = 'No hay ejecuciones registradas para este proyecto.';
+function MarkdownBlock({ title, content }: { title: string; content?: string | null }) {
+  if (!content?.trim()) return null;
+  return (
+    <section className="rounded-xl border border-white/10 bg-[#12131C] p-5">
+      <h2 className="text-sm font-semibold text-[#F9FAFB]">{title}</h2>
+      <pre className="mt-3 whitespace-pre-wrap text-sm text-[#D1D5DB]">{content}</pre>
+    </section>
+  );
+}
 
-const STAGE_LABELS: Record<string, string> = {
-  LINT: 'Lint',
-  TEST: 'Test',
-  BUILD: 'Build',
-  DEPLOY: 'Deploy',
-};
+function emptyStage(order: number): PipelineStage {
+  return {
+    order,
+    name: '',
+    tool: '',
+    commands: '',
+    trigger_event: '',
+    is_required: true,
+  };
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDIENTE: 'Pendiente',
-  EN_EJECUCION: 'En ejecución',
-  EXITOSA: 'Exitosa',
-  FALLIDA: 'Fallida',
-  OMITIDA: 'Omitida',
-};
-
-function statusIcon(status: string) {
-  switch (status) {
-    case 'EXITOSA':
-      return <CheckCircle2 size={18} className="text-emerald-400" aria-hidden />;
-    case 'FALLIDA':
-      return <AlertCircle size={18} className="text-rose-400" aria-hidden />;
-    case 'EN_EJECUCION':
-      return <Loader2 size={18} className="animate-spin text-sky-400" aria-hidden />;
-    case 'OMITIDA':
-      return <MinusCircle size={18} className="text-amber-300" aria-hidden />;
-    default:
-      return <CircleDashed size={18} className="text-[#9CA3AF]" aria-hidden />;
-  }
+function emptyEnv(): DevOpsEnvironment {
+  return {
+    name: '',
+    url: '',
+    branch: '',
+    deploy_strategy: '',
+    requires_approval: false,
+  };
 }
 
 export default function ProjectDevOpsTab() {
   const { projectId = '' } = useParams();
-  const { user } = useAuth();
-  const [data, setData] = useState<LatestPipelineResponse | null>(null);
+  const { showToast } = useToast();
+  const [profile, setProfile] = useState<DevOpsProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  const refresh = useCallback(async () => {
-    try {
-      setError(null);
-      const payload = await fetchLatestPipeline(projectId);
-      setData(payload);
-    } catch {
-      setError(LOAD_FAILURE);
-    }
-  }, [projectId]);
+  const [draft, setDraft] = useState<UpsertDevOpsPayload | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [revisions, setRevisions] = useState<DevOpsRevision[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (!projectId) return;
+      setError(null);
       try {
-        setError(null);
-        const payload = await fetchLatestPipeline(projectId);
-        if (!cancelled) setData(payload);
+        const data = await fetchDevOpsProfile(projectId);
+        if (!cancelled) setProfile(data);
       } catch {
-        if (!cancelled) setError(LOAD_FAILURE);
+        if (!cancelled) setError(DEVOPS_MESSAGES.loadError);
       }
     })();
     return () => {
@@ -70,34 +72,55 @@ export default function ProjectDevOpsTab() {
     };
   }, [projectId]);
 
-  useEffect(() => {
-    const running = data?.stages.some((stage) => stage.status === 'EN_EJECUCION');
-    if (!running) return;
-    const timer = window.setInterval(() => {
-      void refresh();
-    }, 5000);
-    const onFocus = () => {
-      void refresh();
-    };
-    window.addEventListener('focus', onFocus);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [data?.stages, refresh]);
+  const startEdit = () => {
+    if (!profile) return;
+    setDraft({
+      repository_url: profile.repository_url ?? '',
+      ci_cd_provider: profile.ci_cd_provider ?? '',
+      branching_strategy: profile.branching_strategy ?? '',
+      branching_rules_md: profile.branching_rules_md ?? '',
+      pipeline_stages: profile.pipeline_stages.length ? profile.pipeline_stages : [emptyStage(1)],
+      environments: profile.environments.length ? profile.environments : [emptyEnv()],
+      quality_gates_md: profile.quality_gates_md ?? '',
+      deployment_runbook_md: profile.deployment_runbook_md ?? '',
+      rollback_observability_md: profile.rollback_observability_md ?? '',
+      change_summary: '',
+    });
+    setEditing(true);
+  };
 
-  const canTrigger = user?.role === 'admin' || user?.role === 'manager';
+  const openHistory = async () => {
+    setHistoryOpen(true);
+    try {
+      const res = await listDevOpsRevisions(projectId);
+      setRevisions(res.items);
+    } catch {
+      setRevisions([]);
+    }
+  };
 
-  const onTrigger = async () => {
-    if (!canTrigger) return;
+  const onSave = async () => {
+    if (!draft || !projectId) return;
     setBusy(true);
     try {
-      await triggerPipelineRun(projectId);
-      await refresh();
+      const saved = await upsertDevOpsProfile(projectId, draft);
+      setProfile(saved);
+      setEditing(false);
+      setDraft(null);
+      showToast(DEVOPS_MESSAGES.saveSuccess, 'success');
     } catch {
-      setError(LOAD_FAILURE);
+      showToast(DEVOPS_MESSAGES.saveError, 'error');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const copyCommand = async (commands: string) => {
+    try {
+      await navigator.clipboard.writeText(commands);
+      showToast(DEVOPS_MESSAGES.copyOk, 'success');
+    } catch {
+      showToast(DEVOPS_MESSAGES.saveError, 'error');
     }
   };
 
@@ -109,70 +132,277 @@ export default function ProjectDevOpsTab() {
     );
   }
 
-  const empty = !data?.run_id || data.stages.length === 0;
+  if (!profile) {
+    return <div className="text-sm text-[#9CA3AF]">Cargando prácticas DevOps…</div>;
+  }
+
+  const view = editing && draft ? draft : profile;
+  const stages = view.pipeline_stages;
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-[#F9FAFB]">Pipeline de integración</h1>
-            <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-xs text-amber-200">
-              Simulado
-            </span>
-          </div>
-          {data?.run_id ? (
+          <h1 className="text-lg font-semibold text-[#F9FAFB]">Prácticas y arquitectura DevOps</h1>
+          {profile.updated_at ? (
             <p className="mt-1 text-sm text-[#9CA3AF]">
-              Ejecución {data.run_id.slice(0, 8)} · {data.triggered_by?.name ?? 'Semilla inicial'} ·{' '}
-              {data.created_at ? new Date(data.created_at).toLocaleString('es-CO') : '—'} ·{' '}
-              {data.status ? (STATUS_LABELS[data.status] ?? data.status) : '—'}
+              Última actualización: {new Date(profile.updated_at).toLocaleString('es-CO')}
+              {profile.updated_by ? ` · ${profile.updated_by.name}` : ''}
             </p>
           ) : null}
         </div>
-        {empty && canTrigger ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void onTrigger()}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#F9FAFB] hover:bg-white/10 disabled:opacity-60"
-          >
-            <Play size={16} aria-hidden />
-            Disparar simulación
-          </button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {profile.is_configured ? (
+            <Button type="button" variant="secondary" onClick={() => void openHistory()}>
+              <History size={16} aria-hidden className="mr-2" />
+              {DEVOPS_MESSAGES.history}
+            </Button>
+          ) : null}
+          {profile.can_edit && !editing ? (
+            <Button type="button" onClick={startEdit}>
+              <Pencil size={16} aria-hidden className="mr-2" />
+              {profile.is_configured ? DEVOPS_MESSAGES.edit : DEVOPS_MESSAGES.emptyAction}
+            </Button>
+          ) : null}
+          {editing ? (
+            <>
+              <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                {DEVOPS_MESSAGES.cancel}
+              </Button>
+              <Button type="button" disabled={busy} onClick={() => void onSave()}>
+                {DEVOPS_MESSAGES.save}
+              </Button>
+            </>
+          ) : null}
+        </div>
       </header>
 
-      {empty ? (
+      {!profile.is_configured && !editing ? (
         <div className="rounded-xl border border-white/10 bg-[#12131C] p-8 text-center text-sm text-[#9CA3AF]">
-          {EMPTY}
+          {DEVOPS_MESSAGES.emptyTitle}
         </div>
-      ) : (
-        <ol className="grid gap-4 md:grid-cols-4">
-          {data?.stages.map((stage, index) => (
-            <li
-              key={stage.stage}
-              className="relative rounded-xl border border-white/10 bg-[#12131C] p-4"
-            >
-              {index < (data?.stages.length ?? 0) - 1 ? (
-                <span
-                  className="absolute right-0 top-1/2 hidden h-px w-4 translate-x-full bg-white/15 md:block"
-                  aria-hidden
+      ) : null}
+
+      {(profile.is_configured || editing) && (
+        <>
+          <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-[#12131C] p-4">
+              <p className="text-xs text-[#9CA3AF]">Repositorio</p>
+              {editing && draft ? (
+                <input
+                  className="mt-2 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-sm"
+                  value={draft.repository_url ?? ''}
+                  onChange={(e) => setDraft({ ...draft, repository_url: e.target.value })}
                 />
+              ) : view.repository_url ? (
+                <a
+                  href={view.repository_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-sm text-sky-300 hover:underline"
+                >
+                  {view.repository_url}
+                  <ExternalLink size={14} aria-hidden />
+                </a>
+              ) : (
+                <p className="mt-2 text-sm text-[#6B7280]">—</p>
+              )}
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#12131C] p-4">
+              <p className="text-xs text-[#9CA3AF]">Proveedor CI/CD</p>
+              {editing && draft ? (
+                <input
+                  className="mt-2 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-sm"
+                  value={draft.ci_cd_provider ?? ''}
+                  onChange={(e) => setDraft({ ...draft, ci_cd_provider: e.target.value })}
+                />
+              ) : (
+                <p className="mt-2 text-sm text-[#F9FAFB]">{view.ci_cd_provider || '—'}</p>
+              )}
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#12131C] p-4">
+              <p className="text-xs text-[#9CA3AF]">Estrategia de ramas</p>
+              {editing && draft ? (
+                <input
+                  className="mt-2 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-sm"
+                  value={draft.branching_strategy ?? ''}
+                  onChange={(e) => setDraft({ ...draft, branching_strategy: e.target.value })}
+                />
+              ) : (
+                <p className="mt-2 text-sm text-[#F9FAFB]">{view.branching_strategy || '—'}</p>
+              )}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#F9FAFB]">Pipeline CI/CD</h2>
+              {editing && draft ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      pipeline_stages: [
+                        ...draft.pipeline_stages,
+                        emptyStage(draft.pipeline_stages.length + 1),
+                      ],
+                    })
+                  }
+                >
+                  <Plus size={14} className="mr-1" /> Etapa
+                </Button>
               ) : null}
-              <div className="flex items-center gap-2 text-sm font-medium text-[#F9FAFB]">
-                {statusIcon(stage.status)}
-                <span>{STAGE_LABELS[stage.stage] ?? stage.stage}</span>
-              </div>
-              <p className="mt-1 text-xs text-[#9CA3AF]">
-                {STATUS_LABELS[stage.status] ?? stage.status} · {stage.duration_seconds} s
-              </p>
-              {stage.skip_reason ? (
-                <p className="mt-2 text-xs text-amber-200/90">{stage.skip_reason}</p>
-              ) : null}
-            </li>
-          ))}
-        </ol>
+            </div>
+            <ol className="grid gap-3 md:grid-cols-2">
+              {stages.map((stage, index) => (
+                <li
+                  key={`${stage.order}-${index}`}
+                  className="rounded-xl border border-white/10 bg-[#12131C] p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-[#F9FAFB]">
+                      {stage.order}. {stage.name || 'Etapa'}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${stage.is_required ? 'bg-emerald-500/15 text-emerald-200' : 'bg-amber-500/15 text-amber-200'}`}
+                    >
+                      {stage.is_required ? 'Obligatoria' : 'Opcional'}
+                    </span>
+                  </div>
+                  {!editing ? (
+                    <>
+                      <p className="mt-1 text-xs text-[#9CA3AF]">
+                        {stage.tool} · {stage.trigger_event}
+                      </p>
+                      <div className="mt-2 flex items-start gap-2">
+                        <code className="flex-1 rounded bg-black/30 p-2 text-xs text-[#E5E7EB]">
+                          {stage.commands}
+                        </code>
+                        <button
+                          type="button"
+                          className="rounded border border-white/10 p-2 text-[#9CA3AF] hover:bg-white/5"
+                          aria-label="Copiar comando"
+                          onClick={() => void copyCommand(stage.commands)}
+                        >
+                          <ClipboardCopy size={14} />
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+                  {editing && draft ? (
+                    <div className="mt-3 space-y-2">
+                      <input
+                        className="w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-xs"
+                        placeholder="Nombre"
+                        value={stage.name}
+                        onChange={(e) => {
+                          const next = [...draft.pipeline_stages];
+                          next[index] = { ...stage, name: e.target.value };
+                          setDraft({ ...draft, pipeline_stages: next });
+                        }}
+                      />
+                      <textarea
+                        className="w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-xs"
+                        placeholder="Comandos"
+                        rows={2}
+                        value={stage.commands}
+                        onChange={(e) => {
+                          const next = [...draft.pipeline_stages];
+                          next[index] = { ...stage, commands: e.target.value };
+                          setDraft({ ...draft, pipeline_stages: next });
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="text-xs text-rose-300"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            pipeline_stages: draft.pipeline_stages.filter((_, i) => i !== index),
+                          })
+                        }
+                      >
+                        <Trash2 size={12} className="inline" /> Quitar
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {!editing ? (
+            <>
+              <MarkdownBlock
+                title="Flujo Git y reglas de ramas"
+                content={profile.branching_rules_md}
+              />
+              <MarkdownBlock title="Quality gates" content={profile.quality_gates_md} />
+              <MarkdownBlock
+                title="Runbook de despliegue"
+                content={profile.deployment_runbook_md}
+              />
+              <MarkdownBlock
+                title="Rollback y observabilidad"
+                content={profile.rollback_observability_md}
+              />
+            </>
+          ) : draft ? (
+            <div className="space-y-3">
+              <label className="block text-sm text-[#F9FAFB]">
+                {DEVOPS_MESSAGES.changeSummary}
+              </label>
+              <input
+                className="w-full rounded border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                value={draft.change_summary}
+                onChange={(e) => setDraft({ ...draft, change_summary: e.target.value })}
+              />
+              <textarea
+                className="w-full rounded border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                rows={4}
+                placeholder="Reglas de ramas (Markdown)"
+                value={draft.branching_rules_md ?? ''}
+                onChange={(e) => setDraft({ ...draft, branching_rules_md: e.target.value })}
+              />
+            </div>
+          ) : null}
+        </>
       )}
+
+      {historyOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-end bg-black/50"
+          role="dialog"
+          aria-modal
+          aria-label="Historial DevOps"
+        >
+          <div className="h-full w-full max-w-md overflow-y-auto bg-[#0F1017] p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#F9FAFB]">Historial</h2>
+              <button
+                type="button"
+                className="text-sm text-[#9CA3AF]"
+                onClick={() => setHistoryOpen(false)}
+              >
+                Cerrar
+              </button>
+            </div>
+            <ul className="mt-4 space-y-3">
+              {revisions.map((rev) => (
+                <li key={rev.id} className="rounded-lg border border-white/10 p-3 text-sm">
+                  <p className="font-medium text-[#F9FAFB]">{rev.change_summary}</p>
+                  <p className="mt-1 text-xs text-[#9CA3AF]">
+                    {new Date(rev.created_at).toLocaleString('es-CO')}
+                    {rev.changed_by ? ` · ${rev.changed_by.name}` : ''}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,35 +1,45 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, ok } from '@/test/fetchMock';
-import { fetchLatestPipeline, triggerPipelineRun } from './api';
+import { fetchDevOpsProfile, upsertDevOpsProfile } from './api';
 
 describe('devops api client', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it('fetches latest pipeline for a project', async () => {
+  it('fetches devops profile', async () => {
     mockFetch((call) => {
+      expect(call.url).toContain('/projects/p-1/devops');
       expect(call.method).toBe('GET');
-      expect(call.url).toContain('/projects/p-1/devops/pipeline/latest');
       return ok({
-        run_id: 'run-1',
-        is_simulated: true,
-        computed_at: '2026-11-18T12:00:00Z',
-        stages: [],
+        project_id: 'p-1',
+        is_configured: false,
+        can_edit: true,
+        pipeline_stages: [],
+        environments: [],
       });
     });
-    const res = await fetchLatestPipeline('p-1');
-    expect(res.run_id).toBe('run-1');
-    expect(res.is_simulated).toBe(true);
+    const res = await fetchDevOpsProfile('p-1');
+    expect(res.is_configured).toBe(false);
   });
 
-  it('triggers a manual pipeline run', async () => {
+  it('upserts devops profile', async () => {
     mockFetch((call) => {
-      expect(call.method).toBe('POST');
-      expect(call.url).toContain('/projects/p-2/devops/pipeline/runs');
-      return ok({ run_id: 'run-2', created_at: '2026-11-18T12:01:00Z' });
+      expect(call.method).toBe('PUT');
+      expect(call.url).toContain('/projects/p-2/devops');
+      return ok({
+        project_id: 'p-2',
+        is_configured: true,
+        can_edit: true,
+        pipeline_stages: [],
+        environments: [],
+      });
     });
-    const res = await triggerPipelineRun('p-2');
-    expect(res.run_id).toBe('run-2');
+    const res = await upsertDevOpsProfile('p-2', {
+      change_summary: 'Init',
+      pipeline_stages: [],
+      environments: [],
+    });
+    expect(res.is_configured).toBe(true);
   });
 });
