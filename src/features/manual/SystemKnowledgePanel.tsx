@@ -45,8 +45,8 @@ export function SystemKnowledgePanel() {
     <Card className="mb-6 p-6">
       <h2 className="mb-2 text-lg font-semibold text-[#F9FAFB]">Preguntas frecuentes (DashNode)</h2>
       <p className="mb-4 text-sm text-[#9CA3AF]">
-        Base de conocimientos del sistema con al menos 31 entradas sobre funcionalidades reales.
-        El asistente consulta esta información antes de inventar respuestas.
+        Base de conocimientos del sistema con al menos 31 entradas sobre funcionalidades reales. El
+        asistente consulta esta información antes de inventar respuestas.
       </p>
       <label className="mb-4 flex items-center gap-2 rounded-lg border border-white/10 bg-[#0A0B0E] px-3 py-2">
         <Search size={18} className="text-[#6B7280]" aria-hidden />

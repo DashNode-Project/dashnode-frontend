@@ -313,7 +313,9 @@ export default function ProjectDetailPage() {
                   title={member.name}
                 >
                   <Avatar name={member.name} size={28} />
-                  <span className="max-w-[120px] truncate text-xs text-[#F9FAFB]">{member.name}</span>
+                  <span className="max-w-[120px] truncate text-xs text-[#F9FAFB]">
+                    {member.name}
+                  </span>
                 </div>
               ))}
               {teamPreview.length > 8 ? (

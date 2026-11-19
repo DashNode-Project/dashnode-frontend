@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockFetch, ok } from '@/test/fetchMock';
-import {
-  getMetricsByUser,
-  getMetricsSummary,
-  listInteractions,
-  putInteractionRating,
-} from './api';
+import { getMetricsByUser, getMetricsSummary, listInteractions, putInteractionRating } from './api';
 
 describe('ai-metrics api client', () => {
   beforeEach(() => {
@@ -19,7 +14,11 @@ describe('ai-metrics api client', () => {
       expect(call.url).toContain('period=7d');
       expect(call.url).toContain('project_id=p-1');
       return ok({
-        period: { from: '2026-11-09T00:00:00Z', to: '2026-11-16T23:59:59Z', timezone: 'America/Bogota' },
+        period: {
+          from: '2026-11-09T00:00:00Z',
+          to: '2026-11-16T23:59:59Z',
+          timezone: 'America/Bogota',
+        },
         scope: { type: 'PROJECT', project_id: 'p-1', name: 'DashNode' },
         total_interactions: 2,
         avg_latency_ms: 900,

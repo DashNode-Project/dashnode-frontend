@@ -1,10 +1,7 @@
 export type MetricsPeriod = 'today' | '7d' | '30d' | 'month' | 'custom';
 
 export type InteractionSource =
-  | 'ASSISTANT_TEXT'
-  | 'ASSISTANT_VOICE'
-  | 'ISSUE_ANALYSIS'
-  | 'METRICS_QUERY';
+  'ASSISTANT_TEXT' | 'ASSISTANT_VOICE' | 'ISSUE_ANALYSIS' | 'METRICS_QUERY';
 
 export type InteractionStatus = 'PENDING' | 'SUCCESS' | 'ERROR' | 'CANCELLED';
 

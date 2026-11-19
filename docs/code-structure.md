@@ -193,6 +193,18 @@ referencia visual e histórica. Este archivo describe la estructura profesional 
 - `src/features/ai-assistant/AiRatingControl.tsx` (HU 117) integrado en `AiAssistantWidget.tsx` y `AiAnalysisSection.tsx`.
 - `types.ts` del asistente: campos opcionales `interaction_id`, `intent`, `data`, `panel_link` (HU 118 v1).
 
+## EP-15 — Paleta de comandos (HU_DN_09_124 … HU_DN_09_126)
+
+- `src/features/commands/`: `api.ts` (`GET /commands`), `commandSearch.ts` (normalización, puntaje, máx. 8).
+- `src/components/layout/CommandPalette.tsx`: combobox ARIA, Ctrl/Cmd+K vía `HeaderTools.tsx`, foco atrapado.
+- Evento `dashnode:open-assistant` consumido en `AiAssistantWidget.tsx`.
+
+## EP-16 — DevOps simulado (HU_DN_09_128)
+
+- Ruta: `/proyectos/:projectId/devops` → `src/features/devops/ProjectDevOpsTab.tsx`.
+- `api.ts`: `fetchLatestPipeline`, `triggerPipelineRun`.
+- `projectWorkspaceTabs.ts`: pestaña `devops` `implemented: true`.
+
 ## EP-14 — Notificaciones in-app (HU_DN_09_119 … HU_DN_09_123)
 
 - Ruta: `/notificaciones` → `NotificationsPage.tsx` (`PATHS.notifications`, `RequireAuth`, todos los roles).

@@ -5,7 +5,7 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.x-3178C6?logo=typescript&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Cliente web de DashNode (React 19 + Vite + TypeScript). Incluye **EP-01** (autenticación y sesiones), **EP-02** (administración de usuarios), el asistente de IA (EP-10/EP-12), la pestaña **Métricas de IA** (EP-13) y **notificaciones in-app** (EP-14: campana global y `/notificaciones`).
+Cliente web de DashNode (React 19 + Vite + TypeScript). Incluye **EP-01**–**EP-14**, la **paleta de comandos** (**EP-15**, Ctrl/Cmd+K) y la pestaña **DevOps simulado** (**EP-16**, `/proyectos/:id/devops`).
 
 - [Changelog](./CHANGELOG.md)
 - [License](./LICENSE)

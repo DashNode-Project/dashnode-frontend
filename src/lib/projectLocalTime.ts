@@ -18,11 +18,7 @@ export function projectLocalHm(now = new Date()): string {
   return `${h}:${m}`;
 }
 
-export function isSlotDatetimeInPast(
-  date: string,
-  startTime: string,
-  now = new Date(),
-): boolean {
+export function isSlotDatetimeInPast(date: string, startTime: string, now = new Date()): boolean {
   const today = projectLocalYmd(now);
   const time = projectLocalHm(now);
   if (date < today) return true;

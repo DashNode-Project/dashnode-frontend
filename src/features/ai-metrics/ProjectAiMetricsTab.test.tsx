@@ -13,7 +13,11 @@ describe('ProjectAiMetricsTab', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(api.getMetricsSummary).mockResolvedValue({
-      period: { from: '2026-11-09T00:00:00Z', to: '2026-11-16T23:59:59Z', timezone: 'America/Bogota' },
+      period: {
+        from: '2026-11-09T00:00:00Z',
+        to: '2026-11-16T23:59:59Z',
+        timezone: 'America/Bogota',
+      },
       scope: { type: 'PROJECT', project_id: 'p-1', name: 'DashNode' },
       total_interactions: 3,
       avg_latency_ms: 1200,

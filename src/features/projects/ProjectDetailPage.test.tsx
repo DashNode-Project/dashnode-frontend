@@ -133,7 +133,10 @@ describe('HU_DN_02_23-26 — ProjectDetailPage', () => {
     renderDetail();
     await screen.findByRole('button', { name: 'Editar proyecto' });
     expect(await screen.findByText('Progreso')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ver equipo' })).toHaveAttribute('href', '/proyectos/p1/equipo');
+    expect(screen.getByRole('link', { name: 'Ver equipo' })).toHaveAttribute(
+      'href',
+      '/proyectos/p1/equipo',
+    );
     expect(screen.queryByRole('button', { name: 'Agregar miembro' })).not.toBeInTheDocument();
   });
 

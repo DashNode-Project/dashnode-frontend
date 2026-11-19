@@ -138,11 +138,14 @@ function mapInteractionRow(row: RawInteractionRow): InteractionListItem {
       : null,
     query_preview: requestText.slice(0, 120),
     response_preview: responseText.slice(0, 120),
-    latency_ms: row.total_latency_ms != null ? Number(row.total_latency_ms) : null,
+    latency_ms:
+      row.total_latency_ms !== null && row.total_latency_ms !== undefined
+        ? Number(row.total_latency_ms)
+        : null,
     input_tokens: Number(row.input_tokens ?? 0),
     output_tokens: Number(row.output_tokens ?? 0),
     audio_seconds: Math.round(audioMs / 1000),
-    rating: row.rating != null ? Number(row.rating) : null,
+    rating: row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
   };
 }
 
@@ -176,13 +179,22 @@ function mapInteractionDetail(body: Record<string, unknown>): InteractionDetail 
       ? { id: String(nested.project_id), name: String(nested.project_name ?? 'Proyecto') }
       : null,
     query_text: String(nested.request_text ?? ''),
-    response_text: nested.response_text != null ? String(nested.response_text) : null,
-    latency_ms: nested.total_latency_ms != null ? Number(nested.total_latency_ms) : null,
+    response_text:
+      nested.response_text !== null && nested.response_text !== undefined
+        ? String(nested.response_text)
+        : null,
+    latency_ms:
+      nested.total_latency_ms !== null && nested.total_latency_ms !== undefined
+        ? Number(nested.total_latency_ms)
+        : null,
     input_tokens: Number(nested.input_tokens ?? 0),
     output_tokens: Number(nested.output_tokens ?? 0),
     audio_seconds: Math.round(audioMs / 1000),
-    rating: nested.rating != null ? Number(nested.rating) : null,
-    error_code: nested.error_code != null ? String(nested.error_code) : null,
+    rating: nested.rating !== null && nested.rating !== undefined ? Number(nested.rating) : null,
+    error_code:
+      nested.error_code !== null && nested.error_code !== undefined
+        ? String(nested.error_code)
+        : null,
   };
 }
 

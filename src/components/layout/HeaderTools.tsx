@@ -17,8 +17,21 @@ export function HeaderTools() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        const foreignModal =
+          !paletteOpen &&
+          Boolean(document.querySelector('[aria-modal="true"]:not(#command-palette-panel)'));
+        if (foreignModal) return;
         e.preventDefault();
-        setPaletteOpen(true);
+        setPaletteOpen((open) => {
+          if (open) {
+            window.setTimeout(() => {
+              document
+                .querySelector<HTMLInputElement>('#command-palette-panel input[role="combobox"]')
+                ?.focus();
+            }, 0);
+          }
+          return true;
+        });
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
         e.preventDefault();
@@ -27,7 +40,7 @@ export function HeaderTools() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate]);
+  }, [navigate, paletteOpen]);
 
   return (
     <>

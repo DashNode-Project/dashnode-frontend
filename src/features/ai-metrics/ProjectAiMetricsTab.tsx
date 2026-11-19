@@ -1,26 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import {
-  Activity,
-  AudioLines,
-  Clock,
-  Coins,
-  RefreshCw,
-  Sparkles,
-  Users,
-  X,
-} from 'lucide-react';
+import { Activity, AudioLines, Clock, Coins, RefreshCw, Sparkles, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/demo-ui';
 import { ApiError, isTechnicalFailure } from '@/lib/api/errors';
 import { useToast } from '@/lib/toast/ToastProvider';
 import { useProjectWorkspace } from '@/features/projects/ProjectWorkspaceContext';
-import {
-  getInteractionDetail,
-  getMetricsByUser,
-  getMetricsSummary,
-  listInteractions,
-} from './api';
+import { getInteractionDetail, getMetricsByUser, getMetricsSummary, listInteractions } from './api';
 import {
   AI_METRICS_MESSAGES,
   INTERACTION_SOURCE_LABELS,
@@ -540,9 +526,7 @@ export default function ProjectAiMetricsTab() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 text-xs space-y-4">
-            {detailLoading && !detail ? (
-              <p className="text-[#9CA3AF]">Cargando…</p>
-            ) : null}
+            {detailLoading && !detail ? <p className="text-[#9CA3AF]">Cargando…</p> : null}
             {detail ? (
               <>
                 <p className="text-[10px] text-[#6B7280]">{AI_METRICS_MESSAGES.detailHelp}</p>
@@ -554,7 +538,9 @@ export default function ProjectAiMetricsTab() {
                   <span>{INTERACTION_SOURCE_LABELS[detail.source]}</span>
                 </div>
                 <div>
-                  <p className="mb-1 font-medium text-[#E5E7EB]">{AI_METRICS_MESSAGES.queryColumn}</p>
+                  <p className="mb-1 font-medium text-[#E5E7EB]">
+                    {AI_METRICS_MESSAGES.queryColumn}
+                  </p>
                   <pre className="whitespace-pre-wrap rounded-lg border border-white/10 bg-black/20 p-2 text-[#D1D5DB]">
                     {detail.query_text}
                   </pre>

@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — EP-15 Paleta de comandos y EP-16 DevOps
+
+### Added
+
+- Paleta global (Ctrl/Cmd+K): catálogo servidor, búsqueda local ARIA, asistente vía evento.
+- Pestaña DevOps por proyecto con distintivo **Simulado** y actualización periódica.
+
 ## [Unreleased] — EP-14 Notificaciones in-app
 
 ### Added

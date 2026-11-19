@@ -229,7 +229,9 @@ export default function ProjectTeamTab() {
         <p className="text-sm text-[#9CA3AF]">Cargando miembros…</p>
       ) : roster.length === 0 ? (
         <p className="text-sm text-[#9CA3AF]">
-          {debouncedSearch ? 'No se encontraron miembros con ese criterio.' : 'No hay miembros registrados.'}
+          {debouncedSearch
+            ? 'No se encontraron miembros con ese criterio.'
+            : 'No hay miembros registrados.'}
         </p>
       ) : viewMode === 'grid' ? (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -249,7 +251,9 @@ export default function ProjectTeamTab() {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-[#F9FAFB]">{m.name}</p>
                   <p className="truncate text-xs text-[#9CA3AF]">{m.email || '—'}</p>
-                  <p className="mt-1 text-xs text-blue-300">{memberRoleLabel(m, project.manager_id)}</p>
+                  <p className="mt-1 text-xs text-blue-300">
+                    {memberRoleLabel(m, project.manager_id)}
+                  </p>
                 </div>
               </button>
               {canManage && m.user_id !== project.manager_id ? (
@@ -290,7 +294,9 @@ export default function ProjectTeamTab() {
                       <span className="font-medium text-[#F9FAFB]">{m.name}</span>
                     </button>
                   </td>
-                  <td className="hidden px-4 py-3 text-[#9CA3AF] md:table-cell">{m.email || '—'}</td>
+                  <td className="hidden px-4 py-3 text-[#9CA3AF] md:table-cell">
+                    {m.email || '—'}
+                  </td>
                   <td className="px-4 py-3">
                     <RoleBadge role={m.user_id === project.manager_id ? 'manager' : m.role} />
                   </td>
@@ -405,7 +411,9 @@ export default function ProjectTeamTab() {
             <Avatar name={previewMember.name} size={48} />
             <div>
               <p className="font-medium text-[#F9FAFB]">{previewMember.name}</p>
-              <p className="text-sm text-[#9CA3AF]">{previewMember.email || 'Correo no disponible'}</p>
+              <p className="text-sm text-[#9CA3AF]">
+                {previewMember.email || 'Correo no disponible'}
+              </p>
             </div>
           </div>
           <dl className="mt-4 grid gap-2 text-sm">
